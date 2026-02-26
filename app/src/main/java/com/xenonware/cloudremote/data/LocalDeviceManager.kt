@@ -78,8 +78,9 @@ class LocalDeviceManager(private val context: Context) {
             val batteryLevel =
                 if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
             val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+            val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
             val isCharging =
-                status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
