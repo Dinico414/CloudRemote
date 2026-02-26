@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,8 +43,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DoDisturbOn
 import androidx.compose.material.icons.rounded.FlashOn
@@ -50,6 +53,9 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Vibration
@@ -66,7 +72,6 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -351,7 +356,9 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             // Media Player
             if (device.mediaTitle.isNotBlank()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val imageBytes = try {
@@ -365,17 +372,28 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         Image(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "Album Art",
-                            modifier = Modifier.size(96.dp).clip(RoundedCornerShape(8.dp)),
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        Box(modifier = Modifier.size(96.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp)))
+                        Box(
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .fillMaxHeight()
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer,
+                                    RoundedCornerShape(8.dp)
+                                )
+                        )
                     }
 
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column {
                         Text(
                             text = device.mediaTitle,
                             style = MaterialTheme.typography.bodyLarge,
@@ -391,7 +409,6 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         )
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -407,23 +424,35 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                             IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "next")) }) {
                                 Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
                             }
+                            CustomMediaActionButton(
+                                actionTitle = device.mediaCustomAction1Title,
+                                defaultIcon = Icons.Rounded.Add,
+                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }
+                            )
+
+                            CustomMediaActionButton(
+                                actionTitle = device.mediaCustomAction2Title,
+                                defaultIcon = Icons.Rounded.Remove,
+                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }
+                            )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (device.mediaCustomAction1Title.isNotBlank()) {
-                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
-                                    Text(device.mediaCustomAction1Title)
-                                }
-                            }
-                            if (device.mediaCustomAction2Title.isNotBlank()) {
-                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
-                                    Text(device.mediaCustomAction2Title)
-                                }
-                            }
-                        }
+//                        Row(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            horizontalArrangement = Arrangement.Start,
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            if (device.mediaCustomAction1Title.isNotBlank()) {
+//                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
+//                                    Text(device.mediaCustomAction1Title)
+//                                }
+//                            }
+
+//                            if (device.mediaCustomAction2Title.isNotBlank()) {
+//                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
+//                                    Text(device.mediaCustomAction2Title)
+//                                }
+//                            }
+//                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -567,6 +596,26 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             ) {
                 Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
             }
+        }
+    }
+}
+
+@Composable
+fun CustomMediaActionButton(
+    actionTitle: String,
+    defaultIcon: ImageVector,
+    onClick: () -> Unit
+) {
+    if (actionTitle.isNotBlank()) {
+        IconButton(onClick = onClick) {
+            val icon = when (actionTitle) {
+                "Remove from collection" -> Icons.Rounded.CheckCircle
+                "Add to collection" -> Icons.Rounded.AddCircleOutline
+                "Start radio" -> Icons.Rounded.Podcasts
+                "Toggle shuffle" -> Icons.Rounded.Shuffle
+                else -> defaultIcon
+            }
+            Icon(icon, contentDescription = actionTitle)
         }
     }
 }
