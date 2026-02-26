@@ -23,31 +23,15 @@ class GoogleCloudRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getDevice(deviceId: String, onComplete: (Device?) -> Unit) {
-        if (deviceId.isBlank()) {
-            onComplete(null)
-            return
-        }
-        
-        db.collection("devices").document(deviceId).get()
-            .addOnSuccessListener { document ->
-                val device = document.toObject(Device::class.java)
-                onComplete(device)
-            }
-            .addOnFailureListener {
-                onComplete(null)
-            }
-    }
-
     fun updateDevice(device: Device) {
         if (device.id.isBlank()) return
-        
+
         db.collection("devices").document(device.id).set(device)
     }
 
     fun deleteDevice(deviceId: String) {
         if (deviceId.isBlank()) return
-        
+
         db.collection("devices").document(deviceId).delete()
     }
 }
