@@ -1,10 +1,13 @@
 package com.xenonware.cloudremote
 
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -17,6 +20,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -41,9 +45,14 @@ import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DoDisturbOn
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,14 +79,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -103,6 +116,7 @@ class MainActivity : ComponentActivity() {
         checkOverlayPermission()
         checkDoNotDisturbPermission()
         checkDeviceAdminPermission()
+        checkNotificationListenerPermission()
 
         startCloudRemoteService(deviceId)
 
@@ -194,6 +208,16 @@ class MainActivity : ComponentActivity() {
             intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Cloud Remote needs this permission to lock the screen remotely.")
             startActivity(intent)
             Toast.makeText(this, "Please grant Device Admin permission for Remote Lock", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun checkNotificationListenerPermission() {
+        val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        val myListener = ComponentName(this, MediaNotificationListener::class.java).flattenToString()
+        if (enabledListeners == null || !enabledListeners.contains(myListener)) {
+            val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
+            startActivity(intent)
+            Toast.makeText(this, "Please grant Notification Listener permission for Media Control", Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -324,6 +348,75 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Media Player
+            if (device.mediaTitle.isNotBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val imageBytes = try {
+                        Base64.decode(device.mediaAlbumArt, Base64.DEFAULT)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val bitmap = imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Album Art",
+                            modifier = Modifier.size(96.dp).clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(modifier = Modifier.size(96.dp).background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(8.dp)))
+                    }
+
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = device.mediaTitle,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = device.mediaArtist,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) }) {
+                                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous")
+                            }
+                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) }) {
+                                Icon(
+                                    if (device.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                    contentDescription = if (device.isPlaying) "Pause" else "Play"
+                                )
+                            }
+                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "next")) }) {
+                                Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
+                            }
+                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "like")) }) {
+                                Icon(Icons.Rounded.Favorite, contentDescription = "Like")
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(RoundedCornerShape(30.dp)).background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer).combinedClickable(onClick = {}, onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }).padding(vertical = 8.dp, horizontal = 16.dp)) {
                 Icon(

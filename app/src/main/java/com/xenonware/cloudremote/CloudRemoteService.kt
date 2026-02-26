@@ -5,10 +5,16 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.session.MediaController
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.GoogleCloudRepository
@@ -37,10 +43,21 @@ class CloudRemoteService : Service() {
 
     @Volatile
     private var lastLocalState: LocalDeviceManager.DeviceState? = null
-    
-    // Track when the last command was applied from remote to avoid loopback
+
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
+
+    private val mediaUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                val title = it.getStringExtra(MediaNotificationListener.EXTRA_TITLE) ?: ""
+                val artist = it.getStringExtra(MediaNotificationListener.EXTRA_ARTIST) ?: ""
+                val albumArt = it.getStringExtra(MediaNotificationListener.EXTRA_ALBUM_ART) ?: ""
+                val isPlaying = it.getBooleanExtra(MediaNotificationListener.EXTRA_IS_PLAYING, false)
+                updateMediaState(title, artist, albumArt, isPlaying)
+            }
+        }
+    }
 
     companion object {
         const val ACTION_STOP = "ACTION_STOP"
@@ -48,7 +65,6 @@ class CloudRemoteService : Service() {
         const val NOTIFICATION_ID = 101
         const val CHANNEL_ID = "CloudRemoteServiceChannel"
         private const val TAG = "CloudRemoteService"
-
         private const val COOLDOWN_MS = 2_000L
         private const val HEARTBEAT_INTERVAL_MS = 30_000L
     }
@@ -60,6 +76,9 @@ class CloudRemoteService : Service() {
         repository = GoogleCloudRepository()
         localDeviceManager = LocalDeviceManager(this)
         createNotificationChannel()
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            mediaUpdateReceiver, IntentFilter(MediaNotificationListener.ACTION_MEDIA_UPDATE)
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -81,89 +100,117 @@ class CloudRemoteService : Service() {
         val deviceId = localDeviceId ?: return
 
         scope.launch {
-            // Wait for user to be authenticated
             while (auth.currentUser == null) {
                 delay(2000)
             }
 
             repository.getDevicesFlow()
-                .catch { e ->
-                     Log.e(TAG, "Error syncing devices", e)
-                }
+                .catch { e -> Log.e(TAG, "Error syncing devices", e) }
                 .collect { devices ->
-                val myDevice = devices.find { it.id == deviceId }
+                    val myDevice = devices.find { it.id == deviceId }
+                    if (myDevice == null) {
+                        currentRemoteDevice = null
+                        return@collect
+                    }
+                    val prev = currentRemoteDevice
+                    currentRemoteDevice = myDevice
+                    var commandApplied = false
 
-                // If device was removed from the list, stop tracking it as current
-                if (myDevice == null) {
-                    currentRemoteDevice = null
-                    return@collect
-                }
-
-                val prev = currentRemoteDevice
-                currentRemoteDevice = myDevice
-
-                var commandApplied = false
-
-                // 1. Sync Media Volume
-                if (prev == null || prev.mediaVolume != myDevice.mediaVolume) {
-                     localDeviceManager.setVolume(myDevice.mediaVolume)
-                     commandApplied = true
-                }
-
-                // 2. Sync Ringer Mode & DND
-                // Note: We only apply if changed to avoid overriding local changes immediately
-                if (prev == null || prev.ringerMode != myDevice.ringerMode) {
-                    localDeviceManager.setRingerMode(myDevice.ringerMode)
-                    commandApplied = true
-                }
-
-                if (prev == null || prev.isDndActive != myDevice.isDndActive) {
-                    localDeviceManager.setDnd(myDevice.isDndActive)
-                    commandApplied = true
-                }
-
-                // 3. Sync Curtain
-                if (prev == null || prev.isCurtainOn != myDevice.isCurtainOn) {
-                    localDeviceManager.setCurtain(myDevice.isCurtainOn)
-                    commandApplied = true
-                }
-                
-                // 4. Sync Lock State
-                if (prev == null || prev.isLocked != myDevice.isLocked) {
-                    if (myDevice.isLocked) {
+                    if (prev?.mediaVolume != myDevice.mediaVolume) {
+                        localDeviceManager.setVolume(myDevice.mediaVolume)
+                        commandApplied = true
+                    }
+                    if (prev?.ringerMode != myDevice.ringerMode) {
+                        localDeviceManager.setRingerMode(myDevice.ringerMode)
+                        commandApplied = true
+                    }
+                    if (prev?.isDndActive != myDevice.isDndActive) {
+                        localDeviceManager.setDnd(myDevice.isDndActive)
+                        commandApplied = true
+                    }
+                    if (prev?.isCurtainOn != myDevice.isCurtainOn) {
+                        localDeviceManager.setCurtain(myDevice.isCurtainOn)
+                        commandApplied = true
+                    }
+                    if (prev?.isLocked != myDevice.isLocked && myDevice.isLocked) {
                         localDeviceManager.lockDevice()
                         commandApplied = true
                     }
-                }
+                    // Handle Media Actions
+                    if (prev?.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
+                        handleMediaAction(myDevice.mediaAction)
+                        // Reset action after handling
+                        repository.updateDevice(myDevice.copy(mediaAction = ""))
+                        commandApplied = true
+                    }
 
-                if (commandApplied) {
-                    lastCommandAppliedAt = System.currentTimeMillis()
+                    if (commandApplied) {
+                        lastCommandAppliedAt = System.currentTimeMillis()
+                    }
                 }
-            }
         }
 
-        // Heartbeat loop to keep "Online" status active
         scope.launch {
             while (isActive) {
                 if (auth.currentUser != null) {
-                    val device = currentRemoteDevice
-                    val state = lastLocalState
-                    if (device != null && state != null) {
-                        syncLocalStateToCloud(device, state, force = true)
+                    currentRemoteDevice?.let { device ->
+                        lastLocalState?.let { state ->
+                            syncLocalStateToCloud(device, state, force = true)
+                        }
                     }
                 }
                 delay(HEARTBEAT_INTERVAL_MS)
             }
         }
 
-        // Observer local changes and push to cloud
         scope.launch {
-             localDeviceManager.observeDeviceState().collectLatest { state ->
+            localDeviceManager.observeDeviceState().collectLatest { state ->
                 lastLocalState = state
-                val cachedDevice = currentRemoteDevice ?: return@collectLatest
-                if (auth.currentUser != null) {
-                     syncLocalStateToCloud(cachedDevice, state, force = false)
+                currentRemoteDevice?.let {
+                    if (auth.currentUser != null) {
+                        syncLocalStateToCloud(it, state, force = false)
+                    }
                 }
+            }
+        }
+    }
+
+    private fun handleMediaAction(action: String) {
+        val componentName = ComponentName(this, MediaNotificationListener::class.java)
+        val mediaController =
+            (getSystemService(Context.MEDIA_SESSION_SERVICE) as android.media.session.MediaSessionManager)
+                .getActiveSessions(componentName).firstOrNull()
+
+        when (action) {
+            "play" -> mediaController?.transportControls?.play()
+            "pause" -> mediaController?.transportControls?.pause()
+            "next" -> mediaController?.transportControls?.skipToNext()
+            "previous" -> mediaController?.transportControls?.skipToPrevious()
+        }
+    }
+
+    private fun updateMediaState(
+        title: String,
+        artist: String,
+        albumArt: String,
+        isPlaying: Boolean
+    ) {
+        currentRemoteDevice?.let {
+            val changed = it.mediaTitle != title ||
+                    it.mediaArtist != artist ||
+                    it.mediaAlbumArt != albumArt ||
+                    it.isPlaying != isPlaying
+
+            if (changed) {
+                val updatedDevice = it.copy(
+                    mediaTitle = title,
+                    mediaArtist = artist,
+                    mediaAlbumArt = albumArt,
+                    isPlaying = isPlaying,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                currentRemoteDevice = updatedDevice
+                repository.updateDevice(updatedDevice)
             }
         }
     }
@@ -173,23 +220,21 @@ class CloudRemoteService : Service() {
         state: LocalDeviceManager.DeviceState,
         force: Boolean
     ) {
-        // Prevent loop: if we just applied a command from cloud, don't echo back immediately
-        // unless it's a periodic heartbeat (force=true).
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
-        if (!force && msSinceCommand < COOLDOWN_MS) {
-            return
-        }
-        
-        // Check what changed locally vs what we think is in the cloud
-        val batteryChanged = cachedDevice.batteryLevel != state.batteryLevel || cachedDevice.isCharging != state.isCharging
-        val volumeChanged = cachedDevice.mediaVolume != state.mediaVolume || cachedDevice.maxMediaVolume != state.maxMediaVolume
-        val ringerChanged = cachedDevice.ringerMode != state.ringerMode || cachedDevice.isDndActive != state.isDndActive
-        val screenChanged = cachedDevice.isScreenOn != state.isScreenOn || cachedDevice.isLocked != state.isLocked
-        val curtainChanged = cachedDevice.isCurtainOn != state.isCurtainOn
+        if (!force && msSinceCommand < COOLDOWN_MS) return
 
-        if (force || batteryChanged || volumeChanged || ringerChanged || screenChanged || curtainChanged) {
-            Log.d(TAG, "Updating cloud: battery=${state.batteryLevel}, locked=${state.isLocked}")
+        val changed = force ||
+                cachedDevice.batteryLevel != state.batteryLevel ||
+                cachedDevice.isCharging != state.isCharging ||
+                cachedDevice.mediaVolume != state.mediaVolume ||
+                cachedDevice.maxMediaVolume != state.maxMediaVolume ||
+                cachedDevice.ringerMode != state.ringerMode ||
+                cachedDevice.isDndActive != state.isDndActive ||
+                cachedDevice.isScreenOn != state.isScreenOn ||
+                cachedDevice.isCurtainOn != state.isCurtainOn ||
+                cachedDevice.isLocked != state.isLocked
 
+        if (changed) {
             val updatedDevice = cachedDevice.copy(
                 batteryLevel = state.batteryLevel,
                 isCharging = state.isCharging,
@@ -198,11 +243,10 @@ class CloudRemoteService : Service() {
                 ringerMode = state.ringerMode,
                 isDndActive = state.isDndActive,
                 isScreenOn = state.isScreenOn,
-                isCurtainOn = state.isCurtainOn, // update status of curtain
+                isCurtainOn = state.isCurtainOn,
                 isLocked = state.isLocked,
                 lastUpdated = System.currentTimeMillis()
             )
-            // Optimistic update
             currentRemoteDevice = updatedDevice
             repository.updateDevice(updatedDevice)
         }
@@ -219,13 +263,17 @@ class CloudRemoteService : Service() {
         val pendingIntent = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
-        return NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle("Cloud Remote Active")
-            .setContentText("Syncing device state...").setSmallIcon(R.mipmap.ic_launcher)
-            .setContentIntent(pendingIntent).setOngoing(true).build()
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Cloud Remote Active")
+            .setContentText("Syncing device state...")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true).build()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mediaUpdateReceiver)
         job.cancel()
         scope.cancel()
     }
