@@ -23,5 +23,13 @@ data class Device(
     val isCurtainOn: Boolean = false,
     @get:PropertyName("isLocked")
     val isLocked: Boolean = false,
-    val lastUpdated: Long = 0L
+    val lastUpdated: Long = 0L,
+
+    // Media properties
+    val mediaTitle: String = "",
+    val mediaArtist: String = "",
+    val mediaAlbumArt: String = "",
+    @get:PropertyName("isPlaying")
+    val isPlaying: Boolean = false,
+    val mediaAction: String = "" // "play", "pause", "next", "previous", "like"
 )
