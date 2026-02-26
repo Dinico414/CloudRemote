@@ -22,6 +22,10 @@ class MediaNotificationListener : NotificationListenerService() {
         const val EXTRA_ARTIST = "extra_artist"
         const val EXTRA_ALBUM_ART = "extra_album_art"
         const val EXTRA_IS_PLAYING = "extra_is_playing"
+        const val EXTRA_CUSTOM_ACTION_1_TITLE = "extra_custom_action_1_title"
+        const val EXTRA_CUSTOM_ACTION_1_ACTION = "extra_custom_action_1_action"
+        const val EXTRA_CUSTOM_ACTION_2_TITLE = "extra_custom_action_2_title"
+        const val EXTRA_CUSTOM_ACTION_2_ACTION = "extra_custom_action_2_action"
     }
 
     private var activeMediaController: MediaController? = null
@@ -83,11 +87,19 @@ class MediaNotificationListener : NotificationListenerService() {
             lastAlbumArt = albumArtString
         }
 
+        val customActions = playbackState?.customActions ?: emptyList()
+        val customAction1 = customActions.getOrNull(0)
+        val customAction2 = customActions.getOrNull(1)
+
         val intent = Intent(ACTION_MEDIA_UPDATE).apply {
             putExtra(EXTRA_TITLE, title)
             putExtra(EXTRA_ARTIST, artist)
             putExtra(EXTRA_ALBUM_ART, lastAlbumArt)
             putExtra(EXTRA_IS_PLAYING, isPlaying)
+            putExtra(EXTRA_CUSTOM_ACTION_1_TITLE, customAction1?.name.toString())
+            putExtra(EXTRA_CUSTOM_ACTION_1_ACTION, customAction1?.action)
+            putExtra(EXTRA_CUSTOM_ACTION_2_TITLE, customAction2?.name.toString())
+            putExtra(EXTRA_CUSTOM_ACTION_2_ACTION, customAction2?.action)
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }

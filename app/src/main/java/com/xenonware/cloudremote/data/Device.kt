@@ -31,5 +31,10 @@ data class Device(
     val mediaAlbumArt: String = "",
     @get:PropertyName("isPlaying")
     val isPlaying: Boolean = false,
-    val mediaAction: String = "" // "play", "pause", "next", "previous", "like"
+    val mediaAction: String = "", // "play", "pause", "next", "previous", "custom1", "custom2"
+
+    val mediaCustomAction1Title: String = "",
+    val mediaCustomAction2Title: String = "",
+    val mediaCustomAction1Action: String = "",
+    val mediaCustomAction2Action: String = ""
 )

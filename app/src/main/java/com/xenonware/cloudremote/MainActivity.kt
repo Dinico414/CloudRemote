@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DoDisturbOn
-import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
@@ -67,6 +66,7 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -90,7 +90,6 @@ import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import coil.compose.AsyncImage
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
@@ -393,7 +392,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) }) {
@@ -408,8 +407,21 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                             IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "next")) }) {
                                 Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
                             }
-                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "like")) }) {
-                                Icon(Icons.Rounded.Favorite, contentDescription = "Like")
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (device.mediaCustomAction1Title.isNotBlank()) {
+                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
+                                    Text(device.mediaCustomAction1Title)
+                                }
+                            }
+                            if (device.mediaCustomAction2Title.isNotBlank()) {
+                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
+                                    Text(device.mediaCustomAction2Title)
+                                }
                             }
                         }
                     }
