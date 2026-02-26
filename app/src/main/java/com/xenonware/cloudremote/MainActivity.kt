@@ -11,6 +11,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,22 +33,28 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DoDisturbOn
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -54,6 +68,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -87,6 +102,7 @@ class MainActivity : ComponentActivity() {
 
         checkOverlayPermission()
         checkDoNotDisturbPermission()
+        checkDeviceAdminPermission()
 
         startCloudRemoteService(deviceId)
 
@@ -149,6 +165,19 @@ class MainActivity : ComponentActivity() {
                 "Please grant Do Not Disturb permission for Ringer Mode control",
                 Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private fun checkDeviceAdminPermission() {
+        val devicePolicyManager = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        val componentName = android.content.ComponentName(this, AdminReceiver::class.java)
+
+        if (!devicePolicyManager.isAdminActive(componentName)) {
+            val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+            intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+            intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Cloud Remote needs this permission to lock the screen remotely.")
+            startActivity(intent)
+            Toast.makeText(this, "Please grant Device Admin permission for Remote Lock", Toast.LENGTH_LONG).show()
         }
     }
 }
@@ -244,6 +273,7 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) -> Unit) {
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -257,7 +287,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
     val isOnline = (currentTime - device.lastUpdated) < 60_000 // 1 minute threshold
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -272,7 +302,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
-                        imageVector = Icons.Default.Circle,
+                        imageVector = Icons.Rounded.Circle,
                         contentDescription = if (isOnline) "Online" else "Offline",
                         tint = if (isOnline) Color.Green else Color.Gray,
                         modifier = Modifier.size(12.dp)
@@ -290,16 +320,15 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Status: ${if (isOnline) "Online" else "Offline"}")
-                Spacer(modifier = Modifier.width(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(RoundedCornerShape(30.dp)).background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer).combinedClickable(onClick = {}, onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }).padding(vertical = 8.dp, horizontal = 16.dp)) {
                 Icon(
-                    imageVector = if (device.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                    imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     contentDescription = if (device.isLocked) "Locked" else "Unlocked",
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (device.isLocked) "Locked" else "Unlocked")
+                Text(if (device.isLocked) "Locked" else "Unlocked", color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -315,6 +344,47 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     )
                 }
             }
+            
+            val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
+            val blinkColor by infiniteTransition.animateColor(
+                initialValue = MaterialTheme.colorScheme.error,
+                targetValue = MaterialTheme.colorScheme.errorContainer,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(500),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "blink"
+            )
+
+            val progressColor = if (device.isCharging) {
+                Color.Green
+            } else if (device.batteryLevel <= 5) {
+                blinkColor
+            } else if (device.batteryLevel <= 20) {
+                MaterialTheme.colorScheme.error
+            } else if (device.batteryLevel >= 100) {
+                Color.Green
+            }
+            else {
+                MaterialTheme.colorScheme.primary
+            }
+
+            val trackColor = if (!device.isCharging && device.batteryLevel <= 20) {
+                MaterialTheme.colorScheme.errorContainer
+            } else {
+                ProgressIndicatorDefaults.linearTrackColor
+            }
+
+            LinearProgressIndicator(
+                progress = { device.batteryLevel / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(vertical = 8.dp),
+                color = progressColor,
+                trackColor = trackColor,
+            )
+
             Text("Screen: ${if (device.isScreenOn) "On" else "Off"}")
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -327,37 +397,41 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // DND toggle — independent of ringerMode
                 SoundModeIconButton(
                     icon = Icons.Rounded.DoDisturbOn,
-                    label = "DND",
                     isActive = device.isDndActive,
                     activeColor = MaterialTheme.colorScheme.error,
-                    onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) })
+                    onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) },
+                    modifier = Modifier.weight(1f)
+                )
                 // Silent: ringerMode = 0
                 SoundModeIconButton(
                     icon = Icons.AutoMirrored.Rounded.VolumeOff,
-                    label = "Silent",
                     isActive = device.ringerMode == 0,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 0)) })
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 0)) },
+                    modifier = Modifier.weight(1f)
+                )
                 // Vibrate: ringerMode = 1
                 SoundModeIconButton(
-                    icon = Icons.Default.Vibration,
-                    label = "Vibrate",
+                    icon = Icons.Rounded.Vibration,
                     isActive = device.ringerMode == 1,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 1)) })
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 1)) },
+                    modifier = Modifier.weight(1f)
+                )
                 // Sound: ringerMode = 2
                 SoundModeIconButton(
                     icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    label = "Sound",
                     isActive = device.ringerMode == 2,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 2)) })
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 2)) },
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -390,28 +464,26 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 @Composable
 fun SoundModeIconButton(
     icon: ImageVector,
-    label: String,
     isActive: Boolean,
     activeColor: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         IconButton(
             onClick = onClick,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isActive) activeColor else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                containerColor = if (isActive) activeColor else MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
             )
         ) {
             Icon(
-                imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp)
+                imageVector = icon, contentDescription = "", modifier = Modifier.size(24.dp)
             )
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (isActive) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
