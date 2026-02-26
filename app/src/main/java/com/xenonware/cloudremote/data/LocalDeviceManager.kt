@@ -10,6 +10,9 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.BatteryManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
@@ -17,8 +20,8 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.TextView
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -27,15 +30,20 @@ class LocalDeviceManager(private val context: Context) {
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var curtainView: View? = null
     private var isCurtainVisible = false
     private var lastKnownRingVolume = -1
     private var onCurtainStateChanged: (() -> Unit)? = null
+
+    companion object {
+        private const val TAG = "LocalDeviceManager"
+    }
 
     data class DeviceState(
         val batteryLevel: Int = 0,
@@ -132,7 +140,7 @@ class LocalDeviceManager(private val context: Context) {
             val hasPerm = notificationManager.isNotificationPolicyAccessGranted
 
             if (!hasPerm) {
-                Log.w("LocalDeviceManager", "setRingerMode: DND permission not granted")
+                Log.w(TAG, "setRingerMode: DND permission not granted")
                 return
             }
 
@@ -146,7 +154,7 @@ class LocalDeviceManager(private val context: Context) {
                     }
                     audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
                     Log.d(
-                        "LocalDeviceManager", "Ringer → SILENT (actual=${audioManager.ringerMode})"
+                        TAG, "Ringer → SILENT (actual=${audioManager.ringerMode})"
                     )
                 }
 
@@ -159,7 +167,7 @@ class LocalDeviceManager(private val context: Context) {
                         audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
                     }
                     audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-                    Log.d("LocalDeviceManager", "Ringer → VIBRATE")
+                    Log.d(TAG, "Ringer → VIBRATE")
                 }
 
                 2 -> { // Sound — restore ring volume
@@ -169,7 +177,7 @@ class LocalDeviceManager(private val context: Context) {
                     else (maxVol / 2).coerceAtLeast(1)
                     audioManager.setStreamVolume(AudioManager.STREAM_RING, targetVol, 0)
                     audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetVol, 0)
-                    Log.d("LocalDeviceManager", "Ringer → SOUND (volume=$targetVol)")
+                    Log.d(TAG, "Ringer → SOUND (volume=$targetVol)")
                 }
             }
         } catch (e: Exception) {
@@ -180,14 +188,14 @@ class LocalDeviceManager(private val context: Context) {
     fun setDnd(active: Boolean) {
         try {
             if (!notificationManager.isNotificationPolicyAccessGranted) {
-                Log.w("LocalDeviceManager", "setDnd: permission not granted")
+                Log.w(TAG, "setDnd: permission not granted")
                 return
             }
             val target = if (active) NotificationManager.INTERRUPTION_FILTER_NONE
             else NotificationManager.INTERRUPTION_FILTER_ALL
             notificationManager.setInterruptionFilter(target)
             Log.d(
-                "LocalDeviceManager",
+                TAG,
                 "DND → ${if (active) "ON (FILTER_NONE)" else "OFF (FILTER_ALL)"}"
             )
         } catch (e: Exception) {
@@ -196,66 +204,92 @@ class LocalDeviceManager(private val context: Context) {
     }
 
     fun setCurtain(enabled: Boolean) {
-        if (enabled) showCurtain() else hideCurtain()
+        mainHandler.post {
+            Log.d(TAG, "setCurtain: $enabled, currentVisible=$isCurtainVisible")
+            if (enabled) showCurtain() else hideCurtain()
+        }
     }
 
     private fun showCurtain() {
-        if (isCurtainVisible || !Settings.canDrawOverlays(context)) return
+        if (isCurtainVisible) {
+            Log.d(TAG, "Curtain already visible")
+            return
+        }
+        if (!Settings.canDrawOverlays(context)) {
+            Log.e(TAG, "Overlay permission missing, cannot show curtain")
+            return
+        }
+
         try {
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_FULLSCREEN or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_FULLSCREEN or
+                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, // Removed FLAG_NOT_FOCUSABLE to allow key interception
                 PixelFormat.TRANSLUCENT
-            ).also {
-                it.layoutInDisplayCutoutMode =
+            )
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                params.layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
 
             val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                    if (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_HOME) return true
+                    if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+                        return true // Consume BACK key
+                    }
                     return super.dispatchKeyEvent(event)
                 }
             }
             layout.setBackgroundColor(Color.BLACK)
-            @Suppress("DEPRECATION")
-            layout.systemUiVisibility = (View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+            layout.isClickable = true
+            layout.isFocusable = true
+            layout.isFocusableInTouchMode = true
 
-            val unlockButton = Button(context).apply {
-                text = "Unlock"
+            val text = TextView(context).apply {
+                setText("Curtain Active")
                 setTextColor(Color.DKGRAY)
-                setBackgroundColor(Color.TRANSPARENT)
-                setOnClickListener { hideCurtain() }
+                gravity = Gravity.CENTER
             }
             layout.addView(
-                unlockButton, FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                    topMargin = 100
-                })
+                text, FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER
+                )
+            )
 
             windowManager.addView(layout, params)
             curtainView = layout
             isCurtainVisible = true
             onCurtainStateChanged?.invoke()
+            Log.d(TAG, "Curtain shown successfully")
         } catch (e: Exception) {
+            Log.e(TAG, "Error showing curtain", e)
             e.printStackTrace()
         }
     }
 
     private fun hideCurtain() {
-        curtainView?.let {
+        if (curtainView == null && !isCurtainVisible) {
+             Log.d(TAG, "Curtain already hidden")
+             return
+        }
+
+        curtainView?.let { view ->
             try {
-                windowManager.removeView(it)
+                windowManager.removeView(view)
+                Log.d(TAG, "Curtain removed")
             } catch (e: Exception) {
+                Log.e(TAG, "Error removing curtain view", e)
                 e.printStackTrace()
             }
-            curtainView = null
-            isCurtainVisible = false
-            onCurtainStateChanged?.invoke()
         }
+        curtainView = null
+        isCurtainVisible = false
+        onCurtainStateChanged?.invoke()
     }
 }
