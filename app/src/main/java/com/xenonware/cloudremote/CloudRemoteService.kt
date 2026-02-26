@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.GoogleCloudRepository
@@ -31,6 +32,9 @@ class CloudRemoteService : Service() {
     private var localDeviceId: String? = null
 
     @Volatile
+    private var lastLocalState: LocalDeviceManager.DeviceState? = null
+
+    @Volatile
     private var lastCommandAppliedAt: Long = 0L
 
     companion object {
@@ -38,6 +42,7 @@ class CloudRemoteService : Service() {
         const val EXTRA_DEVICE_ID = "EXTRA_DEVICE_ID"
         const val NOTIFICATION_ID = 101
         const val CHANNEL_ID = "CloudRemoteServiceChannel"
+        private const val TAG = "CloudRemoteService"
 
         private const val COOLDOWN_MS = 3_000L
 
@@ -107,34 +112,49 @@ class CloudRemoteService : Service() {
                 if (commandApplied) {
                     lastCommandAppliedAt = System.currentTimeMillis()
                 }
+
+                // Try syncing latest local state immediately after applying commands or receiving update
+                lastLocalState?.let { state ->
+                    syncLocalStateToCloud(myDevice, state)
+                }
             }
         }
 
 
         scope.launch {
             localDeviceManager.observeDeviceState().collectLatest { state ->
-
-                val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
-                if (msSinceCommand < COOLDOWN_MS) return@collectLatest
-
+                lastLocalState = state
                 val cachedDevice = currentRemoteDevice ?: return@collectLatest
-
-                val needsUpdate =
-                    cachedDevice.batteryLevel != state.batteryLevel || cachedDevice.isCharging != state.isCharging || cachedDevice.mediaVolume != state.mediaVolume || cachedDevice.maxMediaVolume != state.maxMediaVolume || cachedDevice.isScreenOn != state.isScreenOn || cachedDevice.isCurtainOn != state.isCurtainOn
-
-                if (needsUpdate) {
-                    val updatedDevice = cachedDevice.copy(
-                        batteryLevel = state.batteryLevel,
-                        isCharging = state.isCharging,
-                        mediaVolume = state.mediaVolume,
-                        maxMediaVolume = state.maxMediaVolume,
-                        isScreenOn = state.isScreenOn,
-                        isCurtainOn = state.isCurtainOn
-                    )
-                    currentRemoteDevice = updatedDevice
-                    repository.updateDevice(updatedDevice)
-                }
+                syncLocalStateToCloud(cachedDevice, state)
             }
+        }
+    }
+
+    private fun syncLocalStateToCloud(cachedDevice: Device, state: LocalDeviceManager.DeviceState) {
+        val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
+        if (msSinceCommand < COOLDOWN_MS) return
+
+        val needsUpdate =
+            cachedDevice.batteryLevel != state.batteryLevel ||
+            cachedDevice.isCharging != state.isCharging ||
+            cachedDevice.mediaVolume != state.mediaVolume ||
+            cachedDevice.maxMediaVolume != state.maxMediaVolume ||
+            cachedDevice.isScreenOn != state.isScreenOn ||
+            cachedDevice.isCurtainOn != state.isCurtainOn
+
+        if (needsUpdate) {
+            Log.d(TAG, "Updating cloud: charging=${state.isCharging}, battery=${state.batteryLevel}")
+            val updatedDevice = cachedDevice.copy(
+                batteryLevel = state.batteryLevel,
+                isCharging = state.isCharging,
+                mediaVolume = state.mediaVolume,
+                maxMediaVolume = state.maxMediaVolume,
+                isScreenOn = state.isScreenOn,
+                isCurtainOn = state.isCurtainOn
+            )
+            // Optimistic update of local cache to prevent redundant updates
+            currentRemoteDevice = updatedDevice
+            repository.updateDevice(updatedDevice)
         }
     }
 
