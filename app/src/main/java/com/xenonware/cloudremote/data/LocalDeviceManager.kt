@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote.data
 
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -29,6 +30,7 @@ class LocalDeviceManager(private val context: Context) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
 
     private var curtainView: View? = null
     private var isCurtainVisible = false
@@ -44,6 +46,7 @@ class LocalDeviceManager(private val context: Context) {
         val isDndActive: Boolean = false,
         val isScreenOn: Boolean = true,
         val isCurtainOn: Boolean = false,
+        val isLocked: Boolean = false,
     )
 
     fun observeDeviceState(): Flow<DeviceState> = callbackFlow {
@@ -56,6 +59,7 @@ class LocalDeviceManager(private val context: Context) {
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
             addAction("android.media.VOLUME_CHANGED_ACTION")
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
@@ -95,6 +99,8 @@ class LocalDeviceManager(private val context: Context) {
                 notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
             } else false
 
+            val isLocked = keyguardManager.isKeyguardLocked
+
             DeviceState(
                 batteryLevel,
                 isCharging,
@@ -103,7 +109,8 @@ class LocalDeviceManager(private val context: Context) {
                 ringerMode,
                 isDndActive,
                 powerManager.isInteractive,
-                isCurtainVisible
+                isCurtainVisible,
+                isLocked
             )
         } catch (e: Exception) {
             e.printStackTrace()
