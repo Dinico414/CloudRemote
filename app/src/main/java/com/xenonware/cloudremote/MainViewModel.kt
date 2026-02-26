@@ -17,24 +17,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GoogleCloudRepository()
     private val auth = FirebaseAuth.getInstance()
-    // LocalDeviceManager is now handled by CloudRemoteService for background sync.
-    // We only keep it here if we needed direct control, but for now we rely on the Service.
+
 
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(auth.currentUser)
+    private val _currentUser = MutableStateFlow(auth.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser
 
     var localDeviceId: String = ""
     var localDeviceName: String = ""
 
     init {
-        // Observe Firestore for changes (Remote -> UI)
         viewModelScope.launch {
-            repository.getDevicesFlow()
-                .catch { e -> e.printStackTrace() }
-                .collect { deviceList ->
+            repository.getDevicesFlow().catch { e -> e.printStackTrace() }.collect { deviceList ->
                     _devices.value = deviceList
                 }
         }
@@ -43,16 +39,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleCurrentDevice() {
         val currentDevices = _devices.value
         val isAdded = currentDevices.any { it.id == localDeviceId }
-        
+
         if (isAdded) {
             repository.deleteDevice(localDeviceId)
         } else {
-            // Initial Add
             val newDevice = Device(
                 id = localDeviceId,
                 name = localDeviceName,
-                // Defaults, Service will update these shortly
-                batteryLevel = 0, 
+                batteryLevel = 0,
                 mediaVolume = 0,
                 isDeviceOn = true,
                 isScreenOn = true,
@@ -68,11 +62,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun signInWithGoogle(idToken: String) {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
-        auth.signInWithCredential(credential)
-            .addOnSuccessListener { result ->
+        auth.signInWithCredential(credential).addOnSuccessListener { result ->
                 _currentUser.value = result.user
-            }
-            .addOnFailureListener { e ->
+            }.addOnFailureListener { e ->
                 e.printStackTrace()
             }
     }

@@ -1,9 +1,7 @@
 package com.xenonware.cloudremote
 
 import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -27,9 +25,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.DoNotDisturb
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Button
@@ -54,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -91,10 +90,13 @@ class MainActivity : ComponentActivity() {
                     if (currentUser == null) {
                         LoginScreen(
                             modifier = Modifier.padding(innerPadding),
-                            onTokenReceived = { token -> viewModel.signInWithGoogle(token) }
-                        )
+                            onTokenReceived = { token -> viewModel.signInWithGoogle(token) })
                     } else {
-                        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .fillMaxSize()
+                        ) {
                             Button(
                                 onClick = { viewModel.signOut() },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -102,8 +104,7 @@ class MainActivity : ComponentActivity() {
                                 Text("Sign Out (${currentUser?.email})")
                             }
                             DeviceControlScreen(
-                                viewModel = viewModel,
-                                modifier = Modifier.weight(1f)
+                                viewModel = viewModel, modifier = Modifier.weight(1f)
                             )
                         }
                     }
@@ -115,32 +116,31 @@ class MainActivity : ComponentActivity() {
     private fun startCloudRemoteService(deviceId: String) {
         val intent = Intent(this, CloudRemoteService::class.java)
         intent.putExtra(CloudRemoteService.EXTRA_DEVICE_ID, deviceId)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        startForegroundService(intent)
     }
 
     private fun checkOverlayPermission() {
         if (!Settings.canDrawOverlays(this)) {
             val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()
             )
             startActivity(intent)
-            Toast.makeText(this, "Please grant Overlay permission for Curtain feature", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this, "Please grant Overlay permission for Curtain feature", Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     private fun checkDoNotDisturbPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (!notificationManager.isNotificationPolicyAccessGranted) {
-                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                startActivity(intent)
-                Toast.makeText(this, "Please grant Do Not Disturb permission for Ringer Mode control", Toast.LENGTH_LONG).show()
-            }
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if (!notificationManager.isNotificationPolicyAccessGranted) {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            startActivity(intent)
+            Toast.makeText(
+                this,
+                "Please grant Do Not Disturb permission for Ringer Mode control",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }
@@ -151,14 +151,19 @@ fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit
     val coroutineScope = rememberCoroutineScope()
 
     val webClientId = remember(context) {
-        val resId = context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
+        val resId =
+            context.resources.getIdentifier("default_web_client_id", "string", context.packageName)
         if (resId != 0) context.resources.getString(resId) else null
     }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Button(onClick = {
             if (webClientId == null) {
-                Toast.makeText(context, "Web Client ID not found. Ensure google-services.json is valid.", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    "Web Client ID not found. Ensure google-services.json is valid.",
+                    Toast.LENGTH_LONG
+                ).show()
                 Log.e("Auth", "default_web_client_id is missing.")
                 return@Button
             }
@@ -167,21 +172,19 @@ fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit
                 try {
                     val credentialManager = CredentialManager.create(context)
 
-                    val googleIdOption = GetGoogleIdOption.Builder()
-                        .setFilterByAuthorizedAccounts(false)
-                        .setServerClientId(webClientId)
-                        .setAutoSelectEnabled(true)
-                        .build()
+                    val googleIdOption =
+                        GetGoogleIdOption.Builder().setFilterByAuthorizedAccounts(false)
+                            .setServerClientId(webClientId).setAutoSelectEnabled(true).build()
 
-                    val request = GetCredentialRequest.Builder()
-                        .addCredentialOption(googleIdOption)
-                        .build()
+                    val request =
+                        GetCredentialRequest.Builder().addCredentialOption(googleIdOption).build()
 
                     val result = credentialManager.getCredential(context, request)
                     val credential = result.credential
 
                     if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        val googleIdTokenCredential =
+                            GoogleIdTokenCredential.createFrom(credential.data)
                         onTokenReceived(googleIdTokenCredential.idToken)
                     } else {
                         Log.e("Auth", "Unexpected credential type: ${credential.type}")
@@ -206,7 +209,9 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
 
         Button(
             onClick = { viewModel.toggleCurrentDevice() },
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
         ) {
             Text(if (isLocalDeviceAdded) "Remove this device from sync" else "Add this device to sync")
         }
@@ -219,15 +224,13 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
         )
 
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
+            verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()
         ) {
             items(devices) { device ->
                 DeviceItem(
                     device = device,
                     isLocalDevice = device.id == viewModel.localDeviceId,
-                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
-                )
+                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) })
             }
         }
     }
@@ -258,19 +261,21 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Battery & Charging
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Battery: ${device.batteryLevel}%")
                 if (device.isCharging) {
                     Spacer(modifier = Modifier.width(4.dp))
-                    Icon(imageVector = Icons.Rounded.FlashOn, tint = MaterialTheme.colorScheme.onSurface, contentDescription = "")
+                    Icon(
+                        imageVector = Icons.Rounded.FlashOn,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        contentDescription = ""
+                    )
                 }
             }
             Text("Screen: ${if (device.isScreenOn) "On" else "Off"}")
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ── 4-icon toggle row: DND | Silent | Vibrate | Sound ──
             Text(
                 text = "Sound Mode:",
                 style = MaterialTheme.typography.bodyMedium,
@@ -288,32 +293,28 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     label = "DND",
                     isActive = device.isDndActive,
                     activeColor = MaterialTheme.colorScheme.error,
-                    onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) }
-                )
+                    onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) })
                 // Silent: ringerMode = 0
                 SoundModeIconButton(
-                    icon = Icons.Default.VolumeOff,
+                    icon = Icons.AutoMirrored.Filled.VolumeOff,
                     label = "Silent",
                     isActive = device.ringerMode == 0,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 0)) }
-                )
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 0)) })
                 // Vibrate: ringerMode = 1
                 SoundModeIconButton(
                     icon = Icons.Default.Vibration,
                     label = "Vibrate",
                     isActive = device.ringerMode == 1,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 1)) }
-                )
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 1)) })
                 // Sound: ringerMode = 2
                 SoundModeIconButton(
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.AutoMirrored.Filled.VolumeUp,
                     label = "Sound",
                     isActive = device.ringerMode == 2,
                     activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 2)) }
-                )
+                    onClick = { onUpdateDevice(device.copy(ringerMode = 2)) })
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -330,7 +331,9 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             // Curtain toggle
             Button(
                 onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
-                modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
@@ -341,16 +344,13 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
     }
 }
 
-/**
- * A compact icon button that shows a filled background when active.
- */
 @Composable
 fun SoundModeIconButton(
     icon: ImageVector,
     label: String,
     isActive: Boolean,
-    activeColor: androidx.compose.ui.graphics.Color,
-    onClick: () -> Unit
+    activeColor: Color,
+    onClick: () -> Unit,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         IconButton(
@@ -362,9 +362,7 @@ fun SoundModeIconButton(
             )
         ) {
             Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(24.dp)
+                imageVector = icon, contentDescription = label, modifier = Modifier.size(24.dp)
             )
         }
         Text(
