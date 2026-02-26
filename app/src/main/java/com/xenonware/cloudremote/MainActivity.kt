@@ -116,16 +116,32 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.padding(innerPadding),
                             onTokenReceived = { token -> viewModel.signInWithGoogle(token) })
                     } else {
+                        val devices by viewModel.devices.collectAsState()
+                        val isLocalDeviceAdded = devices.any { it.id == viewModel.localDeviceId }
                         Column(
                             modifier = Modifier
                                 .padding(innerPadding)
                                 .fillMaxSize()
                         ) {
-                            Button(
-                                onClick = { viewModel.signOut() },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Sign Out (${currentUser?.email})")
+                                Button(
+                                    onClick = { viewModel.signOut() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Sign Out")
+                                }
+                                Button(
+                                    onClick = { viewModel.toggleCurrentDevice() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (isLocalDeviceAdded) "Remove device" else "Add device")
+                                }
                             }
                             DeviceControlScreen(
                                 viewModel = viewModel, modifier = Modifier.weight(1f)
@@ -240,19 +256,8 @@ fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit
 @Composable
 fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel) {
     val devices by viewModel.devices.collectAsState()
-    val isLocalDeviceAdded = devices.any { it.id == viewModel.localDeviceId }
 
     Column(modifier = modifier.padding(horizontal = 16.dp)) {
-
-        Button(
-            onClick = { viewModel.toggleCurrentDevice() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        ) {
-            Text(if (isLocalDeviceAdded) "Remove this device from sync" else "Add this device to sync")
-        }
-
         Text(
             text = "Connected Devices:",
             style = MaterialTheme.typography.titleMedium,
@@ -363,7 +368,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             } else if (device.batteryLevel <= 20) {
                 MaterialTheme.colorScheme.error
             } else if (device.batteryLevel >= 100) {
-                Color.Green
+                MaterialTheme.colorScheme.tertiary
             }
             else {
                 MaterialTheme.colorScheme.primary
