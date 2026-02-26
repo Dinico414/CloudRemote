@@ -80,7 +80,14 @@ class CloudRemoteService : Service() {
 
         scope.launch {
             repository.getDevicesFlow().collect { devices ->
-                val myDevice = devices.find { it.id == deviceId } ?: return@collect
+                val myDevice = devices.find { it.id == deviceId }
+
+                if (myDevice == null) {
+                    // Device was removed from sync list, stop syncing
+                    currentRemoteDevice = null
+                    return@collect
+                }
+
                 val prev = currentRemoteDevice
                 currentRemoteDevice = myDevice
 

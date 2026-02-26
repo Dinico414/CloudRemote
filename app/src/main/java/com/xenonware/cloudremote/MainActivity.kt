@@ -44,10 +44,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +67,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.ui.theme.CloudRemoteTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -241,7 +245,16 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
 
 @Composable
 fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) -> Unit) {
-    val isOnline = (System.currentTimeMillis() - device.lastUpdated) < 60_000 // 1 minute threshold
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            currentTime = System.currentTimeMillis()
+        }
+    }
+
+    val isOnline = (currentTime - device.lastUpdated) < 60_000 // 1 minute threshold
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
