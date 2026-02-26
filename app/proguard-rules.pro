@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep the Device data class to prevent Firestore deserialization issues
+-keep class com.xenonware.cloudremote.data.Device { *; }

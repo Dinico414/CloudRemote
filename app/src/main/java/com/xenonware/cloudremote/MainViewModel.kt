@@ -1,6 +1,7 @@
 package com.xenonware.cloudremote
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -8,11 +9,15 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.GoogleCloudRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GoogleCloudRepository()
@@ -30,9 +35,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch {
-            repository.getDevicesFlow().catch { e -> e.printStackTrace() }.collect { deviceList ->
-                    _devices.value = deviceList
+            _currentUser.flatMapLatest { user ->
+                if (user != null) {
+                    repository.getDevicesFlow().catch { e ->
+                        Log.e("MainViewModel", "Error fetching devices", e)
+                        emit(emptyList())
+                    }
+                } else {
+                    flowOf(emptyList())
                 }
+            }.collect { deviceList ->
+                _devices.value = deviceList
+            }
         }
     }
 

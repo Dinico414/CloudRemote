@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +67,7 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
 import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.ui.theme.CloudRemoteTheme
+import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -90,7 +91,7 @@ class MainActivity : ComponentActivity() {
         startCloudRemoteService(deviceId)
 
         setContent {
-            CloudRemoteTheme {
+            XenonTheme(darkTheme = isSystemInDarkTheme()) {
                 val currentUser by viewModel.currentUser.collectAsState()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
