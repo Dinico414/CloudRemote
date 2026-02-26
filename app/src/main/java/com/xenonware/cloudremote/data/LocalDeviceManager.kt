@@ -2,7 +2,9 @@ package com.xenonware.cloudremote.data
 
 import android.app.KeyguardManager
 import android.app.NotificationManager
+import android.app.admin.DevicePolicyManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -22,6 +24,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
+import com.xenonware.cloudremote.AdminReceiver
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -34,7 +37,9 @@ class LocalDeviceManager(private val context: Context) {
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val adminComponent = ComponentName(context, AdminReceiver::class.java)
 
     private var curtainView: View? = null
     private var isCurtainVisible = false
@@ -291,5 +296,18 @@ class LocalDeviceManager(private val context: Context) {
         curtainView = null
         isCurtainVisible = false
         onCurtainStateChanged?.invoke()
+    }
+
+    fun lockDevice() {
+        try {
+            if (devicePolicyManager.isAdminActive(adminComponent)) {
+                devicePolicyManager.lockNow()
+                Log.d(TAG, "Device Locked via DevicePolicyManager")
+            } else {
+                Log.w(TAG, "lockDevice: Admin permission not active")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

@@ -127,6 +127,14 @@ class CloudRemoteService : Service() {
                     localDeviceManager.setCurtain(myDevice.isCurtainOn)
                     commandApplied = true
                 }
+                
+                // 4. Sync Lock State
+                if (prev == null || prev.isLocked != myDevice.isLocked) {
+                    if (myDevice.isLocked) {
+                        localDeviceManager.lockDevice()
+                        commandApplied = true
+                    }
+                }
 
                 if (commandApplied) {
                     lastCommandAppliedAt = System.currentTimeMillis()
