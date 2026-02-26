@@ -54,7 +54,11 @@ class CloudRemoteService : Service() {
                 val artist = it.getStringExtra(MediaNotificationListener.EXTRA_ARTIST) ?: ""
                 val albumArt = it.getStringExtra(MediaNotificationListener.EXTRA_ALBUM_ART) ?: ""
                 val isPlaying = it.getBooleanExtra(MediaNotificationListener.EXTRA_IS_PLAYING, false)
-                updateMediaState(title, artist, albumArt, isPlaying)
+                val customAction1Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_TITLE) ?: ""
+                val customAction1Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_ACTION) ?: ""
+                val customAction2Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_TITLE) ?: ""
+                val customAction2Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_ACTION) ?: ""
+                updateMediaState(title, artist, albumArt, isPlaying, customAction1Title, customAction1Action, customAction2Title, customAction2Action)
             }
         }
     }
@@ -186,6 +190,12 @@ class CloudRemoteService : Service() {
             "pause" -> mediaController?.transportControls?.pause()
             "next" -> mediaController?.transportControls?.skipToNext()
             "previous" -> mediaController?.transportControls?.skipToPrevious()
+            "custom1" -> currentRemoteDevice?.mediaCustomAction1Action?.let {
+                mediaController?.transportControls?.sendCustomAction(it, null)
+            }
+            "custom2" -> currentRemoteDevice?.mediaCustomAction2Action?.let {
+                mediaController?.transportControls?.sendCustomAction(it, null)
+            }
         }
     }
 
@@ -193,13 +203,19 @@ class CloudRemoteService : Service() {
         title: String,
         artist: String,
         albumArt: String,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        customAction1Title: String,
+        customAction1Action: String,
+        customAction2Title: String,
+        customAction2Action: String
     ) {
         currentRemoteDevice?.let {
             val changed = it.mediaTitle != title ||
                     it.mediaArtist != artist ||
                     it.mediaAlbumArt != albumArt ||
-                    it.isPlaying != isPlaying
+                    it.isPlaying != isPlaying ||
+                    it.mediaCustomAction1Title != customAction1Title ||
+                    it.mediaCustomAction2Title != customAction2Title
 
             if (changed) {
                 val updatedDevice = it.copy(
@@ -207,6 +223,10 @@ class CloudRemoteService : Service() {
                     mediaArtist = artist,
                     mediaAlbumArt = albumArt,
                     isPlaying = isPlaying,
+                    mediaCustomAction1Title = customAction1Title,
+                    mediaCustomAction1Action = customAction1Action,
+                    mediaCustomAction2Title = customAction2Title,
+                    mediaCustomAction2Action = customAction2Action,
                     lastUpdated = System.currentTimeMillis()
                 )
                 currentRemoteDevice = updatedDevice
