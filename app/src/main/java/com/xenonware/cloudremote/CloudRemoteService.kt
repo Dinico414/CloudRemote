@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.google.firebase.auth.FirebaseAuth
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.GoogleCloudRepository
 import com.xenonware.cloudremote.data.LocalDeviceManager
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -28,13 +30,15 @@ class CloudRemoteService : Service() {
 
     private lateinit var repository: GoogleCloudRepository
     private lateinit var localDeviceManager: LocalDeviceManager
+    private val auth = FirebaseAuth.getInstance()
 
     private var currentRemoteDevice: Device? = null
     private var localDeviceId: String? = null
 
     @Volatile
     private var lastLocalState: LocalDeviceManager.DeviceState? = null
-
+    
+    // Track when the last command was applied from remote to avoid loopback
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
 
@@ -45,9 +49,7 @@ class CloudRemoteService : Service() {
         const val CHANNEL_ID = "CloudRemoteServiceChannel"
         private const val TAG = "CloudRemoteService"
 
-        private const val COOLDOWN_MS = 3_000L
-
-        private const val RINGER_SETTLE_MS = 400L
+        private const val COOLDOWN_MS = 2_000L
         private const val HEARTBEAT_INTERVAL_MS = 30_000L
     }
 
@@ -79,11 +81,20 @@ class CloudRemoteService : Service() {
         val deviceId = localDeviceId ?: return
 
         scope.launch {
-            repository.getDevicesFlow().collect { devices ->
+            // Wait for user to be authenticated
+            while (auth.currentUser == null) {
+                delay(2000)
+            }
+
+            repository.getDevicesFlow()
+                .catch { e ->
+                     Log.e(TAG, "Error syncing devices", e)
+                }
+                .collect { devices ->
                 val myDevice = devices.find { it.id == deviceId }
 
+                // If device was removed from the list, stop tracking it as current
                 if (myDevice == null) {
-                    // Device was removed from sync list, stop syncing
                     currentRemoteDevice = null
                     return@collect
                 }
@@ -93,26 +104,25 @@ class CloudRemoteService : Service() {
 
                 var commandApplied = false
 
+                // 1. Sync Media Volume
                 if (prev == null || prev.mediaVolume != myDevice.mediaVolume) {
-                    localDeviceManager.setVolume(myDevice.mediaVolume)
+                     localDeviceManager.setVolume(myDevice.mediaVolume)
+                     commandApplied = true
+                }
+
+                // 2. Sync Ringer Mode & DND
+                // Note: We only apply if changed to avoid overriding local changes immediately
+                if (prev == null || prev.ringerMode != myDevice.ringerMode) {
+                    localDeviceManager.setRingerMode(myDevice.ringerMode)
                     commandApplied = true
                 }
 
-                val ringerChanged = prev == null || prev.ringerMode != myDevice.ringerMode
-                val dndChanged = prev == null || prev.isDndActive != myDevice.isDndActive
-
-                if (ringerChanged || dndChanged) {
-                    commandApplied = true
-
-                    if (ringerChanged) {
-                        localDeviceManager.setRingerMode(myDevice.ringerMode)
-                        delay(RINGER_SETTLE_MS)
-                    }
-
-
+                if (prev == null || prev.isDndActive != myDevice.isDndActive) {
                     localDeviceManager.setDnd(myDevice.isDndActive)
+                    commandApplied = true
                 }
 
+                // 3. Sync Curtain
                 if (prev == null || prev.isCurtainOn != myDevice.isCurtainOn) {
                     localDeviceManager.setCurtain(myDevice.isCurtainOn)
                     commandApplied = true
@@ -121,31 +131,31 @@ class CloudRemoteService : Service() {
                 if (commandApplied) {
                     lastCommandAppliedAt = System.currentTimeMillis()
                 }
-
-                // Try syncing latest local state immediately after applying commands or receiving update
-                lastLocalState?.let { state ->
-                    syncLocalStateToCloud(myDevice, state, force = false)
-                }
             }
         }
 
         // Heartbeat loop to keep "Online" status active
         scope.launch {
             while (isActive) {
-                delay(HEARTBEAT_INTERVAL_MS)
-                val cached = currentRemoteDevice
-                val state = lastLocalState
-                if (cached != null && state != null) {
-                    syncLocalStateToCloud(cached, state, force = true)
+                if (auth.currentUser != null) {
+                    val device = currentRemoteDevice
+                    val state = lastLocalState
+                    if (device != null && state != null) {
+                        syncLocalStateToCloud(device, state, force = true)
+                    }
                 }
+                delay(HEARTBEAT_INTERVAL_MS)
             }
         }
 
+        // Observer local changes and push to cloud
         scope.launch {
-            localDeviceManager.observeDeviceState().collectLatest { state ->
+             localDeviceManager.observeDeviceState().collectLatest { state ->
                 lastLocalState = state
                 val cachedDevice = currentRemoteDevice ?: return@collectLatest
-                syncLocalStateToCloud(cachedDevice, state, force = false)
+                if (auth.currentUser != null) {
+                     syncLocalStateToCloud(cachedDevice, state, force = false)
+                }
             }
         }
     }
@@ -155,31 +165,36 @@ class CloudRemoteService : Service() {
         state: LocalDeviceManager.DeviceState,
         force: Boolean
     ) {
+        // Prevent loop: if we just applied a command from cloud, don't echo back immediately
+        // unless it's a periodic heartbeat (force=true).
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
-        if (msSinceCommand < COOLDOWN_MS && !force) return
+        if (!force && msSinceCommand < COOLDOWN_MS) {
+            return
+        }
+        
+        // Check what changed locally vs what we think is in the cloud
+        val batteryChanged = cachedDevice.batteryLevel != state.batteryLevel || cachedDevice.isCharging != state.isCharging
+        val volumeChanged = cachedDevice.mediaVolume != state.mediaVolume || cachedDevice.maxMediaVolume != state.maxMediaVolume
+        val ringerChanged = cachedDevice.ringerMode != state.ringerMode || cachedDevice.isDndActive != state.isDndActive
+        val screenChanged = cachedDevice.isScreenOn != state.isScreenOn || cachedDevice.isLocked != state.isLocked
+        val curtainChanged = cachedDevice.isCurtainOn != state.isCurtainOn
 
-        val needsUpdate = force ||
-                cachedDevice.batteryLevel != state.batteryLevel ||
-                cachedDevice.isCharging != state.isCharging ||
-                cachedDevice.mediaVolume != state.mediaVolume ||
-                cachedDevice.maxMediaVolume != state.maxMediaVolume ||
-                cachedDevice.isScreenOn != state.isScreenOn ||
-                cachedDevice.isCurtainOn != state.isCurtainOn ||
-                cachedDevice.isLocked != state.isLocked
+        if (force || batteryChanged || volumeChanged || ringerChanged || screenChanged || curtainChanged) {
+            Log.d(TAG, "Updating cloud: battery=${state.batteryLevel}, locked=${state.isLocked}")
 
-        if (needsUpdate) {
-            Log.d(TAG, "Updating cloud: locked=${state.isLocked}, battery=${state.batteryLevel}")
             val updatedDevice = cachedDevice.copy(
                 batteryLevel = state.batteryLevel,
                 isCharging = state.isCharging,
                 mediaVolume = state.mediaVolume,
                 maxMediaVolume = state.maxMediaVolume,
+                ringerMode = state.ringerMode,
+                isDndActive = state.isDndActive,
                 isScreenOn = state.isScreenOn,
-                isCurtainOn = state.isCurtainOn,
+                isCurtainOn = state.isCurtainOn, // update status of curtain
                 isLocked = state.isLocked,
                 lastUpdated = System.currentTimeMillis()
             )
-            // Optimistic update of local cache to prevent redundant updates
+            // Optimistic update
             currentRemoteDevice = updatedDevice
             repository.updateDevice(updatedDevice)
         }

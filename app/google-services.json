@@ -14,6 +14,43 @@
       },
       "oauth_client": [
         {
+          "client_id": "8027822132-1iu73dir955s8sqln3ddv610h3j2430u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.xenonware.cloudremote",
+            "certificate_hash": "***REMOVED***"
+          }
+        },
+        {
+          "client_id": "8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRzAu1i8x9EgffFawcFgW9WgFCM-kBmJc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:8027822132:android:2b2684854e4e031dbe1261",
+        "android_client_info": {
+          "package_name": "com.xenonware.cloudremote.debug"
+        }
+      },
+      "oauth_client": [
+        {
           "client_id": "8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com",
           "client_type": 3
         }

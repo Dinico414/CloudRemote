@@ -1,7 +1,9 @@
 package com.xenonware.cloudremote.data
 
+import androidx.annotation.Keep
 import com.google.firebase.firestore.PropertyName
 
+@Keep
 data class Device(
     val id: String = "",
     val name: String = "",
