@@ -25,10 +25,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeOff
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.rounded.DoDisturbOn
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -238,6 +241,8 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
 
 @Composable
 fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) -> Unit) {
+    val isOnline = (System.currentTimeMillis() - device.lastUpdated) < 60_000 // 1 minute threshold
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -245,11 +250,21 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = device.name.ifBlank { "Unknown Device" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = device.name.ifBlank { "Unknown Device" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Default.Circle,
+                        contentDescription = if (isOnline) "Online" else "Offline",
+                        tint = if (isOnline) Color.Green else Color.Gray,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+
                 if (isLocalDevice) {
                     Text(
                         text = "(This Device)",
@@ -257,6 +272,20 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Status: ${if (isOnline) "Online" else "Offline"}")
+                Spacer(modifier = Modifier.width(16.dp))
+                Icon(
+                    imageVector = if (device.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    contentDescription = if (device.isLocked) "Locked" else "Unlocked",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(if (device.isLocked) "Locked" else "Unlocked")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -289,14 +318,14 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
             ) {
                 // DND toggle — independent of ringerMode
                 SoundModeIconButton(
-                    icon = Icons.Default.DoNotDisturb,
+                    icon = Icons.Rounded.DoDisturbOn,
                     label = "DND",
                     isActive = device.isDndActive,
                     activeColor = MaterialTheme.colorScheme.error,
                     onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) })
                 // Silent: ringerMode = 0
                 SoundModeIconButton(
-                    icon = Icons.AutoMirrored.Filled.VolumeOff,
+                    icon = Icons.AutoMirrored.Rounded.VolumeOff,
                     label = "Silent",
                     isActive = device.ringerMode == 0,
                     activeColor = MaterialTheme.colorScheme.primary,
@@ -310,7 +339,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     onClick = { onUpdateDevice(device.copy(ringerMode = 1)) })
                 // Sound: ringerMode = 2
                 SoundModeIconButton(
-                    icon = Icons.AutoMirrored.Filled.VolumeUp,
+                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
                     label = "Sound",
                     isActive = device.ringerMode == 2,
                     activeColor = MaterialTheme.colorScheme.primary,

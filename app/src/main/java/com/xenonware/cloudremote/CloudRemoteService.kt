@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class CloudRemoteService : Service() {
@@ -47,6 +48,7 @@ class CloudRemoteService : Service() {
         private const val COOLDOWN_MS = 3_000L
 
         private const val RINGER_SETTLE_MS = 400L
+        private const val HEARTBEAT_INTERVAL_MS = 30_000L
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -115,42 +117,60 @@ class CloudRemoteService : Service() {
 
                 // Try syncing latest local state immediately after applying commands or receiving update
                 lastLocalState?.let { state ->
-                    syncLocalStateToCloud(myDevice, state)
+                    syncLocalStateToCloud(myDevice, state, force = false)
                 }
             }
         }
 
+        // Heartbeat loop to keep "Online" status active
+        scope.launch {
+            while (isActive) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                val cached = currentRemoteDevice
+                val state = lastLocalState
+                if (cached != null && state != null) {
+                    syncLocalStateToCloud(cached, state, force = true)
+                }
+            }
+        }
 
         scope.launch {
             localDeviceManager.observeDeviceState().collectLatest { state ->
                 lastLocalState = state
                 val cachedDevice = currentRemoteDevice ?: return@collectLatest
-                syncLocalStateToCloud(cachedDevice, state)
+                syncLocalStateToCloud(cachedDevice, state, force = false)
             }
         }
     }
 
-    private fun syncLocalStateToCloud(cachedDevice: Device, state: LocalDeviceManager.DeviceState) {
+    private fun syncLocalStateToCloud(
+        cachedDevice: Device,
+        state: LocalDeviceManager.DeviceState,
+        force: Boolean
+    ) {
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
-        if (msSinceCommand < COOLDOWN_MS) return
+        if (msSinceCommand < COOLDOWN_MS && !force) return
 
-        val needsUpdate =
-            cachedDevice.batteryLevel != state.batteryLevel ||
-            cachedDevice.isCharging != state.isCharging ||
-            cachedDevice.mediaVolume != state.mediaVolume ||
-            cachedDevice.maxMediaVolume != state.maxMediaVolume ||
-            cachedDevice.isScreenOn != state.isScreenOn ||
-            cachedDevice.isCurtainOn != state.isCurtainOn
+        val needsUpdate = force ||
+                cachedDevice.batteryLevel != state.batteryLevel ||
+                cachedDevice.isCharging != state.isCharging ||
+                cachedDevice.mediaVolume != state.mediaVolume ||
+                cachedDevice.maxMediaVolume != state.maxMediaVolume ||
+                cachedDevice.isScreenOn != state.isScreenOn ||
+                cachedDevice.isCurtainOn != state.isCurtainOn ||
+                cachedDevice.isLocked != state.isLocked
 
         if (needsUpdate) {
-            Log.d(TAG, "Updating cloud: charging=${state.isCharging}, battery=${state.batteryLevel}")
+            Log.d(TAG, "Updating cloud: locked=${state.isLocked}, battery=${state.batteryLevel}")
             val updatedDevice = cachedDevice.copy(
                 batteryLevel = state.batteryLevel,
                 isCharging = state.isCharging,
                 mediaVolume = state.mediaVolume,
                 maxMediaVolume = state.maxMediaVolume,
                 isScreenOn = state.isScreenOn,
-                isCurtainOn = state.isCurtainOn
+                isCurtainOn = state.isCurtainOn,
+                isLocked = state.isLocked,
+                lastUpdated = System.currentTimeMillis()
             )
             // Optimistic update of local cache to prevent redundant updates
             currentRemoteDevice = updatedDevice

@@ -19,4 +19,7 @@ data class Device(
     val isScreenOn: Boolean = true,
     @get:PropertyName("isCurtainOn")
     val isCurtainOn: Boolean = false,
+    @get:PropertyName("isLocked")
+    val isLocked: Boolean = false,
+    val lastUpdated: Long = 0L
 )
