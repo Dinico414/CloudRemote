@@ -250,7 +250,7 @@ class LocalDeviceManager(private val context: Context) {
             layout.isFocusableInTouchMode = true
 
             val text = TextView(context).apply {
-                setText("Curtain Active")
+                setText("Device Locked")
                 setTextColor(Color.DKGRAY)
                 gravity = Gravity.CENTER
             }
