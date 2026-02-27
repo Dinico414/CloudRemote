@@ -14,8 +14,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -27,6 +29,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -37,6 +40,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,6 +64,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -91,6 +96,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -203,25 +209,37 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkDeviceAdminPermission() {
-        val devicePolicyManager = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        val devicePolicyManager =
+            getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
         val componentName = android.content.ComponentName(this, AdminReceiver::class.java)
 
         if (!devicePolicyManager.isAdminActive(componentName)) {
             val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
             intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-            intent.putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Cloud Remote needs this permission to lock the screen remotely.")
+            intent.putExtra(
+                android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "Cloud Remote needs this permission to lock the screen remotely."
+            )
             startActivity(intent)
-            Toast.makeText(this, "Please grant Device Admin permission for Remote Lock", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this, "Please grant Device Admin permission for Remote Lock", Toast.LENGTH_LONG
+            ).show()
         }
     }
 
     private fun checkNotificationListenerPermission() {
-        val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        val myListener = ComponentName(this, MediaNotificationListener::class.java).flattenToString()
+        val enabledListeners =
+            Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        val myListener =
+            ComponentName(this, MediaNotificationListener::class.java).flattenToString()
         if (enabledListeners == null || !enabledListeners.contains(myListener)) {
             val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
             startActivity(intent)
-            Toast.makeText(this, "Please grant Notification Listener permission for Media Control", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                "Please grant Notification Listener permission for Media Control",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }
@@ -320,7 +338,11 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
     val isOnline = (currentTime - device.lastUpdated) < 60_000 // 1 minute threshold
 
-    Card(shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
+    Card(
+        shape = RoundedCornerShape(30.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -368,46 +390,59 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     }
                     val bitmap = imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Album Art",
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .fillMaxHeight()
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .fillMaxHeight()
-                                .background(
-                                    MaterialTheme.colorScheme.secondaryContainer,
-                                    RoundedCornerShape(8.dp)
-                                )
-                        )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(96.dp)
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "Album Art",
+                                modifier = Modifier
+                                    .widthIn(max = 96.dp)
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .widthIn(max = 96.dp)
+                                    .fillMaxSize()
+                                    .background(
+                                        MaterialTheme.colorScheme.secondaryContainer,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                            )
+                        }
                     }
 
 
                     Spacer(modifier = Modifier.width(12.dp))
 
-                    Column {
+                    Column(modifier = Modifier.width(IntrinsicSize.Min)) {
                         Text(
                             text = device.mediaTitle,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 8.dp)
                         )
                         Text(
                             text = device.mediaArtist,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 8.dp)
                         )
 
+                        val cornerRadius by animateDpAsState(
+                            targetValue = if (device.isPlaying) 12.dp else 24.dp,
+                            animationSpec = tween(300),
+                            label = "playPauseShape"
+                        )
                         Row(
                             horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
@@ -415,51 +450,56 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                             IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) }) {
                                 Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous")
                             }
-                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) }) {
-                                Icon(
-                                    if (device.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                    contentDescription = if (device.isPlaying) "Pause" else "Play"
-                                )
+                            IconButton(
+                                shape = RoundedCornerShape(cornerRadius),
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) }
+
+                            ) {
+                                Crossfade(
+                                    targetState = device.isPlaying,
+                                    animationSpec = tween(300),
+                                    label = "playPauseIcon"
+                                ) { isPlaying ->
+                                    Icon(
+                                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                        contentDescription = if (isPlaying) "Pause" else "Play"
+                                    )
+                                }
                             }
                             IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "next")) }) {
                                 Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
                             }
+
                             CustomMediaActionButton(
                                 actionTitle = device.mediaCustomAction1Title,
                                 defaultIcon = Icons.Rounded.Add,
-                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }
-                            )
+                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) })
 
                             CustomMediaActionButton(
                                 actionTitle = device.mediaCustomAction2Title,
                                 defaultIcon = Icons.Rounded.Remove,
-                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }
-                            )
+                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) })
                         }
-//                        Row(
-//                            modifier = Modifier.fillMaxWidth(),
-//                            horizontalArrangement = Arrangement.Start,
-//                            verticalAlignment = Alignment.CenterVertically
-//                        ) {
-//                            if (device.mediaCustomAction1Title.isNotBlank()) {
-//                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
-//                                    Text(device.mediaCustomAction1Title)
-//                                }
-//                            }
-
-//                            if (device.mediaCustomAction2Title.isNotBlank()) {
-//                                TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
-//                                    Text(device.mediaCustomAction2Title)
-//                                }
-//                            }
-//                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clip(RoundedCornerShape(30.dp)).background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer).combinedClickable(onClick = {}, onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }).padding(vertical = 8.dp, horizontal = 16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+                    .combinedClickable(
+                        onClick = {},
+                        onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) })
+                    .padding(vertical = 8.dp, horizontal = 16.dp)
+            ) {
                 Icon(
                     tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
                     imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
@@ -467,7 +507,10 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(if (device.isLocked) "Locked" else "Unlocked", color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(
+                    if (device.isLocked) "Locked" else "Unlocked",
+                    color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -483,14 +526,13 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     )
                 }
             }
-            
+
             val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
             val blinkColor by infiniteTransition.animateColor(
                 initialValue = MaterialTheme.colorScheme.error,
                 targetValue = MaterialTheme.colorScheme.errorContainer,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(500),
-                    repeatMode = RepeatMode.Reverse
+                    animation = tween(500), repeatMode = RepeatMode.Reverse
                 ),
                 label = "blink"
             )
@@ -503,8 +545,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                 MaterialTheme.colorScheme.error
             } else if (device.batteryLevel >= 100) {
                 MaterialTheme.colorScheme.tertiary
-            }
-            else {
+            } else {
                 MaterialTheme.colorScheme.primary
             }
 
@@ -602,9 +643,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
 @Composable
 fun CustomMediaActionButton(
-    actionTitle: String,
-    defaultIcon: ImageVector,
-    onClick: () -> Unit
+    actionTitle: String, defaultIcon: ImageVector, onClick: () -> Unit
 ) {
     if (actionTitle.isNotBlank()) {
         IconButton(onClick = onClick) {
@@ -629,12 +668,13 @@ fun SoundModeIconButton(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
     ) {
         IconButton(
             onClick = onClick,
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = if (isActive) activeColor else MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
