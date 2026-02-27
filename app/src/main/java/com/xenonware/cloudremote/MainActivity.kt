@@ -32,8 +32,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,7 +48,6 @@ import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Circle
 import androidx.compose.material.icons.rounded.DoDisturbOn
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Lock
@@ -64,7 +61,6 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -90,13 +86,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.max
 import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -361,294 +357,320 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .graphicsLayer(alpha = if (isOnline) 1f else 0.5f)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = device.name.ifBlank { "Unknown Device" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.Circle,
-                        contentDescription = if (isOnline) "Online" else "Offline",
-                        tint = if (isOnline) Color.Green else Color.Gray,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
+                Text(
+                    text = device.name.ifBlank { "Unknown Device" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (isOnline) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // Media Player
-            if (device.mediaTitle.isNotBlank()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(96.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val imageBytes = try {
-                        Base64.decode(device.mediaAlbumArt, Base64.DEFAULT)
-                    } catch (e: Exception) {
-                        null
-                    }
-                    val bitmap = imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-
-                    Box(
+                // Media Player
+                if (device.mediaTitle.isNotBlank()) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(96.dp)
+                            .fillMaxWidth()
+                            .height(96.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "Album Art",
-                                modifier = Modifier
-                                    .widthIn(max = 96.dp)
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .widthIn(max = 96.dp)
-                                    .fillMaxSize()
-                                    .background(
-                                        MaterialTheme.colorScheme.secondaryContainer,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                            )
+                        val imageBytes = try {
+                            Base64.decode(device.mediaAlbumArt, Base64.DEFAULT)
+                        } catch (e: Exception) {
+                            null
                         }
-                    }
+                        val bitmap =
+                            imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.width(IntrinsicSize.Min)) {
-                        Text(
-                            text = device.mediaTitle,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                        Text(
-                            text = device.mediaArtist,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-
-                        val cornerRadius by animateDpAsState(
-                            targetValue = if (device.isPlaying) 12.dp else 24.dp,
-                            animationSpec = tween(300),
-                            label = "playPauseShape"
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.Start,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(96.dp)
                         ) {
-                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) }) {
-                                Icon(Icons.Rounded.SkipPrevious, contentDescription = "Previous")
+                            if (bitmap != null) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "Album Art",
+                                    modifier = Modifier
+                                        .widthIn(max = 96.dp)
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .widthIn(max = 96.dp)
+                                        .fillMaxSize()
+                                        .background(
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                            RoundedCornerShape(8.dp)
+                                        )
+                                )
                             }
-                            IconButton(
-                                shape = RoundedCornerShape(cornerRadius),
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) }
+                        }
 
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.width(IntrinsicSize.Min)) {
+                            Text(
+                                text = device.mediaTitle,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                            Text(
+                                text = device.mediaArtist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+
+                            val cornerRadius by animateDpAsState(
+                                targetValue = if (device.isPlaying) 12.dp else 24.dp,
+                                animationSpec = tween(300),
+                                label = "playPauseShape"
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.Start,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Crossfade(
-                                    targetState = device.isPlaying,
-                                    animationSpec = tween(300),
-                                    label = "playPauseIcon"
-                                ) { isPlaying ->
+                                IconButton(
+                                    onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) },
+                                    enabled = isOnline
+                                ) {
                                     Icon(
-                                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                        contentDescription = if (isPlaying) "Pause" else "Play"
+                                        Icons.Rounded.SkipPrevious,
+                                        contentDescription = "Previous"
                                     )
                                 }
-                            }
-                            IconButton(onClick = { onUpdateDevice(device.copy(mediaAction = "next")) }) {
-                                Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
-                            }
+                                IconButton(
+                                    shape = RoundedCornerShape(cornerRadius),
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) },
+                                    enabled = isOnline
+                                ) {
+                                    Crossfade(
+                                        targetState = device.isPlaying,
+                                        animationSpec = tween(300),
+                                        label = "playPauseIcon"
+                                    ) { isPlaying ->
+                                        Icon(
+                                            imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                            contentDescription = if (isPlaying) "Pause" else "Play"
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = { onUpdateDevice(device.copy(mediaAction = "next")) },
+                                    enabled = isOnline
+                                ) {
+                                    Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
+                                }
 
-                            CustomMediaActionButton(
-                                actionTitle = device.mediaCustomAction1Title,
-                                defaultIcon = Icons.Rounded.Add,
-                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) })
+                                CustomMediaActionButton(
+                                    actionTitle = device.mediaCustomAction1Title,
+                                    defaultIcon = Icons.Rounded.Add,
+                                    onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) },
+                                    enabled = isOnline
+                                )
 
-                            CustomMediaActionButton(
-                                actionTitle = device.mediaCustomAction2Title,
-                                defaultIcon = Icons.Rounded.Remove,
-                                onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) })
+                                CustomMediaActionButton(
+                                    actionTitle = device.mediaCustomAction2Title,
+                                    defaultIcon = Icons.Rounded.Remove,
+                                    onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) },
+                                    enabled = isOnline
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
+
+                if (!isLocalDevice) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(30.dp))
+                            .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+                            .then(
+                                if (isOnline) Modifier.combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }
+                                ) else Modifier
+                            )
+                            .padding(vertical = 8.dp, horizontal = 16.dp)
+                    ) {
+                        Icon(
+                            tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                            imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                            contentDescription = if (device.isLocked) "Locked" else "Unlocked",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            if (device.isLocked) "Locked" else "Unlocked",
+                            color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Battery: ${device.batteryLevel}%")
+                    if (device.isCharging) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Rounded.FlashOn,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            contentDescription = ""
+                        )
+                    }
+                }
+
+                val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
+                val blinkColor by infiniteTransition.animateColor(
+                    initialValue = MaterialTheme.colorScheme.error,
+                    targetValue = MaterialTheme.colorScheme.errorContainer,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(500), repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "blink"
+                )
+
+                val progressColor = if (device.isCharging) {
+                    Color.Green
+                } else if (device.batteryLevel <= 5) {
+                    blinkColor
+                } else if (device.batteryLevel <= 20) {
+                    MaterialTheme.colorScheme.error
+                } else if (device.batteryLevel >= 100) {
+                    MaterialTheme.colorScheme.tertiary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
+
+                val trackColor = if (!device.isCharging && device.batteryLevel <= 20) {
+                    MaterialTheme.colorScheme.errorContainer
+                } else {
+                    ProgressIndicatorDefaults.linearTrackColor
+                }
+
+                LinearProgressIndicator(
+                    progress = { device.batteryLevel / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp)
+                        .padding(vertical = 8.dp),
+                    color = progressColor,
+                    trackColor = trackColor,
+                )
+
+                Text("Screen: ${if (device.isScreenOn) "On" else "Off"}")
+
                 Spacer(modifier = Modifier.height(12.dp))
-            }
 
-            if (!isLocalDevice) {
+                Text(
+                    text = "Sound Mode:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(30.dp))
-                        .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
-                        .combinedClickable(
-                            onClick = {},
-                            onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) })
-                        .padding(vertical = 8.dp, horizontal = 16.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
-                        imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                        contentDescription = if (device.isLocked) "Locked" else "Unlocked",
-                        modifier = Modifier.size(16.dp)
+                    // DND toggle — independent of ringerMode
+                    SoundModeIconButton(
+                        icon = Icons.Rounded.DoDisturbOn,
+                        isActive = device.isDndActive,
+                        activeColor = MaterialTheme.colorScheme.error,
+                        onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) },
+                        modifier = Modifier.weight(1f),
+                        enabled = isOnline
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        if (device.isLocked) "Locked" else "Unlocked",
-                        color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                    // Silent: ringerMode = 0
+                    SoundModeIconButton(
+                        icon = Icons.AutoMirrored.Rounded.VolumeOff,
+                        isActive = device.ringerMode == 0,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        onClick = { onUpdateDevice(device.copy(ringerMode = 0)) },
+                        modifier = Modifier.weight(1f),
+                        enabled = isOnline
+                    )
+                    // Vibrate: ringerMode = 1
+                    SoundModeIconButton(
+                        icon = Icons.Rounded.Vibration,
+                        isActive = device.ringerMode == 1,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        onClick = { onUpdateDevice(device.copy(ringerMode = 1)) },
+                        modifier = Modifier.weight(1f),
+                        enabled = isOnline
+                    )
+                    // Sound: ringerMode = 2
+                    SoundModeIconButton(
+                        icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                        isActive = device.ringerMode == 2,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        onClick = { onUpdateDevice(device.copy(ringerMode = 2)) },
+                        modifier = Modifier.weight(1f),
+                        enabled = isOnline
                     )
                 }
-            }
 
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Battery: ${device.batteryLevel}%")
-                if (device.isCharging) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Rounded.FlashOn,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        contentDescription = ""
-                    )
+                // Media Volume
+                Text("Media Volume: ${device.mediaVolume}")
+                Slider(
+                    value = device.mediaVolume.toFloat(),
+                    onValueChange = { onUpdateDevice(device.copy(mediaVolume = it.toInt())) },
+                    valueRange = 0f..device.maxMediaVolume.toFloat(),
+                    steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0,
+                    enabled = isOnline
+                )
+                if (!isLocalDevice) {
+                    // Curtain toggle
+                    Button(
+                        onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                        ),
+                        enabled = isOnline
+                    ) {
+                        Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+                    }
                 }
-            }
-
-            val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
-            val blinkColor by infiniteTransition.animateColor(
-                initialValue = MaterialTheme.colorScheme.error,
-                targetValue = MaterialTheme.colorScheme.errorContainer,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(500), repeatMode = RepeatMode.Reverse
-                ),
-                label = "blink"
-            )
-
-            val progressColor = if (device.isCharging) {
-                Color.Green
-            } else if (device.batteryLevel <= 5) {
-                blinkColor
-            } else if (device.batteryLevel <= 20) {
-                MaterialTheme.colorScheme.error
-            } else if (device.batteryLevel >= 100) {
-                MaterialTheme.colorScheme.tertiary
             } else {
-                MaterialTheme.colorScheme.primary
-            }
-
-            val trackColor = if (!device.isCharging && device.batteryLevel <= 20) {
-                MaterialTheme.colorScheme.errorContainer
-            } else {
-                ProgressIndicatorDefaults.linearTrackColor
-            }
-
-            LinearProgressIndicator(
-                progress = { device.batteryLevel / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .padding(vertical = 8.dp),
-                color = progressColor,
-                trackColor = trackColor,
-            )
-
-            Text("Screen: ${if (device.isScreenOn) "On" else "Off"}")
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = "Sound Mode:",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // DND toggle — independent of ringerMode
-                SoundModeIconButton(
-                    icon = Icons.Rounded.DoDisturbOn,
-                    isActive = device.isDndActive,
-                    activeColor = MaterialTheme.colorScheme.error,
-                    onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) },
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "device unavailable",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                // Silent: ringerMode = 0
-                SoundModeIconButton(
-                    icon = Icons.AutoMirrored.Rounded.VolumeOff,
-                    isActive = device.ringerMode == 0,
-                    activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 0)) },
-                    modifier = Modifier.weight(1f)
-                )
-                // Vibrate: ringerMode = 1
-                SoundModeIconButton(
-                    icon = Icons.Rounded.Vibration,
-                    isActive = device.ringerMode == 1,
-                    activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 1)) },
-                    modifier = Modifier.weight(1f)
-                )
-                // Sound: ringerMode = 2
-                SoundModeIconButton(
-                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    isActive = device.ringerMode == 2,
-                    activeColor = MaterialTheme.colorScheme.primary,
-                    onClick = { onUpdateDevice(device.copy(ringerMode = 2)) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Media Volume
-            Text("Media Volume: ${device.mediaVolume}")
-            Slider(
-                value = device.mediaVolume.toFloat(),
-                onValueChange = { onUpdateDevice(device.copy(mediaVolume = it.toInt())) },
-                valueRange = 0f..device.maxMediaVolume.toFloat(),
-                steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0
-            )
-            if (!isLocalDevice) {
-                // Curtain toggle
-                Button(
-                    onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
-                }
             }
         }
     }
@@ -656,10 +678,13 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
 @Composable
 fun CustomMediaActionButton(
-    actionTitle: String, defaultIcon: ImageVector, onClick: () -> Unit
+    actionTitle: String,
+    defaultIcon: ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean
 ) {
     if (actionTitle.isNotBlank()) {
-        IconButton(onClick = onClick) {
+        IconButton(onClick = onClick, enabled = enabled) {
             val icon = when (actionTitle) {
                 "Remove from collection" -> Icons.Rounded.CheckCircle
                 "Add to collection" -> Icons.Rounded.AddCircleOutline
@@ -678,7 +703,8 @@ fun SoundModeIconButton(
     isActive: Boolean,
     activeColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean
 ) {
     Column(
         modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
@@ -691,7 +717,8 @@ fun SoundModeIconButton(
             colors = IconButtonDefaults.iconButtonColors(
                 containerColor = if (isActive) activeColor else MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            ),
+            enabled = enabled
         ) {
             Icon(
                 imageVector = icon, contentDescription = "", modifier = Modifier.size(24.dp)
