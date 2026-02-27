@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote
 
+import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
@@ -110,6 +111,7 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    @SuppressLint("HardwareIds")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -206,8 +208,8 @@ class MainActivity : ComponentActivity() {
 
     private fun checkDeviceAdminPermission() {
         val devicePolicyManager =
-            getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
-        val componentName = android.content.ComponentName(this, AdminReceiver::class.java)
+            getSystemService(DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+        val componentName = ComponentName(this, AdminReceiver::class.java)
 
         if (!devicePolicyManager.isAdminActive(componentName)) {
             val intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
@@ -240,6 +242,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("LocalContextResourcesRead")
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit) {
     val context = LocalContext.current
@@ -299,7 +302,20 @@ fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit
 fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel) {
     val devices by viewModel.devices.collectAsState()
     val localDevice = devices.find { it.id == viewModel.localDeviceId }
+
+    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000)
+            currentTime = System.currentTimeMillis()
+        }
+    }
+
     val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
+    val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
+        (currentTime - it.lastUpdated) < 60_000 // 1 minute threshold
+    }
 
     LazyColumn(
         modifier = modifier
@@ -312,12 +328,13 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
                 DeviceItem(
                     device = it,
                     isLocalDevice = true,
+                    isOnline = true, // Local device is always considered online for UI purposes
                     onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
                 )
             }
         }
 
-        if (cloudDevices.isNotEmpty()) {
+        if (onlineCloudDevices.isNotEmpty()) {
             item {
                 Text(
                     text = "Cloud Devices",
@@ -327,10 +344,31 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
                 )
             }
 
-            items(cloudDevices) { device ->
+            items(onlineCloudDevices) { device ->
                 DeviceItem(
                     device = device,
                     isLocalDevice = false,
+                    isOnline = true,
+                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
+                )
+            }
+        }
+
+        if (offlineCloudDevices.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Offline Devices",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            items(offlineCloudDevices) { device ->
+                DeviceItem(
+                    device = device,
+                    isLocalDevice = false,
+                    isOnline = false,
                     onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
                 )
             }
@@ -340,18 +378,7 @@ fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) -> Unit) {
-    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(5000)
-            currentTime = System.currentTimeMillis()
-        }
-    }
-
-    val isOnline = (currentTime - device.lastUpdated) < 60_000 // 1 minute threshold
-
+fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpdateDevice: (Device) -> Unit) {
     Card(
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -387,7 +414,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     ) {
                         val imageBytes = try {
                             Base64.decode(device.mediaAlbumArt, Base64.DEFAULT)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
                         val bitmap =
@@ -460,7 +487,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                             ) {
                                 IconButton(
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) },
-                                    enabled = isOnline
+                                    enabled = true
                                 ) {
                                     Icon(
                                         Icons.Rounded.SkipPrevious,
@@ -474,7 +501,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                                         contentColor = MaterialTheme.colorScheme.onPrimary
                                     ),
                                     onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) },
-                                    enabled = isOnline
+                                    enabled = true
                                 ) {
                                     Crossfade(
                                         targetState = device.isPlaying,
@@ -489,7 +516,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                                 }
                                 IconButton(
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "next")) },
-                                    enabled = isOnline
+                                    enabled = true
                                 ) {
                                     Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
                                 }
@@ -498,14 +525,14 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                                     actionTitle = device.mediaCustomAction1Title,
                                     defaultIcon = Icons.Rounded.Add,
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) },
-                                    enabled = isOnline
+                                    enabled = true
                                 )
 
                                 CustomMediaActionButton(
                                     actionTitle = device.mediaCustomAction2Title,
                                     defaultIcon = Icons.Rounded.Remove,
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) },
-                                    enabled = isOnline
+                                    enabled = true
                                 )
                             }
                         }
@@ -520,10 +547,10 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                             .clip(RoundedCornerShape(30.dp))
                             .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
                             .then(
-                                if (isOnline) Modifier.combinedClickable(
+                                Modifier.combinedClickable(
                                     onClick = {},
                                     onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }
-                                ) else Modifier
+                                )
                             )
                             .padding(vertical = 8.dp, horizontal = 16.dp)
                     ) {
@@ -616,7 +643,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         activeColor = MaterialTheme.colorScheme.error,
                         onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) },
                         modifier = Modifier.weight(1f),
-                        enabled = isOnline
+                        enabled = true
                     )
                     // Silent: ringerMode = 0
                     SoundModeIconButton(
@@ -625,7 +652,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         activeColor = MaterialTheme.colorScheme.primary,
                         onClick = { onUpdateDevice(device.copy(ringerMode = 0)) },
                         modifier = Modifier.weight(1f),
-                        enabled = isOnline
+                        enabled = true
                     )
                     // Vibrate: ringerMode = 1
                     SoundModeIconButton(
@@ -634,7 +661,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         activeColor = MaterialTheme.colorScheme.primary,
                         onClick = { onUpdateDevice(device.copy(ringerMode = 1)) },
                         modifier = Modifier.weight(1f),
-                        enabled = isOnline
+                        enabled = true
                     )
                     // Sound: ringerMode = 2
                     SoundModeIconButton(
@@ -643,7 +670,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         activeColor = MaterialTheme.colorScheme.primary,
                         onClick = { onUpdateDevice(device.copy(ringerMode = 2)) },
                         modifier = Modifier.weight(1f),
-                        enabled = isOnline
+                        enabled = true
                     )
                 }
 
@@ -656,7 +683,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                     onValueChange = { onUpdateDevice(device.copy(mediaVolume = it.toInt())) },
                     valueRange = 0f..device.maxMediaVolume.toFloat(),
                     steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0,
-                    enabled = isOnline
+                    enabled = true
                 )
                 if (!isLocalDevice) {
                     // Curtain toggle
@@ -668,7 +695,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         ),
-                        enabled = isOnline
+                        enabled = true
                     ) {
                         Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
                     }
