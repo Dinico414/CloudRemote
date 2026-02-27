@@ -74,6 +74,7 @@ import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -539,6 +540,26 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
+
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (device.mediaCustomAction1Title.isNotBlank()) {
+                        TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
+                            Text(device.mediaCustomAction1Title)
+                        }
+                    }
+
+                    if (device.mediaCustomAction2Title.isNotBlank()) {
+                        TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
+                            Text(device.mediaCustomAction2Title)
+                        }
+                    }
+                }
+
 
                 if (!isLocalDevice) {
                     Row(
