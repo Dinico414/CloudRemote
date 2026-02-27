@@ -393,10 +393,18 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         val bitmap =
                             imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
+                        val isSquare = bitmap != null && (bitmap.width.toFloat() / bitmap.height.toFloat() == 1f)
+
                         Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(96.dp)
+                            modifier = if (isSquare) {
+                                Modifier
+                                    .width(96.dp)
+                                    .height(96.dp)
+                            } else {
+                                Modifier
+                                    .weight(1f)
+                                    .height(96.dp)
+                            }
                         ) {
                             if (bitmap != null) {
                                 Image(
@@ -424,7 +432,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
 
                         Spacer(modifier = Modifier.width(12.dp))
 
-                        Column(modifier = Modifier.width(IntrinsicSize.Min)) {
+                        Column(modifier = if (isSquare) Modifier.weight(1f) else Modifier.width(IntrinsicSize.Min)) {
                             Text(
                                 text = device.mediaTitle,
                                 style = MaterialTheme.typography.bodyLarge,
