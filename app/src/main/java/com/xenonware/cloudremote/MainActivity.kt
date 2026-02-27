@@ -302,23 +302,41 @@ fun LoginScreen(modifier: Modifier = Modifier, onTokenReceived: (String) -> Unit
 @Composable
 fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel) {
     val devices by viewModel.devices.collectAsState()
+    val localDevice = devices.find { it.id == viewModel.localDeviceId }
+    val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
 
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
-        Text(
-            text = "Connected Devices:",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+    LazyColumn(
+        modifier = modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        localDevice?.let {
+            item {
+                DeviceItem(
+                    device = it,
+                    isLocalDevice = true,
+                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
+                )
+            }
+        }
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxSize()
-        ) {
-            items(devices) { device ->
+        if (cloudDevices.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Cloud Devices",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+
+            items(cloudDevices) { device ->
                 DeviceItem(
                     device = device,
-                    isLocalDevice = device.id == viewModel.localDeviceId,
-                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) })
+                    isLocalDevice = false,
+                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
+                )
             }
         }
     }
@@ -361,14 +379,6 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                         contentDescription = if (isOnline) "Online" else "Offline",
                         tint = if (isOnline) Color.Green else Color.Gray,
                         modifier = Modifier.size(12.dp)
-                    )
-                }
-
-                if (isLocalDevice) {
-                    Text(
-                        text = "(This Device)",
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
@@ -489,29 +499,31 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(30.dp))
-                    .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
-                    .combinedClickable(
-                        onClick = {},
-                        onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) })
-                    .padding(vertical = 8.dp, horizontal = 16.dp)
-            ) {
-                Icon(
-                    tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
-                    imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                    contentDescription = if (device.isLocked) "Locked" else "Unlocked",
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    if (device.isLocked) "Locked" else "Unlocked",
-                    color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            if (!isLocalDevice) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) })
+                        .padding(vertical = 8.dp, horizontal = 16.dp)
+                ) {
+                    Icon(
+                        tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                        imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                        contentDescription = if (device.isLocked) "Locked" else "Unlocked",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (device.isLocked) "Locked" else "Unlocked",
+                        color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -624,18 +636,19 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, onUpdateDevice: (Device) 
                 valueRange = 0f..device.maxMediaVolume.toFloat(),
                 steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0
             )
-
-            // Curtain toggle
-            Button(
-                onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
-                modifier = Modifier
-                    .padding(top = 8.dp)
-                    .fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+            if (!isLocalDevice) {
+                // Curtain toggle
+                Button(
+                    onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+                }
             }
         }
     }
