@@ -486,6 +486,10 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                                 horizontalArrangement = Arrangement.Start,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val button1gone = if (device.mediaCustomAction1Title == "null") 24.dp else 0.dp
+                                val button2gone = if (device.mediaCustomAction2Title == "null") 24.dp else 0.dp
+
+                                Spacer(modifier = Modifier.width(button1gone + button2gone))
                                 IconButton(
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) },
                                     enabled = true
@@ -535,6 +539,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                                     onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) },
                                     enabled = true
                                 )
+                                Spacer(modifier = Modifier.width(button1gone + button2gone))
                             }
                         }
                     }
@@ -739,7 +744,7 @@ fun CustomMediaActionButton(
     onClick: () -> Unit,
     enabled: Boolean
 ) {
-    if (actionTitle.isNotBlank()) {
+    if (actionTitle != "null") {
         IconButton(onClick = onClick, enabled = enabled) {
             val icon = when (actionTitle) {
                 "Remove from collection" -> Icons.Rounded.CheckCircle
