@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -60,6 +62,9 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.ThumbDownOffAlt
+import androidx.compose.material.icons.rounded.ThumbUp
+import androidx.compose.material.icons.rounded.ThumbUpOffAlt
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -750,7 +755,9 @@ fun CustomMediaActionButton(
                 "Remove from collection" -> Icons.Rounded.CheckCircle
                 "Add to collection" -> Icons.Rounded.AddCircleOutline
                 "Start radio" -> Icons.Rounded.Podcasts
-                "Toggle shuffle" -> Icons.Rounded.Shuffle
+                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on"-> Icons.Rounded.Shuffle
+                "Mag ich", "Like" -> Icons.Outlined.ThumbUp
+                "Like rückgängig machen", "Undo like" -> Icons.Filled.ThumbUp
                 else -> defaultIcon
             }
             Icon(icon, contentDescription = actionTitle)
