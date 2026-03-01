@@ -90,12 +90,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -415,7 +418,8 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(96.dp),
+                            .height(96.dp)
+                            .debugBounds("OuterRow"),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val imageBytes = try {
@@ -427,9 +431,13 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                             imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
                         val isSquare = bitmap != null && (bitmap.width.toFloat() / bitmap.height.toFloat() == 1f)
+                        
+                        LaunchedEffect(device.mediaTitle, bitmap) {
+                            Log.d("MEDIA_DEBUG", "Title: ${device.mediaTitle}, Bitmap: ${bitmap?.width}x${bitmap?.height}, isSquare: $isSquare")
+                        }
 
                         Box(
-                            modifier = if (isSquare) {
+                            modifier = (if (isSquare) {
                                 Modifier
                                     .width(96.dp)
                                     .height(96.dp)
@@ -437,7 +445,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                                 Modifier
                                     .weight(1f)
                                     .height(96.dp)
-                            }
+                            }).debugBounds("ImageBox")
                         ) {
                             if (bitmap != null) {
                                 Image(
@@ -446,7 +454,8 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                                     modifier = Modifier
                                         .widthIn(max = 96.dp)
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(8.dp)),
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .debugBounds("Image"),
                                     contentScale = ContentScale.Crop
                                 )
                             } else {
@@ -458,14 +467,15 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                                             MaterialTheme.colorScheme.secondaryContainer,
                                             RoundedCornerShape(8.dp)
                                         )
+                                        .debugBounds("PlaceholderBox")
                                 )
                             }
                         }
 
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(12.dp).debugBounds("Spacer"))
 
-                        Column(modifier = if (isSquare) Modifier.weight(1f) else Modifier.width(IntrinsicSize.Min)) {
+                        Column(modifier = (if (isSquare) Modifier.weight(1f) else Modifier.width(IntrinsicSize.Min)).debugBounds("TextColumn")) {
                             Text(
                                 text = device.mediaTitle,
                                 style = MaterialTheme.typography.bodyLarge,
@@ -489,7 +499,8 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                             )
                             Row(
                                 horizontalArrangement = Arrangement.Start,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.debugBounds("ButtonsRow")
                             ) {
                                 val button1gone = if (device.mediaCustomAction1Title == "null") 24.dp else 0.dp
                                 val button2gone = if (device.mediaCustomAction2Title == "null") 24.dp else 0.dp
@@ -793,4 +804,8 @@ fun SoundModeIconButton(
             )
         }
     }
+}
+
+fun Modifier.debugBounds(tag: String): Modifier = onGloballyPositioned { coordinates ->
+    Log.d("MEDIA_DEBUG", "$tag: size=${coordinates.size}, pos=${coordinates.positionInRoot()}")
 }
