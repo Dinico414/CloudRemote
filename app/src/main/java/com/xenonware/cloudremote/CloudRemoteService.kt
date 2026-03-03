@@ -47,6 +47,21 @@ class CloudRemoteService : Service() {
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
 
+    private val userPresentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_USER_PRESENT) {
+                Log.d(TAG, "User unlocked device, resetting lock state.")
+                currentRemoteDevice?.let {
+                    if (it.isLocked) {
+                        val unlockedDevice = it.copy(isLocked = false)
+                        repository.updateDevice(unlockedDevice)
+                        currentRemoteDevice = unlockedDevice
+                    }
+                }
+            }
+        }
+    }
+
     private val mediaUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
@@ -83,6 +98,7 @@ class CloudRemoteService : Service() {
         LocalBroadcastManager.getInstance(this).registerReceiver(
             mediaUpdateReceiver, IntentFilter(MediaNotificationListener.ACTION_MEDIA_UPDATE)
         )
+        registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -294,6 +310,7 @@ class CloudRemoteService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mediaUpdateReceiver)
+        unregisterReceiver(userPresentReceiver)
         job.cancel()
         scope.cancel()
     }
