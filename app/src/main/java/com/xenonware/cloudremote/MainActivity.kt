@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +39,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,21 +49,34 @@ import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.AllInclusive
+import androidx.compose.material.icons.rounded.Cached
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DoDisturbOn
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOn
+import androidx.compose.material.icons.rounded.RepeatOne
+import androidx.compose.material.icons.rounded.RepeatOneOn
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Replay30
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.ThumbDownOffAlt
-import androidx.compose.material.icons.rounded.ThumbUp
-import androidx.compose.material.icons.rounded.ThumbUpOffAlt
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -101,8 +112,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.max
+import androidx.compose.ui.unit.min
 import androidx.core.net.toUri
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -756,12 +767,34 @@ fun CustomMediaActionButton(
     if (actionTitle != "null") {
         IconButton(onClick = onClick, enabled = enabled) {
             val icon = when (actionTitle) {
+                // Add / Checked
                 "Remove from collection" -> Icons.Rounded.CheckCircle
                 "Add to collection" -> Icons.Rounded.AddCircleOutline
-                "Start radio" -> Icons.Rounded.Podcasts
-                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on"-> Icons.Rounded.Shuffle
+               // Thumbs up
                 "Mag ich", "Like" -> Icons.Outlined.ThumbUp
                 "Like rückgängig machen", "Undo like" -> Icons.Filled.ThumbUp
+                // Star
+                "Als Favorit markieren", "Favorite" -> Icons.Rounded.StarBorder
+                "Undo Favorite", "„Favorit“ widerrufen" -> Icons.Rounded.Star
+                // Heart
+                "LikeRatingAction", "Aus Meine Musik entfernen", "Favorit", "Favourite", "Remove from My Collection" -> Icons.Rounded.Favorite
+                "UnLikeRatingAction" -> Icons.Rounded.FavoriteBorder
+                // Radio
+                "Start radio" -> Icons.Rounded.Podcasts
+                // Jump
+                "Rücklauf" -> Icons.Rounded.Replay
+                "30 Sek. zurückspulen", "Rewind 30 Sec" -> Icons.Rounded.Replay30
+                "30 Sek. vorspulen", "Forward 30 Sec", "Schnellvorlauf" -> Icons.Rounded.Forward30
+                // Repeat
+                "Alle Songs wiederholen" -> Icons.Rounded.Repeat
+                "Song wiederholen" -> Icons.Rounded.RepeatOn
+                "Wiederholung aus" -> Icons.Rounded.RepeatOneOn
+                // Shuffle
+                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on", "Shuffle", "Zufällig", "Zufallswiedergabe ein", "zufallswiedergabe aus"-> Icons.Rounded.Shuffle
+                // Stop
+                "Stopp" -> Icons.Rounded.Stop
+                // Infinity
+                "Autoplay", "Automatisch wiedergeben" -> Icons.Rounded.AllInclusive
                 else -> defaultIcon
             }
             Icon(icon, contentDescription = actionTitle)
