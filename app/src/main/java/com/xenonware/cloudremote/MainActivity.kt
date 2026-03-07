@@ -593,7 +593,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                             .then(
                                 Modifier.combinedClickable(
                                     onClick = {},
-                                    onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(isLocked = true)) }
+                                    onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(pendingAction = "lock")) }
                                 )
                             )
                             .padding(vertical = 8.dp, horizontal = 16.dp)

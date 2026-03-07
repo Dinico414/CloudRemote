@@ -36,5 +36,7 @@ data class Device(
     val mediaCustomAction1Title: String = "",
     val mediaCustomAction2Title: String = "",
     val mediaCustomAction1Action: String = "",
-    val mediaCustomAction2Action: String = ""
+    val mediaCustomAction2Action: String = "",
+
+    val pendingAction: String = "" // "lock"
 )
