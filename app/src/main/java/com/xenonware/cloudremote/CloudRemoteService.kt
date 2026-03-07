@@ -46,16 +46,7 @@ class CloudRemoteService : Service() {
 
     private val userPresentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_USER_PRESENT) {
-                Log.d(TAG, "User unlocked device, resetting lock state.")
-                currentRemoteDevice?.let {
-                    if (it.isLocked) {
-                        val updates = mapOf("locked" to false)
-                        repository.updateDeviceFields(it.id, updates)
-                        currentRemoteDevice = it.copy(isLocked = false)
-                    }
-                }
-            }
+            // This is handled by the local state sync, but we still need the receiver
         }
     }
 
@@ -150,13 +141,15 @@ class CloudRemoteService : Service() {
                             localDeviceManager.setCurtain(myDevice.isCurtainOn)
                             commandApplied = true
                         }
-                        if (!prev.isLocked && myDevice.isLocked) {
-                            localDeviceManager.lockDevice()
-                            commandApplied = true
-                        }
                         if (myDevice.mediaAction.isNotBlank()) {
                             handleMediaAction(myDevice.mediaAction)
                             repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
+                            commandApplied = true
+                        }
+                        if (myDevice.pendingAction == "lock") {
+                            localDeviceManager.lockDevice()
+                            val updates = mapOf("pendingAction" to "", "isLocked" to true)
+                            repository.updateDeviceFields(deviceId, updates)
                             commandApplied = true
                         }
                     }
