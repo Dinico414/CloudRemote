@@ -13,6 +13,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Base64
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 class MediaNotificationListener : NotificationListenerService() {
 
@@ -26,6 +27,7 @@ class MediaNotificationListener : NotificationListenerService() {
         const val EXTRA_CUSTOM_ACTION_1_ACTION = "extra_custom_action_1_action"
         const val EXTRA_CUSTOM_ACTION_2_TITLE = "extra_custom_action_2_title"
         const val EXTRA_CUSTOM_ACTION_2_ACTION = "extra_custom_action_2_action"
+        private const val MAX_ALBUM_ART_SIZE = 512
     }
 
     private var activeMediaController: MediaController? = null
@@ -105,9 +107,27 @@ class MediaNotificationListener : NotificationListenerService() {
     }
 
     private fun encodeBitmap(bitmap: Bitmap): String {
+        val resizedBitmap = resizeBitmap(bitmap, MAX_ALBUM_ART_SIZE)
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 30, outputStream) // Compress to 30% quality
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, outputStream) // Compress to 30% quality
         val byteArray = outputStream.toByteArray()
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
+
+    private fun resizeBitmap(bitmap: Bitmap, maxSize: Int): Bitmap {
+        var width = bitmap.width
+        var height = bitmap.height
+        if (width <= maxSize && height <= maxSize) {
+            return bitmap
+        }
+        val ratio = width.toFloat() / height.toFloat()
+        if (ratio > 1) { // Landscape
+            width = maxSize
+            height = (width / ratio).roundToInt()
+        } else { // Portrait or square
+            height = maxSize
+            width = (height * ratio).roundToInt()
+        }
+        return Bitmap.createScaledBitmap(bitmap, width, height, true)
     }
 }
