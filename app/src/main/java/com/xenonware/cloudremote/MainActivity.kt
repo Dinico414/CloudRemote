@@ -766,8 +766,8 @@ fun CustomMediaActionButton(
         IconButton(onClick = onClick, enabled = enabled) {
             val icon = when (actionTitle) {
                 // Add / Checked
-                "Remove from collection" -> Icons.Rounded.CheckCircle
-                "Add to collection" -> Icons.Rounded.AddCircleOutline
+                "Remove from collection", "Aus Sammlung entfernen" -> Icons.Rounded.CheckCircle
+                "Add to collection", "Zu Sammlung hinzufügen" -> Icons.Rounded.AddCircleOutline
                // Thumbs up
                 "Mag ich", "Like" -> Icons.Outlined.ThumbUp
                 "Like rückgängig machen", "Undo like" -> Icons.Filled.ThumbUp
@@ -788,7 +788,7 @@ fun CustomMediaActionButton(
                 "Song wiederholen" -> Icons.Rounded.RepeatOn
                 "Wiederholung aus" -> Icons.Rounded.RepeatOneOn
                 // Shuffle
-                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on", "Shuffle", "Zufällig", "Zufallswiedergabe ein", "zufallswiedergabe aus"-> Icons.Rounded.Shuffle
+                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on", "Shuffle", "Zufällig", "Zufallswiedergabe ein", "zufallswiedergabe aus", "Shuffle aktivieren/deaktivieren"-> Icons.Rounded.Shuffle
                 // Stop
                 "Stopp" -> Icons.Rounded.Stop
                 // Infinity

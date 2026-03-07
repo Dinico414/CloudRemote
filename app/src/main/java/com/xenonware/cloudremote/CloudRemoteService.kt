@@ -10,7 +10,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.media.session.MediaController
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -38,11 +37,9 @@ class CloudRemoteService : Service() {
     private lateinit var localDeviceManager: LocalDeviceManager
     private val auth = FirebaseAuth.getInstance()
 
+    @Volatile
     private var currentRemoteDevice: Device? = null
     private var localDeviceId: String? = null
-
-    @Volatile
-    private var lastLocalState: LocalDeviceManager.DeviceState? = null
 
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
@@ -53,9 +50,9 @@ class CloudRemoteService : Service() {
                 Log.d(TAG, "User unlocked device, resetting lock state.")
                 currentRemoteDevice?.let {
                     if (it.isLocked) {
-                        val unlockedDevice = it.copy(isLocked = false)
-                        repository.updateDevice(unlockedDevice)
-                        currentRemoteDevice = unlockedDevice
+                        val updates = mapOf("locked" to false)
+                        repository.updateDeviceFields(it.id, updates)
+                        currentRemoteDevice = it.copy(isLocked = false)
                     }
                 }
             }
@@ -124,10 +121,10 @@ class CloudRemoteService : Service() {
                 delay(2000)
             }
 
-            repository.getDevicesFlow()
-                .catch { e -> Log.e(TAG, "Error syncing devices", e) }
-                .collect { devices ->
-                    val myDevice = devices.find { it.id == deviceId }
+            // Listen for remote changes to this device only
+            repository.getDeviceFlow(deviceId)
+                .catch { e -> Log.e(TAG, "Error syncing device", e) }
+                .collect { myDevice ->
                     if (myDevice == null) {
                         currentRemoteDevice = null
                         return@collect
@@ -136,32 +133,32 @@ class CloudRemoteService : Service() {
                     currentRemoteDevice = myDevice
                     var commandApplied = false
 
-                    if (prev?.mediaVolume != myDevice.mediaVolume) {
-                        localDeviceManager.setVolume(myDevice.mediaVolume)
-                        commandApplied = true
-                    }
-                    if (prev?.ringerMode != myDevice.ringerMode) {
-                        localDeviceManager.setRingerMode(myDevice.ringerMode)
-                        commandApplied = true
-                    }
-                    if (prev?.isDndActive != myDevice.isDndActive) {
-                        localDeviceManager.setDnd(myDevice.isDndActive)
-                        commandApplied = true
-                    }
-                    if (prev?.isCurtainOn != myDevice.isCurtainOn) {
-                        localDeviceManager.setCurtain(myDevice.isCurtainOn)
-                        commandApplied = true
-                    }
-                    if (prev?.isLocked != myDevice.isLocked && myDevice.isLocked) {
-                        localDeviceManager.lockDevice()
-                        commandApplied = true
-                    }
-                    // Handle Media Actions
-                    if (prev?.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
-                        handleMediaAction(myDevice.mediaAction)
-                        // Reset action after handling
-                        repository.updateDevice(myDevice.copy(mediaAction = ""))
-                        commandApplied = true
+                    if (prev != null) {
+                        if (prev.mediaVolume != myDevice.mediaVolume) {
+                            localDeviceManager.setVolume(myDevice.mediaVolume)
+                            commandApplied = true
+                        }
+                        if (prev.ringerMode != myDevice.ringerMode) {
+                            localDeviceManager.setRingerMode(myDevice.ringerMode)
+                            commandApplied = true
+                        }
+                        if (prev.isDndActive != myDevice.isDndActive) {
+                            localDeviceManager.setDnd(myDevice.isDndActive)
+                            commandApplied = true
+                        }
+                        if (prev.isCurtainOn != myDevice.isCurtainOn) {
+                            localDeviceManager.setCurtain(myDevice.isCurtainOn)
+                            commandApplied = true
+                        }
+                        if (!prev.isLocked && myDevice.isLocked) {
+                            localDeviceManager.lockDevice()
+                            commandApplied = true
+                        }
+                        if (myDevice.mediaAction.isNotBlank()) {
+                            handleMediaAction(myDevice.mediaAction)
+                            repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
+                            commandApplied = true
+                        }
                     }
 
                     if (commandApplied) {
@@ -170,26 +167,24 @@ class CloudRemoteService : Service() {
                 }
         }
 
+        // Observe local state changes and upload them
         scope.launch {
-            while (isActive) {
-                if (auth.currentUser != null) {
-                    currentRemoteDevice?.let { device ->
-                        lastLocalState?.let { state ->
-                            syncLocalStateToCloud(device, state, force = true)
-                        }
+            localDeviceManager.observeDeviceState().collectLatest { state ->
+                currentRemoteDevice?.let {
+                    if (auth.currentUser != null) {
+                        syncLocalStateToCloud(it, state)
                     }
                 }
-                delay(HEARTBEAT_INTERVAL_MS)
             }
         }
 
+        // Heartbeat to keep device online
         scope.launch {
-            localDeviceManager.observeDeviceState().collectLatest { state ->
-                lastLocalState = state
-                currentRemoteDevice?.let {
-                    if (auth.currentUser != null) {
-                        syncLocalStateToCloud(it, state, force = false)
-                    }
+            while (isActive) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                if (auth.currentUser != null) {
+                    val fields = mapOf("lastUpdated" to System.currentTimeMillis())
+                    repository.updateDeviceFields(deviceId, fields)
                 }
             }
         }
@@ -216,75 +211,62 @@ class CloudRemoteService : Service() {
     }
 
     private fun updateMediaState(
-        title: String,
-        artist: String,
-        albumArt: String,
-        isPlaying: Boolean,
-        customAction1Title: String,
-        customAction1Action: String,
-        customAction2Title: String,
-        customAction2Action: String
+        title: String, artist: String, albumArt: String, isPlaying: Boolean,
+        customAction1Title: String, customAction1Action: String,
+        customAction2Title: String, customAction2Action: String
     ) {
-        currentRemoteDevice?.let {
-            val changed = it.mediaTitle != title ||
-                    it.mediaArtist != artist ||
-                    it.mediaAlbumArt != albumArt ||
-                    it.isPlaying != isPlaying ||
-                    it.mediaCustomAction1Title != customAction1Title ||
-                    it.mediaCustomAction2Title != customAction2Title
+        val device = currentRemoteDevice ?: return
+        val deviceId = localDeviceId ?: return
 
-            if (changed) {
-                val updatedDevice = it.copy(
-                    mediaTitle = title,
-                    mediaArtist = artist,
-                    mediaAlbumArt = albumArt,
-                    isPlaying = isPlaying,
-                    mediaCustomAction1Title = customAction1Title,
-                    mediaCustomAction1Action = customAction1Action,
-                    mediaCustomAction2Title = customAction2Title,
-                    mediaCustomAction2Action = customAction2Action,
-                    lastUpdated = System.currentTimeMillis()
-                )
-                currentRemoteDevice = updatedDevice
-                repository.updateDevice(updatedDevice)
-            }
+        val updates = mutableMapOf<String, Any>()
+        if (device.mediaTitle != title) updates["mediaTitle"] = title
+        if (device.mediaArtist != artist) updates["mediaArtist"] = artist
+        if (device.mediaAlbumArt != albumArt) updates["mediaAlbumArt"] = albumArt
+        if (device.isPlaying != isPlaying) updates["isPlaying"] = isPlaying
+        if (device.mediaCustomAction1Title != customAction1Title) updates["mediaCustomAction1Title"] = customAction1Title
+        if (device.mediaCustomAction1Action != customAction1Action) updates["mediaCustomAction1Action"] = customAction1Action
+        if (device.mediaCustomAction2Title != customAction2Title) updates["mediaCustomAction2Title"] = customAction2Title
+        if (device.mediaCustomAction2Action != customAction2Action) updates["mediaCustomAction2Action"] = customAction2Action
+
+        if (updates.isNotEmpty()) {
+            updates["lastUpdated"] = System.currentTimeMillis()
+            repository.updateDeviceFields(deviceId, updates)
+            currentRemoteDevice = device.copy(
+                mediaTitle = title, mediaArtist = artist, mediaAlbumArt = albumArt,
+                isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title,
+                mediaCustomAction1Action = customAction1Action,
+                mediaCustomAction2Title = customAction2Title,
+                mediaCustomAction2Action = customAction2Action
+            )
         }
     }
 
-    private fun syncLocalStateToCloud(
-        cachedDevice: Device,
-        state: LocalDeviceManager.DeviceState,
-        force: Boolean
-    ) {
+    private fun syncLocalStateToCloud(cachedDevice: Device, state: LocalDeviceManager.DeviceState) {
+        val deviceId = localDeviceId ?: return
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
-        if (!force && msSinceCommand < COOLDOWN_MS) return
+        if (msSinceCommand < COOLDOWN_MS) return
 
-        val changed = force ||
-                cachedDevice.batteryLevel != state.batteryLevel ||
-                cachedDevice.isCharging != state.isCharging ||
-                cachedDevice.mediaVolume != state.mediaVolume ||
-                cachedDevice.maxMediaVolume != state.maxMediaVolume ||
-                cachedDevice.ringerMode != state.ringerMode ||
-                cachedDevice.isDndActive != state.isDndActive ||
-                cachedDevice.isScreenOn != state.isScreenOn ||
-                cachedDevice.isCurtainOn != state.isCurtainOn ||
-                cachedDevice.isLocked != state.isLocked
+        val updates = mutableMapOf<String, Any>()
+        if (cachedDevice.batteryLevel != state.batteryLevel) updates["batteryLevel"] = state.batteryLevel
+        if (cachedDevice.isCharging != state.isCharging) updates["isCharging"] = state.isCharging
+        if (cachedDevice.mediaVolume != state.mediaVolume) updates["mediaVolume"] = state.mediaVolume
+        if (cachedDevice.maxMediaVolume != state.maxMediaVolume) updates["maxMediaVolume"] = state.maxMediaVolume
+        if (cachedDevice.ringerMode != state.ringerMode) updates["ringerMode"] = state.ringerMode
+        if (cachedDevice.isDndActive != state.isDndActive) updates["isDndActive"] = state.isDndActive
+        if (cachedDevice.isScreenOn != state.isScreenOn) updates["isScreenOn"] = state.isScreenOn
+        if (cachedDevice.isCurtainOn != state.isCurtainOn) updates["isCurtainOn"] = state.isCurtainOn
+        if (cachedDevice.isLocked != state.isLocked) updates["isLocked"] = state.isLocked
 
-        if (changed) {
-            val updatedDevice = cachedDevice.copy(
-                batteryLevel = state.batteryLevel,
-                isCharging = state.isCharging,
-                mediaVolume = state.mediaVolume,
-                maxMediaVolume = state.maxMediaVolume,
-                ringerMode = state.ringerMode,
-                isDndActive = state.isDndActive,
-                isScreenOn = state.isScreenOn,
-                isCurtainOn = state.isCurtainOn,
-                isLocked = state.isLocked,
-                lastUpdated = System.currentTimeMillis()
+        if (updates.isNotEmpty()) {
+            updates["lastUpdated"] = System.currentTimeMillis()
+            repository.updateDeviceFields(deviceId, updates)
+            currentRemoteDevice = cachedDevice.copy(
+                batteryLevel = state.batteryLevel, isCharging = state.isCharging,
+                mediaVolume = state.mediaVolume, maxMediaVolume = state.maxMediaVolume,
+                ringerMode = state.ringerMode, isDndActive = state.isDndActive,
+                isScreenOn = state.isScreenOn, isCurtainOn = state.isCurtainOn,
+                isLocked = state.isLocked
             )
-            currentRemoteDevice = updatedDevice
-            repository.updateDevice(updatedDevice)
         }
     }
 
