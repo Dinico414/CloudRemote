@@ -100,4 +100,5 @@ dependencies {
     implementation (libs.play.services.auth)
     implementation (libs.androidx.navigation.compose)
     implementation (libs.coil.compose)
+    implementation ("com.google.code.gson:gson:2.10.1")
 }

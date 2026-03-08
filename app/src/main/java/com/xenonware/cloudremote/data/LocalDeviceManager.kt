@@ -62,6 +62,20 @@ class LocalDeviceManager(private val context: Context) {
         val isLocked: Boolean = false,
     )
 
+    fun getBatteryLevel(): Int {
+        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        return if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
+    }
+
+    fun isCharging(): Boolean {
+        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+        return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
+    }
+
     fun observeDeviceState(): Flow<DeviceState> = callbackFlow {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
@@ -88,16 +102,8 @@ class LocalDeviceManager(private val context: Context) {
 
     private fun getCurrentState(): DeviceState {
         return try {
-            val batteryIntent =
-                context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-            val batteryLevel =
-                if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
-            val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-            val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-            val isCharging =
-                status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
+            val batteryLevel = getBatteryLevel()
+            val isCharging = isCharging()
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
