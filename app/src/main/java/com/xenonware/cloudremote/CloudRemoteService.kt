@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.Gson
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.GoogleCloudRepository
 import com.xenonware.cloudremote.data.LocalDeviceManager
@@ -112,14 +113,16 @@ class CloudRemoteService : Service() {
                 delay(2000)
             }
 
-            // Listen for remote changes to this device only
-            repository.getDeviceFlow(deviceId)
-                .catch { e -> Log.e(TAG, "Error syncing device", e) }
-                .collect { myDevice ->
+            // Listen for remote changes to all devices
+            repository.getDevicesFlow()
+                .catch { e -> Log.e(TAG, "Error syncing devices", e) }
+                .collect { devices ->
+                    val myDevice = devices.find { it.id == deviceId }
                     if (myDevice == null) {
                         currentRemoteDevice = null
                         return@collect
                     }
+
                     val prev = currentRemoteDevice
                     currentRemoteDevice = myDevice
                     var commandApplied = false
@@ -157,6 +160,10 @@ class CloudRemoteService : Service() {
                     if (commandApplied) {
                         lastCommandAppliedAt = System.currentTimeMillis()
                     }
+
+                    // Update widget with online devices
+                    val onlineDevices = devices.filter { (System.currentTimeMillis() - it.lastUpdated) < 60_000 }
+                    broadcastWidgetUpdate(onlineDevices)
                 }
         }
 
@@ -181,6 +188,14 @@ class CloudRemoteService : Service() {
                 }
             }
         }
+    }
+
+    private fun broadcastWidgetUpdate(devices: List<Device>) {
+        val intent = Intent(this, BatteryWidgetProvider::class.java).apply {
+            action = BatteryWidgetProvider.ACTION_UPDATE_WIDGET
+            putExtra(BatteryWidgetProvider.EXTRA_DEVICES_JSON, Gson().toJson(devices))
+        }
+        sendBroadcast(intent)
     }
 
     private fun handleMediaAction(action: String) {
