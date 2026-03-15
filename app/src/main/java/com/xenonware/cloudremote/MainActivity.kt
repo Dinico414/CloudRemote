@@ -778,7 +778,7 @@ fun CustomMediaActionButton(
                 "LikeRatingAction", "Aus Meine Musik entfernen", "Favorit", "Favourite", "Remove from My Collection" -> Icons.Rounded.Favorite
                 "UnLikeRatingAction" -> Icons.Rounded.FavoriteBorder
                 // Radio
-                "Start radio" -> Icons.Rounded.Podcasts
+                "Start radio", "Radio starten" -> Icons.Rounded.Podcasts
                 // Jump
                 "Rücklauf" -> Icons.Rounded.Replay
                 "30 Sek. zurückspulen", "Rewind 30 Sec" -> Icons.Rounded.Replay30
