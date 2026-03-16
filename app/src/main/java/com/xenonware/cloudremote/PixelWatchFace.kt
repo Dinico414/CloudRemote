@@ -120,11 +120,6 @@ fun PixelWatchFace() {
             fontSize = (r * 0.08f).sp,
             fontWeight = FontWeight.Medium
         )
-        val digSecStyle = TextStyle(
-            color = primaryColor,
-            fontSize = (r * 0.05f).sp,
-            fontWeight = FontWeight.Medium
-        )
         val dialNumStyle = TextStyle(
             color = secondaryColor,
             fontSize = (r * 0.035f).sp,
@@ -148,10 +143,11 @@ fun PixelWatchFace() {
             rTickIn: Float,
             rTickOut: Float,
             alpha: Float = 1f,
-            hideCurrentNumber: Boolean = false
+            drawTicks: Boolean = true,
+            drawNumbers: Boolean = true
         ) {
             if (alpha <= 0f) return
-            
+
             for (i in 0 until 60) {
                 val angleDeg = (currentValue - i) * 6f
                 val rad = Math.toRadians(angleDeg.toDouble())
@@ -159,25 +155,20 @@ fun PixelWatchFace() {
                 val sinA = sin(rad).toFloat()
 
                 // Ticks
-                val isThick = i % 5 == 0
-                val strokeWidth = if (isThick) r * 0.012f else r * 0.005f
-                drawLine(
-                    color = secondaryColor.copy(alpha = secondaryColor.alpha * alpha),
-                    start = Offset(cx + rTickIn * cosA, cy + rTickIn * sinA),
-                    end = Offset(cx + rTickOut * cosA, cy + rTickOut * sinA),
-                    strokeWidth = strokeWidth,
-                    cap = StrokeCap.Round
-                )
+                if (drawTicks) {
+                    val isThick = i % 5 == 0
+                    val strokeWidth = if (isThick) r * 0.012f else r * 0.005f
+                    drawLine(
+                        color = secondaryColor.copy(alpha = secondaryColor.alpha * alpha),
+                        start = Offset(cx + rTickIn * cosA, cy + rTickIn * sinA),
+                        end = Offset(cx + rTickOut * cosA, cy + rTickOut * sinA),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
 
                 // Numbers
-                if (isThick) {
-                    val normalizedAngle = (angleDeg % 360f + 360f) % 360f
-                    val isNearRight = normalizedAngle < 25f || normalizedAngle > 335f
-                    
-                    // Hide any number that falls inside the pill area (near 3 o'clock)
-                    if (hideCurrentNumber && isNearRight) {
-                        continue
-                    }
+                if (drawNumbers && i % 5 == 0) {
                     val displayNum = if (i == 0) 60 else i
                     val numText = String.format(Locale.getDefault(), "%02d", displayNum)
                     val layout = textMeasurer.measure(numText, dialNumStyle)
@@ -193,56 +184,45 @@ fun PixelWatchFace() {
             }
         }
 
-        // Draw Minute Ring (ticks per minute instantly)
-        drawDial(currentMinuteFloat, rInnerNum, rInnerTickIn, rInnerTickOut, hideCurrentNumber = true)
-        
-        // Draw Second Ring (smoothly glides per second)
-        if (pillRightWeight > 0f) {
-            drawDial(currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight, hideCurrentNumber = false)
-        }
+        // --- DRAWING ORDER ---
 
-        // Pill
-        val pillHeight = r * 0.36f // 0.61f - 0.25f = 0.36f to perfectly match the ring edge
+        // 1. Minute Numbers (to be occluded)
+        drawDial(currentMinuteFloat, rInnerNum, rInnerTickIn, rInnerTickOut, drawTicks = false, drawNumbers = true)
+
+        // 2. Pill Solid Background (to occlude minute numbers)
+        val pillHeight = r * 0.36f
         val pillTop = cy - pillHeight / 2f
         val pillBottom = cy + pillHeight / 2f
-        
         val pillLeft = cx + r * 0.25f
         val pillRadius = pillHeight / 2f
-
-        val inactivePillRight = cx + rInnerTickOut // cx + r * 0.61f
-        val activePillRight = cx + rOuterTickOut   // cx + r * 0.88f
+        val inactivePillRight = cx + rInnerTickOut
+        val activePillRight = cx + rOuterTickOut
         val currentPillRight = inactivePillRight + (activePillRight - inactivePillRight) * pillRightWeight
 
-        val pillRect = Rect(
-            left = pillLeft,
-            top = pillTop,
-            right = currentPillRight,
-            bottom = pillBottom
-        )
+        val pillRect = Rect(left = pillLeft, top = pillTop, right = currentPillRight, bottom = pillBottom)
         val pillPath = Path().apply {
-            addRoundRect(
-                RoundRect(
-                    rect = pillRect,
-                    cornerRadius = CornerRadius(pillRadius, pillRadius)
-                )
-            )
+            addRoundRect(RoundRect(rect = pillRect, cornerRadius = CornerRadius(pillRadius, pillRadius)))
+        }
+        drawPath(pillPath, color = Color.Black)
+
+        // 3. Minute Ticks (on top of pill background)
+        drawDial(currentMinuteFloat, rInnerNum, rInnerTickIn, rInnerTickOut, drawTicks = true, drawNumbers = false)
+
+        // 4. Second Ring (on top of pill background)
+        if (pillRightWeight > 0f) {
+            drawDial(currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight)
         }
 
-        // Pill Outline (No solid background so ticks show through!)
+        // 5. Pill Outline (on top of everything)
         drawPath(pillPath, color = pillOutlineColor, style = Stroke(width = r * 0.008f))
 
-        // Digital Minute Inside Pill
+        // 6. Digital Minute Inside Pill
         val minText = String.format(Locale.getDefault(), "%02d", minute)
         val minLayout = textMeasurer.measure(minText, digMinStyle)
-        
-        // Center the minute text exactly in the circular part of the inactive pill
         val circleCenterX = pillLeft + pillRadius
         drawText(
             textLayoutResult = minLayout,
-            topLeft = Offset(
-                circleCenterX - minLayout.size.width / 2f,
-                cy - minLayout.size.height / 2f
-            )
+            topLeft = Offset(circleCenterX - minLayout.size.width / 2f, cy - minLayout.size.height / 2f)
         )
     }
 }
