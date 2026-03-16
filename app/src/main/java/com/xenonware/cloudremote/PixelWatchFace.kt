@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote
 
+import android.text.format.DateFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -23,7 +24,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +45,8 @@ import kotlin.math.sin
 @Composable
 fun PixelWatchFace() {
     val textMeasurer = rememberTextMeasurer()
+    val context = LocalContext.current
+    val is24Hour = DateFormat.is24HourFormat(context)
 
     var touchCount by remember { mutableIntStateOf(0) }
     var isActive by remember { mutableStateOf(true) }
@@ -80,8 +85,13 @@ fun PixelWatchFace() {
     }
 
     val calendar = Calendar.getInstance().apply { timeInMillis = time }
-    val hour = calendar.get(Calendar.HOUR_OF_DAY) % 12
-    val displayHour = if (hour == 0) 12 else hour
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val displayHour = if (is24Hour) {
+        hour
+    } else {
+        val hour12 = hour % 12
+        if (hour12 == 0) 12 else hour12
+    }
     val minute = calendar.get(Calendar.MINUTE)
     val second = calendar.get(Calendar.SECOND)
     val millis = calendar.get(Calendar.MILLISECOND)
@@ -90,6 +100,7 @@ fun PixelWatchFace() {
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .graphicsLayer(alpha = animatedAlpha)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = { touchCount++ })
@@ -108,9 +119,9 @@ fun PixelWatchFace() {
         val rOuterTickIn = r * 0.9f
         val rOuterTickOut = r * 0.95f
 
-        val primaryColor = Color.White.copy(alpha = animatedAlpha)
-        val secondaryColor = Color.Gray.copy(alpha = animatedAlpha)
-        val pillOutlineColor = Color.LightGray.copy(alpha = animatedAlpha)
+        val primaryColor = Color.White
+        val secondaryColor = Color.Gray
+        val pillOutlineColor = Color.LightGray
 
         val hourStyle = TextStyle(
             color = primaryColor,
@@ -136,7 +147,8 @@ fun PixelWatchFace() {
         val hourLayout = textMeasurer.measure(hourText, hourStyle)
         drawText(
             textLayoutResult = hourLayout, topLeft = Offset(
-                cx - hourLayout.size.width / 2f - r * 0.03f, cy - hourLayout.size.height / 2f
+                cx - hourLayout.size.width / 2f - r * 0.03f,
+                cy - hourLayout.size.height / 2f - hourLayout.size.height * 0.02f
             )
         )
 
@@ -181,7 +193,7 @@ fun PixelWatchFace() {
                     drawText(
                         textLayoutResult = layout, topLeft = Offset(
                             cx + rNum * cosA - layout.size.width / 2f,
-                            cy + rNum * sinA - layout.size.height / 2f
+                            cy + rNum * sinA - layout.size.height / 2f - layout.size.height * 0.02f
                         ), alpha = alpha
                     )
                 }
@@ -249,7 +261,8 @@ fun PixelWatchFace() {
         val circleCenterX = pillLeft + pillRadius
         drawText(
             textLayoutResult = minLayout, topLeft = Offset(
-                circleCenterX - minLayout.size.width / 2f, cy - minLayout.size.height / 2f
+                circleCenterX - minLayout.size.width / 2f,
+                cy - minLayout.size.height / 2f - minLayout.size.height * 0.02f
             )
         )
     }
