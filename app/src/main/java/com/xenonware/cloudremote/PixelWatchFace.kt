@@ -6,7 +6,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -47,14 +54,10 @@ fun PixelWatchFace() {
     }
 
     val animatedAlpha by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0.4f,
-        animationSpec = tween(500),
-        label = "alpha"
+        targetValue = if (isActive) 1f else 0.4f, animationSpec = tween(500), label = "alpha"
     )
     val pillRightWeight by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0f,
-        animationSpec = tween(500),
-        label = "pillRight"
+        targetValue = if (isActive) 1f else 0f, animationSpec = tween(500), label = "pillRight"
     )
 
     var time by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -89,21 +92,19 @@ fun PixelWatchFace() {
             .background(Color.Black)
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onPress = { touchCount++ }
-                )
-            }
-    ) {
+                    onPress = { touchCount++ })
+            }) {
         val w = size.width
         val h = size.height
         val cx = w / 2f
         val cy = h / 2f
         val r = min(w, h) / 2f
 
-        val rInnerNum = r * 0.5f
-        val rInnerTickIn = r * 0.6f
+        val rInnerNum = r * 0.54f
+        val rInnerTickIn = r * 0.62f
         val rInnerTickOut = r * 0.65f
 
-        val rOuterNum = r * 0.8f
+        val rOuterNum = r * 0.82f
         val rOuterTickIn = r * 0.9f
         val rOuterTickOut = r * 0.95f
 
@@ -134,8 +135,9 @@ fun PixelWatchFace() {
         val hourText = displayHour.toString()
         val hourLayout = textMeasurer.measure(hourText, hourStyle)
         drawText(
-            textLayoutResult = hourLayout,
-            topLeft = Offset(cx - hourLayout.size.width / 2f, cy - hourLayout.size.height / 2f)
+            textLayoutResult = hourLayout, topLeft = Offset(
+                cx - hourLayout.size.width / 2f - r * 0.03f, cy - hourLayout.size.height / 2f
+            )
         )
 
         val currentMinuteFloat = minute.toFloat()
@@ -177,12 +179,10 @@ fun PixelWatchFace() {
                     val numText = String.format(Locale.getDefault(), "%02d", displayNum)
                     val layout = textMeasurer.measure(numText, dialNumStyle)
                     drawText(
-                        textLayoutResult = layout,
-                        topLeft = Offset(
+                        textLayoutResult = layout, topLeft = Offset(
                             cx + rNum * cosA - layout.size.width / 2f,
                             cy + rNum * sinA - layout.size.height / 2f
-                        ),
-                        alpha = alpha
+                        ), alpha = alpha
                     )
                 }
             }
@@ -191,30 +191,53 @@ fun PixelWatchFace() {
         // --- DRAWING ORDER ---
 
         // 1. Minute Numbers (to be occluded)
-        drawDial(currentMinuteFloat, rInnerNum, rInnerTickIn, rInnerTickOut, drawTicks = false, drawNumbers = true)
+        drawDial(
+            currentMinuteFloat,
+            rInnerNum,
+            rInnerTickIn,
+            rInnerTickOut,
+            drawTicks = false,
+            drawNumbers = true
+        )
 
         // 2. Pill Solid Background (to occlude minute numbers)
         val pillHeight = r * 0.36f
         val pillTop = cy - pillHeight / 2f
         val pillBottom = cy + pillHeight / 2f
-        val pillLeft = cx + r * 0.25f
-        val pillRadius = pillHeight / 2f
         val inactivePillRight = cx + rInnerTickOut
-        val activePillRight = cx + rOuterTickOut
-        val currentPillRight = inactivePillRight + (activePillRight - inactivePillRight) * pillRightWeight
+        val pillLeft = inactivePillRight - pillHeight
+        val pillRadius = pillHeight / 2f
 
-        val pillRect = Rect(left = pillLeft, top = pillTop, right = currentPillRight, bottom = pillBottom)
+        val activePillRight = cx + rOuterTickOut
+        val currentPillRight =
+            inactivePillRight + (activePillRight - inactivePillRight) * pillRightWeight
+
+        val pillRect =
+            Rect(left = pillLeft, top = pillTop, right = currentPillRight, bottom = pillBottom)
         val pillPath = Path().apply {
-            addRoundRect(RoundRect(rect = pillRect, cornerRadius = CornerRadius(pillRadius, pillRadius)))
+            addRoundRect(
+                RoundRect(
+                    rect = pillRect, cornerRadius = CornerRadius(pillRadius, pillRadius)
+                )
+            )
         }
         drawPath(pillPath, color = Color.Black)
 
         // 3. Minute Ticks (on top of pill background)
-        drawDial(currentMinuteFloat, rInnerNum, rInnerTickIn, rInnerTickOut, drawTicks = true, drawNumbers = false)
+        drawDial(
+            currentMinuteFloat,
+            rInnerNum,
+            rInnerTickIn,
+            rInnerTickOut,
+            drawTicks = true,
+            drawNumbers = false
+        )
 
         // 4. Second Ring (on top of pill background)
         if (pillRightWeight > 0f) {
-            drawDial(currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight)
+            drawDial(
+                currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight
+            )
         }
 
         // 5. Pill Outline (on top of everything)
@@ -225,8 +248,9 @@ fun PixelWatchFace() {
         val minLayout = textMeasurer.measure(minText, digMinStyle)
         val circleCenterX = pillLeft + pillRadius
         drawText(
-            textLayoutResult = minLayout,
-            topLeft = Offset(circleCenterX - minLayout.size.width / 2f, cy - minLayout.size.height / 2f)
+            textLayoutResult = minLayout, topLeft = Offset(
+                circleCenterX - minLayout.size.width / 2f, cy - minLayout.size.height / 2f
+            )
         )
     }
 }
