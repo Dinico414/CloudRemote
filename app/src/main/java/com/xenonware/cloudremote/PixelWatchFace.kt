@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import kotlinx.coroutines.delay
 import java.util.Calendar
 import java.util.Locale
@@ -113,17 +114,20 @@ fun PixelWatchFace() {
         val hourStyle = TextStyle(
             color = primaryColor,
             fontSize = (r * 0.22f).sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            fontFamily = QuicksandTitleVariable
         )
         val digMinStyle = TextStyle(
             color = primaryColor,
             fontSize = (r * 0.08f).sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            fontFamily = QuicksandTitleVariable
         )
         val dialNumStyle = TextStyle(
             color = secondaryColor,
             fontSize = (r * 0.035f).sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
+            fontFamily = QuicksandTitleVariable
         )
 
         // Draw Hour
