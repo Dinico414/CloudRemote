@@ -23,8 +23,20 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.xenonware.cloudremote.AdminReceiver
+import com.xenonware.cloudremote.PixelWatchFace
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -42,6 +54,7 @@ class LocalDeviceManager(private val context: Context) {
     private val adminComponent = ComponentName(context, AdminReceiver::class.java)
 
     private var curtainView: View? = null
+    private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
     private var isCurtainVisible = false
     private var lastKnownRingVolume = -1
     private var onCurtainStateChanged: (() -> Unit)? = null
@@ -260,20 +273,31 @@ class LocalDeviceManager(private val context: Context) {
             layout.isFocusable = true
             layout.isFocusableInTouchMode = true
 
-            val text = TextView(context).apply {
-                setText("Device Locked")
-                setTextColor(Color.DKGRAY)
-                gravity = Gravity.CENTER
+            // Setup lifecycle owner for ComposeView
+            overlayLifecycleOwner = OverlayLifecycleOwner()
+            overlayLifecycleOwner?.performRestore(null)
+            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+
+            val composeView = ComposeView(context).apply {
+                setViewTreeLifecycleOwner(overlayLifecycleOwner)
+                setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
+                setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
+                setContent {
+                    PixelWatchFace()
+                }
             }
+
             layout.addView(
-                text, FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.CENTER
+                composeView, FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
                 )
             )
 
             windowManager.addView(layout, params)
+            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+
             curtainView = layout
             isCurtainVisible = true
             onCurtainStateChanged?.invoke()
@@ -292,6 +316,9 @@ class LocalDeviceManager(private val context: Context) {
 
         curtainView?.let { view ->
             try {
+                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 windowManager.removeView(view)
                 Log.d(TAG, "Curtain removed")
             } catch (e: Exception) {
@@ -300,6 +327,7 @@ class LocalDeviceManager(private val context: Context) {
             }
         }
         curtainView = null
+        overlayLifecycleOwner = null
         isCurtainVisible = false
         onCurtainStateChanged?.invoke()
     }
@@ -314,6 +342,25 @@ class LocalDeviceManager(private val context: Context) {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // A simple lifecycle owner for ComposeView inside WindowManager
+    private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+        private val lifecycleRegistry = LifecycleRegistry(this)
+        private val savedStateRegistryController = SavedStateRegistryController.create(this)
+        private val store = ViewModelStore()
+
+        override val lifecycle: Lifecycle get() = lifecycleRegistry
+        override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+        override val viewModelStore: ViewModelStore get() = store
+
+        fun handleLifecycleEvent(event: Lifecycle.Event) {
+            lifecycleRegistry.handleLifecycleEvent(event)
+        }
+
+        fun performRestore(savedState: android.os.Bundle?) {
+            savedStateRegistryController.performRestore(savedState)
         }
     }
 }
