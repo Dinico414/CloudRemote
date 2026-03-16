@@ -14,11 +14,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color as ComposeColor
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -54,8 +52,7 @@ class CurtainActivity : ComponentActivity() {
                     .background(ComposeColor.Black),
                 contentAlignment = Alignment.Center
             ) {
-                // Optional: Show some text or instructions if needed, currently just black
-                Text("Device Locked", color = ComposeColor.DarkGray, fontSize = 12.sp)
+                PixelWatchFace()
             }
         }
 
