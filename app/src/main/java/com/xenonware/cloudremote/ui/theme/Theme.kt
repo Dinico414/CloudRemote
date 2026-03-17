@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote.ui.theme
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.ColorScheme
@@ -140,14 +141,15 @@ fun ColorScheme.toCoverMode(): ColorScheme {
     )
 }
 
-
+@SuppressLint("ObsoleteSdkInt")
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun XenonTheme(
     darkTheme: Boolean,
+    useVoicemailTheme: Boolean = false,
     useBlackedOutDarkTheme: Boolean = false,
     isCoverMode: Boolean = false,
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = !useVoicemailTheme,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
@@ -184,7 +186,7 @@ fun XenonTheme(
                 inverseError = inverseErrorLight,
                 inverseOnError = inverseOnErrorLight,
                 inverseErrorContainer = inverseErrorContainerLight,
-                inverseOnErrorContainer = inverseOnErrorContainerLight
+                inverseOnErrorContainer = inverseOnErrorContainerLight,
             )
         }
     }

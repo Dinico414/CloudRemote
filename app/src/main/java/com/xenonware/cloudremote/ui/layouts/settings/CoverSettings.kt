@@ -1,4 +1,4 @@
-package com.xenonware.phone.ui.layouts.settings
+package com.xenonware.cloudremote.ui.layouts.settings
 
 import android.os.Build
 import androidx.compose.foundation.layout.Box
@@ -38,12 +38,12 @@ import com.xenon.mylibrary.res.ThemeSetting
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
-import com.xenonware.phone.BuildConfig
-import com.xenonware.phone.R
-import com.xenonware.phone.presentation.sign_in.GoogleAuthUiClient
-import com.xenonware.phone.presentation.sign_in.SignInState
-import com.xenonware.phone.viewmodel.classes.SettingsItems
-import com.xenonware.phone.viewmodel.SettingsViewModel
+import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.cloudremote.presentation.sign_in.SignInState
+import com.xenonware.cloudremote.BuildConfig
+import com.xenonware.cloudremote.R
+import com.xenonware.cloudremote.viewmodel.classes.SettingsItems
+import com.xenonware.cloudremote.viewmodel.SettingsViewModel
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
