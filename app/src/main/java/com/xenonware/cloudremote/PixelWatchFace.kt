@@ -41,6 +41,7 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
+import kotlin.random.Random
 
 @Composable
 fun PixelWatchFace() {
@@ -67,6 +68,22 @@ fun PixelWatchFace() {
 
     var time by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val isFullyInactive = !isActive && pillRightWeight == 0f
+    var burnInOffset by remember { mutableStateOf(Offset.Zero) }
+
+    LaunchedEffect(isFullyInactive) {
+        if (isFullyInactive) {
+            while (true) {
+                delay(20000L)
+                val maxOffset = 10f
+                burnInOffset = Offset(
+                    x = (Random.nextFloat() * 2 - 1) * maxOffset,
+                    y = (Random.nextFloat() * 2 - 1) * maxOffset
+                )
+            }
+        } else {
+            burnInOffset = Offset.Zero
+        }
+    }
 
     LaunchedEffect(isFullyInactive) {
         while (true) {
@@ -100,7 +117,11 @@ fun PixelWatchFace() {
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .graphicsLayer(alpha = animatedAlpha)
+            .graphicsLayer(
+                alpha = animatedAlpha,
+                translationX = burnInOffset.x,
+                translationY = burnInOffset.y
+            )
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = { touchCount++ })
