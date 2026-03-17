@@ -6,7 +6,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -89,9 +92,8 @@ fun PixelWatchFace() {
         while (true) {
             time = System.currentTimeMillis()
             if (!isFullyInactive) {
-                delay(16) // ~60fps smooth rendering
+                delay(16)
             } else {
-                // In ambient mode, sleep until the next minute tick
                 val calendar = Calendar.getInstance().apply { timeInMillis = time }
                 val seconds = calendar.get(Calendar.SECOND)
                 val millis = calendar.get(Calendar.MILLISECOND)
@@ -113,6 +115,8 @@ fun PixelWatchFace() {
     val second = calendar.get(Calendar.SECOND)
     val millis = calendar.get(Calendar.MILLISECOND)
 
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -128,9 +132,14 @@ fun PixelWatchFace() {
             }) {
         val w = size.width
         val h = size.height
+
+        val topInset = insets.calculateTopPadding().toPx()
+        val bottomInset = insets.calculateBottomPadding().toPx()
+        val safeHeight = h - topInset - bottomInset
+
         val cx = w / 2f
-        val cy = h / 2f
-        val r = min(w, h) / 2f
+        val cy = topInset + safeHeight / 2f
+        val r = min(w, safeHeight) / 2f
 
         val rInnerNum = r * 0.54f
         val rInnerTickIn = r * 0.62f
@@ -146,7 +155,7 @@ fun PixelWatchFace() {
 
         val hourStyle = TextStyle(
             color = primaryColor,
-            fontSize = (r * 0.22f).sp,
+            fontSize = (r * 0.20f).sp,
             fontWeight = FontWeight.Medium,
             fontFamily = QuicksandTitleVariable
         )
