@@ -119,8 +119,12 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.helper.MediaNotificationListener
+import com.xenonware.cloudremote.service.CloudRemoteService
 import com.xenonware.cloudremote.ui.theme.XenonTheme
+import com.xenonware.cloudremote.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID

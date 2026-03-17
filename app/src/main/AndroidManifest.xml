@@ -51,12 +51,12 @@
             android:turnScreenOn="true" />
 
         <service
-            android:name=".CloudRemoteService"
+            android:name=".service.CloudRemoteService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <service android:name=".MediaNotificationListener"
+        <service android:name=".helper.MediaNotificationListener"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
@@ -66,7 +66,7 @@
         </service>
 
         <service
-            android:name=".CurtainTileService"
+            android:name=".service.CurtainTileService"
             android:icon="@drawable/ic_launcher_foreground"
             android:label="Curtain"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
@@ -77,7 +77,7 @@
         </service>
 
         <receiver
-            android:name=".AdminReceiver"
+            android:name=".broadcastReceiver.AdminReceiver"
             android:description="@string/app_name"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
@@ -91,7 +91,7 @@
         </receiver>
 
         <receiver
-            android:name=".BootReceiver"
+            android:name=".broadcastReceiver.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -100,7 +100,7 @@
         </receiver>
 
         <receiver
-            android:name=".BatteryWidgetProvider"
+            android:name=".widget.BatteryWidgetProvider"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -112,7 +112,7 @@
         </receiver>
 
         <service
-            android:name=".WidgetService"
+            android:name=".service.WidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>
 

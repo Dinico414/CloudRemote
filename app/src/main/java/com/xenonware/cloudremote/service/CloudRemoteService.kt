@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -10,15 +10,20 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.session.MediaSessionManager
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
+import com.xenonware.cloudremote.widget.BatteryWidgetProvider
+import com.xenonware.cloudremote.MainActivity
+import com.xenonware.cloudremote.helper.MediaNotificationListener
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.data.GoogleCloudRepository
-import com.xenonware.cloudremote.data.LocalDeviceManager
+import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
+import com.xenonware.cloudremote.helper.LocalDeviceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,14 +59,14 @@ class CloudRemoteService : Service() {
     private val mediaUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
-                val title = it.getStringExtra(MediaNotificationListener.EXTRA_TITLE) ?: ""
-                val artist = it.getStringExtra(MediaNotificationListener.EXTRA_ARTIST) ?: ""
-                val albumArt = it.getStringExtra(MediaNotificationListener.EXTRA_ALBUM_ART) ?: ""
-                val isPlaying = it.getBooleanExtra(MediaNotificationListener.EXTRA_IS_PLAYING, false)
-                val customAction1Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_TITLE) ?: ""
-                val customAction1Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_ACTION) ?: ""
-                val customAction2Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_TITLE) ?: ""
-                val customAction2Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_ACTION) ?: ""
+                val title = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_TITLE) ?: ""
+                val artist = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_ARTIST) ?: ""
+                val albumArt = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_ALBUM_ART) ?: ""
+                val isPlaying = it.getBooleanExtra(MediaNotificationListener.Companion.EXTRA_IS_PLAYING, false)
+                val customAction1Title = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_CUSTOM_ACTION_1_TITLE) ?: ""
+                val customAction1Action = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_CUSTOM_ACTION_1_ACTION) ?: ""
+                val customAction2Title = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_CUSTOM_ACTION_2_TITLE) ?: ""
+                val customAction2Action = it.getStringExtra(MediaNotificationListener.Companion.EXTRA_CUSTOM_ACTION_2_ACTION) ?: ""
                 updateMediaState(title, artist, albumArt, isPlaying, customAction1Title, customAction1Action, customAction2Title, customAction2Action)
             }
         }
@@ -85,7 +90,8 @@ class CloudRemoteService : Service() {
         localDeviceManager = LocalDeviceManager(this)
         createNotificationChannel()
         LocalBroadcastManager.getInstance(this).registerReceiver(
-            mediaUpdateReceiver, IntentFilter(MediaNotificationListener.ACTION_MEDIA_UPDATE)
+            mediaUpdateReceiver,
+            IntentFilter(MediaNotificationListener.Companion.ACTION_MEDIA_UPDATE)
         )
         registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
     }
@@ -192,8 +198,8 @@ class CloudRemoteService : Service() {
 
     private fun broadcastWidgetUpdate(devices: List<Device>) {
         val intent = Intent(this, BatteryWidgetProvider::class.java).apply {
-            action = BatteryWidgetProvider.ACTION_UPDATE_WIDGET
-            putExtra(BatteryWidgetProvider.EXTRA_DEVICES_JSON, Gson().toJson(devices))
+            action = BatteryWidgetProvider.Companion.ACTION_UPDATE_WIDGET
+            putExtra(BatteryWidgetProvider.Companion.EXTRA_DEVICES_JSON, Gson().toJson(devices))
         }
         sendBroadcast(intent)
     }
@@ -201,7 +207,7 @@ class CloudRemoteService : Service() {
     private fun handleMediaAction(action: String) {
         val componentName = ComponentName(this, MediaNotificationListener::class.java)
         val mediaController =
-            (getSystemService(Context.MEDIA_SESSION_SERVICE) as android.media.session.MediaSessionManager)
+            (getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager)
                 .getActiveSessions(componentName).firstOrNull()
 
         when (action) {
@@ -282,7 +288,7 @@ class CloudRemoteService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID, "Cloud Remote Sync Service", NotificationManager.IMPORTANCE_LOW
         )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        Context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {

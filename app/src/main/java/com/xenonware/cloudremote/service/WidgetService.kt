@@ -1,7 +1,9 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.service
 
 import android.content.Intent
 import android.widget.RemoteViewsService
+import com.xenonware.cloudremote.viewmodel.BatteryWidgetRemoteViewsFactory
+import com.xenonware.cloudremote.R
 
 class WidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {

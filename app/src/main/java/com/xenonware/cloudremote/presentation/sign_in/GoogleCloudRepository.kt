@@ -1,6 +1,7 @@
-package com.xenonware.cloudremote.data
+package com.xenonware.cloudremote.presentation.sign_in
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.xenonware.cloudremote.data.Device
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow

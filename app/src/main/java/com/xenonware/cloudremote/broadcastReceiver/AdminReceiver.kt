@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.broadcastReceiver
 
 import android.app.admin.DeviceAdminReceiver
 import android.content.Context

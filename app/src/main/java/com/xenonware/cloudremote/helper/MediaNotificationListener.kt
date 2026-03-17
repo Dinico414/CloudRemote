@@ -1,7 +1,6 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.helper
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadata
@@ -36,7 +35,7 @@ class MediaNotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-        mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
     }
 
     private val mediaControllerCallback = object : MediaController.Callback() {

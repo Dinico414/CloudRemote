@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.widget
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -9,7 +9,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
 import com.google.gson.Gson
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.service.WidgetService
+import com.xenonware.cloudremote.viewmodel.BatteryWidgetRemoteViewsFactory
 
 class BatteryWidgetProvider : AppWidgetProvider() {
 
@@ -68,7 +71,7 @@ class BatteryWidgetProvider : AppWidgetProvider() {
             val devicesJson = intent.getStringExtra(EXTRA_DEVICES_JSON)
             if (devicesJson != null) {
                 val devices = Gson().fromJson(devicesJson, Array<Device>::class.java).toList()
-                BatteryWidgetRemoteViewsFactory.devices = devices
+                BatteryWidgetRemoteViewsFactory.Companion.devices = devices
             }
 
             val appWidgetManager = AppWidgetManager.getInstance(context)
