@@ -164,7 +164,7 @@ fun PixelWatchFace() {
         )
 
         // Draw Hour
-        val hourText = displayHour.toString()
+        val hourText = String.format(Locale.getDefault(), "%02d", displayHour)
         val hourLayout = textMeasurer.measure(hourText, hourStyle)
         drawText(
             textLayoutResult = hourLayout, topLeft = Offset(
