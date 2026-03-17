@@ -14,7 +14,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import com.xenon.mylibrary.theme.LayoutType
+import com.xenonware.cloudremote.viewmodel.LayoutType
 
 @Composable
 fun ScreenEnvironment(

@@ -27,7 +27,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
 
-    private val _currentUser = MutableStateFlow(auth.currentUser)
+    private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser
 
     var localDeviceId: String = ""
@@ -48,6 +48,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _devices.value = deviceList
             }
         }
+    }
+
+    fun onSignedIn() {
+        _currentUser.value = auth.currentUser
     }
 
     fun toggleCurrentDevice() {

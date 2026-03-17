@@ -2,7 +2,7 @@ package com.xenonware.cloudremote.ui.layouts
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.xenon.mylibrary.theme.LayoutType
+import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.presentation.sign_in.SignInState
 import com.xenonware.cloudremote.ui.layouts.settings.CoverSettings
