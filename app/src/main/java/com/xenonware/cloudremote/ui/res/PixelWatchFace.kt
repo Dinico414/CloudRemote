@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.ui.res
 
 import android.text.format.DateFormat
 import androidx.compose.animation.core.animateFloatAsState

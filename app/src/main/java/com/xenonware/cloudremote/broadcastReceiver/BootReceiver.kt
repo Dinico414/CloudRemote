@@ -1,9 +1,10 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.broadcastReceiver
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import com.xenonware.cloudremote.service.CloudRemoteService
 import java.util.UUID
 
 class BootReceiver : BroadcastReceiver() {
@@ -13,7 +14,7 @@ class BootReceiver : BroadcastReceiver() {
             val deviceId = androidId ?: UUID.randomUUID().toString()
 
             val serviceIntent = Intent(context, CloudRemoteService::class.java).apply {
-                putExtra(CloudRemoteService.EXTRA_DEVICE_ID, deviceId)
+                putExtra(CloudRemoteService.Companion.EXTRA_DEVICE_ID, deviceId)
             }
             context.startForegroundService(serviceIntent)
         }

@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.viewmodel
 
 import android.app.Application
 import android.util.Log
@@ -8,7 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.data.GoogleCloudRepository
+import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

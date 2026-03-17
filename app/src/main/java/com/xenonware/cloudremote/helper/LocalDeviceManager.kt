@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote.data
+package com.xenonware.cloudremote.helper
 
 import android.app.KeyguardManager
 import android.app.NotificationManager
@@ -13,12 +13,12 @@ import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -35,8 +35,8 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.xenonware.cloudremote.AdminReceiver
-import com.xenonware.cloudremote.PixelWatchFace
+import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
+import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -76,14 +76,18 @@ class LocalDeviceManager(private val context: Context) {
     )
 
     fun getBatteryLevel(): Int {
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryIntent = context.registerReceiver(null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         return if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
     }
 
     fun isCharging(): Boolean {
-        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val batteryIntent = context.registerReceiver(null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
         val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
         return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
@@ -347,9 +351,10 @@ class LocalDeviceManager(private val context: Context) {
     }
 
     // A simple lifecycle owner for ComposeView inside WindowManager
-    private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+    private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner,
+        SavedStateRegistryOwner {
         private val lifecycleRegistry = LifecycleRegistry(this)
-        private val savedStateRegistryController = SavedStateRegistryController.create(this)
+        private val savedStateRegistryController = SavedStateRegistryController.Companion.create(this)
         private val store = ViewModelStore()
 
         override val lifecycle: Lifecycle get() = lifecycleRegistry
@@ -360,7 +365,7 @@ class LocalDeviceManager(private val context: Context) {
             lifecycleRegistry.handleLifecycleEvent(event)
         }
 
-        fun performRestore(savedState: android.os.Bundle?) {
+        fun performRestore(savedState: Bundle?) {
             savedStateRegistryController.performRestore(savedState)
         }
     }

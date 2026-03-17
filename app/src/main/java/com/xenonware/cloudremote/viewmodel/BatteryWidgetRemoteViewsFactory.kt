@@ -1,9 +1,10 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.viewmodel
 
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 
 class BatteryWidgetRemoteViewsFactory(

@@ -1,4 +1,4 @@
-package com.xenonware.cloudremote
+package com.xenonware.cloudremote.service
 
 import android.app.PendingIntent
 import android.content.Intent
@@ -6,6 +6,7 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.annotation.RequiresApi
+import com.xenonware.cloudremote.SwipeableCurtainActivity
 
 class CurtainTileService : TileService() {
 
@@ -18,7 +19,7 @@ class CurtainTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (isCurtainActive) {
-            val closeIntent = Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
+            val closeIntent = Intent(SwipeableCurtainActivity.Companion.ACTION_CLOSE_CURTAIN)
             sendBroadcast(closeIntent)
         } else {
             val intent = Intent(this, SwipeableCurtainActivity::class.java)

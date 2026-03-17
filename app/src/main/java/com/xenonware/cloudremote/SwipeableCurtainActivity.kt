@@ -34,6 +34,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.xenonware.cloudremote.service.CurtainTileService
+import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlin.math.roundToInt
 
