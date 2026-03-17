@@ -1,3 +1,112 @@
 <resources>
+    <!-- App Name -->
     <string name="app_name">Cloud Remote</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_menu_item">Settings</string>
+    <string name="settings_menu_item_description">Open settings menu</string>
+    <string name="theme">Theme</string>
+    <string name="cover_screen_mode">Cover Screen Mode</string>
+    <string name="cover_screen_mode_description">Selected cover screen</string>
+    <string name="language">Language</string>
+    <string name="clear_data">Clear All Data</string>
+    <string name="clear_data_description">Clears app data and cache</string>
+    <string name="reset_settings">Reset All Settings</string>
+    <string name="blacked_out">Blacked-out</string>
+    <string name="blacked_out_description">Makes dark mode even darker.</string>
+    <string name="time_format">Time Format</string>
+    <string name="date_format">Date Format</string>
+    <string name="date_time_format"><![CDATA[Time & Date Format]]></string>
+    <string name="sign_out">Sign out</string>
+    <string name="version">Version</string>
+    <string name="app_version">App Version</string>
+    <string name="xenon_ui_version">Xenon-UI Version</string>
+    <string name="xenon_commons_version">Xenon-Commons Version</string>
+
+    <!-- Developer Settings -->
+    <string name="developer_options_title">Developer Options</string>
+    <string name="developer_options">Developer Settings</string>
+    <string name="dev_settings_description">Enable Alpha and Beta State Features</string>
+    <string name="already_in_developer_mode">You are already in developer mode</string>
+    <string name="developer_mode_enabled">Developer mode enabled!</string>
+    <string name="taps_remaining_to_developer">You are now %d steps away from being a developer.</string>
+    <string name="show_dummy_profile_title">Enable Fake Google Profile</string>
+    <string name="default_web_client_id">8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com</string>
+
+    <!-- Dialog Titles -->
+    <string name="theme_dialog_title">Select Theme</string>
+    <string name="cover_screen_dialog_title">Is this currently the cover screen?</string>
+    <string name="language_dialog_title">Select Language</string>
+    <string name="clear_data_dialog_title">Clear all data?</string>
+    <string name="reset_settings_dialog_title">Reset all settings?</string>
+    <string name="add_new_list_dialog_title">Add new list</string>
+    <string name="rename_list_dialog_title">Rename list</string>
+    <string name="confirm_delete_title">Confirm Deletion</string>
+    <string name="select_date_title">Select Date</string>
+    <string name="select_time_title">Select Time</string>
+
+    <!-- Dialog Content -->
+    <string name="cover_dialog_description">Enable to apply a more compact, edgeless layout when using the cover screen.</string>
+    <string name="clear_data_dialog_description">Are you sure you want to clear all data?</string>
+    <string name="reset_settings_dialog_description">Are you sure you want to reset all settings?</string>
+    <string name="sign_out_dialog_description">Are you sure you want to sign out?</string>
+    <string name="sign_out_description">Are you sure you want to sign out?</string>
+    <string name="confirm_delete_message">Are you sure you want to delete the selected list(s)? This action cannot be undone.</string>
+
+    <!-- Dialog Buttons -->
+    <string name="ok">Okay</string>
+    <string name="confirm">Confirm</string>
+    <string name="yes">Yes</string>
+    <string name="cancel">Cancel</string>
+    <string name="no">No</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="reset">Reset</string>
+    <string name="add">Add</string>
+
+    <!-- Universal Strings -->
+    <string name="current">Current:</string>
+    <string name="enabled">Enabled</string>
+    <string name="disabled">Disabled</string>
+    <string name="system_default">System Default</string>
+    <string name="placeholder">Placeholder</string>
+    <string name="search">Search</string>
+    <string name="undo">Undo</string>
+    <string name="no_search_results">No search results</string>
+    <string name="deleted_text">deleted</string>
+    <string name="permission_denied">Permission denied</string>
+    <string name="no_match">No matching results</string>
+    <string name="unknown">Unknown</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="last_week">Last Week</string>
+    <string name="last_month">Last Month</string>
+    <string name="error_restarting_app">Error while restarting</string>
+    <string name="error_clearing_data_failed">Error clearing data</string>
+    <string name="error_clearing_data_permission">Permission Missing</string>
+    <string name="select_date">Select\nDate</string>
+    <string name="select_time">Select\nTime</string>
+    <string name="descending_label">Descending</string>
+    <string name="ascending_label">Ascending</string>
+    <string name="include">Include</string>
+    <string name="exclude">Exclude</string>
+    <string name="bold_text">Bold Text</string>
+    <string name="italic_text">Italic Text</string>
+    <string name="underline_text">Underline Text</string>
+    <string name="change_text_size">Change Text Size</string>
+    <string name="change_layout">Change Layout</string>
+    <string name="profile_picture">Profilepicture</string>
+    <string name="more_infos">More infos</string>
+
+    <!-- Universal Accessibility Strings -->
+    <string name="navigate_back_description">Navigate back</string>
+    <string name="menu_description">Open menu</string>
+    <string name="checkbox">Checkbox</string>
+    <string name="open_navigation_menu">Open navigation menu</string>
+    <string name="switch_units_description">Switch units</string>
+    <string name="restart_app_description">restart app</string>
+
+    <!-- App Specific Strings -->
+
 </resources>

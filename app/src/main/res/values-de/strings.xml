@@ -1,0 +1,112 @@
+<resources>
+    <!-- App Name -->
+    <string name="app_name">Cloud Remote</string>
+
+    <!-- Settings -->
+    <string name="settings">Einstellungen</string>
+    <string name="settings_menu_item">Einstellungen</string>
+    <string name="settings_menu_item_description">Öffne Einstellungen</string>
+    <string name="theme">Theme</string>
+    <string name="cover_screen_mode">Frontdisplay Modus</string>
+    <string name="cover_screen_mode_description">Ausgewählter Frontdisplay</string>
+    <string name="language">Sprache</string>
+    <string name="clear_data">Alle Daten löschen</string>
+    <string name="clear_data_description">Löscht App Daten und Cache</string>
+    <string name="reset_settings">Alle Einstellungen zurücksetzen</string>
+    <string name="blacked_out">Ausgeschwärzt</string>
+    <string name="blacked_out_description">Dunkelt Darkmode noch mehr ab.</string>
+    <string name="time_format">Zeitformat</string>
+    <string name="date_format">Datumsformat</string>
+    <string name="date_time_format"><![CDATA[Zeit & Datums Format]]></string>
+    <string name="sign_out">Sign out</string>
+    <string name="version">Version</string>
+    <string name="app_version">App Version</string>
+    <string name="xenon_ui_version">Xenon-UI Version</string>
+    <string name="xenon_commons_version">Xenon-Commons Version</string>
+
+    <!-- Developer Settings -->
+    <string name="developer_options_title">Entwickleroptionen</string>
+    <string name="developer_options">Entwicklereinstellungen</string>
+    <string name="dev_settings_description">Aktiviere Alpha- und Beta-Features</string>
+    <string name="already_in_developer_mode">Du bist bereits im Entwicklermodus</string>
+    <string name="developer_mode_enabled">Entwicklermodus aktiviert!</string>
+    <string name="taps_remaining_to_developer">Du bist jetzt noch %d Schritte davon entfernt, ein Entwickler zu sein.</string>
+    <string name="show_dummy_profile_title">Falsches Google-Profil aktivieren</string>
+    <string name="default_web_client_id">8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com</string>
+
+    <!-- Dialog Titles -->
+    <string name="theme_dialog_title">Wähle Theme</string>
+    <string name="cover_screen_dialog_title">Ist dies aktuell der Frontdisplay?</string>
+    <string name="language_dialog_title">Wähle Sprache</string>
+    <string name="clear_data_dialog_title">Alle Daten löschen?</string>
+    <string name="reset_settings_dialog_title">Alle Einstellungen zurücksetzen?</string>
+    <string name="add_new_list_dialog_title">Neue Liste hinzufügen</string>
+    <string name="rename_list_dialog_title">Liste umbenennen</string>
+    <string name="confirm_delete_title">Löschen bestätigen</string>
+    <string name="select_date_title">Datum auswählen</string>
+    <string name="select_time_title">Zeit auswählen</string>
+
+    <!-- Dialog Content -->
+    <string name="cover_dialog_description">Aktivieren, um ein kompakteres, randloses Layout anzuwenden, wenn das Frontdisplay verwendet wird.</string>
+    <string name="clear_data_dialog_description">Bist du sicher, dass du alle Daten löschen willst?</string>
+    <string name="reset_settings_dialog_description">Bist du sicher, dass du alle Einstellungen zurücksetzen willst?</string>
+    <string name="sign_out_dialog_description">Are you sure you want to sign out?</string>
+    <string name="sign_out_description">Are you sure you want to sign out?</string>
+    <string name="confirm_delete_message">Bist du sicher, dass du die ausgewählte(n) Liste(n) löschen willst? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+
+    <!-- Dialog Buttons -->
+    <string name="ok">Okay</string>
+    <string name="confirm">Bestätigen</string>
+    <string name="yes">Ja</string>
+    <string name="cancel">Abbruch</string>
+    <string name="no">Nein</string>
+    <string name="save">Speichern</string>
+    <string name="delete">Löschen</string>
+    <string name="reset">Zurück\u200Bsetzen</string>
+    <string name="add">Neu</string>
+
+    <!-- Universal Strings -->
+    <string name="current">Aktuell:</string>
+    <string name="enabled">Aktiv</string>
+    <string name="disabled">Inaktiv</string>
+    <string name="system_default">System</string>
+    <string name="placeholder">Placeholder</string>
+    <string name="search">Suche</string>
+    <string name="undo">Rückgängig</string>
+    <string name="no_search_results">Keine Suchergebnisse</string>
+    <string name="deleted_text">gelöscht</string>
+    <string name="permission_denied">Berechtigung verweigert</string>
+    <string name="no_match">Keine passenden Ergebnisse</string>
+    <string name="unknown">Unbekannt</string>
+    <string name="today">Heute</string>
+    <string name="yesterday">Gestern</string>
+    <string name="last_week">Letzte Woche</string>
+    <string name="last_month">Letzter Monat</string>
+    <string name="error_restarting_app">Fehler beim Neustart</string>
+    <string name="error_clearing_data_failed">Fehler beim Löschen der Daten</string>
+    <string name="error_clearing_data_permission">Berechtigung fehlt</string>
+    <string name="select_date">Datum\nauswählen</string>
+    <string name="select_time">Zeit\nauswählen</string>
+    <string name="descending_label">Absteigend</string>
+    <string name="ascending_label">Aufsteigend</string>
+    <string name="include">Anzeigen</string>
+    <string name="exclude">Ausblenden</string>
+    <string name="bold_text">Fettgedruckter Text</string>
+    <string name="italic_text">Kursiver Text</string>
+    <string name="underline_text">Unterstrichener Text</string>
+    <string name="change_text_size">Textgröße ändern</string>
+    <string name="change_layout">Layout ändern</string>
+    <string name="profile_picture">Profilepicture</string>
+    <string name="more_infos">More infos</string>
+
+    <!-- Universal Accessibility Strings -->
+    <string name="navigate_back_description">Zurück Aktion</string>
+    <string name="menu_description">Öffne Menü</string>
+    <string name="checkbox">Checkbox</string>
+    <string name="open_navigation_menu">Öffne Navigation</string>
+    <string name="switch_units_description">Wechsel Einheiten</string>
+    <string name="restart_app_description">App neustarten</string>
+
+    <!-- App Specific Strings -->
+
+</resources>
