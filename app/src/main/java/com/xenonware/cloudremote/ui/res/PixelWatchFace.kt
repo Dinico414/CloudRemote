@@ -74,7 +74,7 @@ fun PixelWatchFace() {
         if (isFullyInactive) {
             while (true) {
                 delay(20000L)
-                val maxOffset = 10f
+                val maxOffset = 80f
                 burnInOffset = Offset(
                     x = (Random.nextFloat() * 2 - 1) * maxOffset,
                     y = (Random.nextFloat() * 2 - 1) * maxOffset

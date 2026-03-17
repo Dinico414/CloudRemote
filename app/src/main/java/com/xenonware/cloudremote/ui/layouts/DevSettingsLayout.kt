@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.xenon.mylibrary.theme.LayoutType
+import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.viewmodel.DevSettingsViewModel
 import com.xenonware.cloudremote.ui.layouts.dev_settings.DevCoverSettings
 import com.xenonware.cloudremote.ui.layouts.dev_settings.DevDefaultSettings

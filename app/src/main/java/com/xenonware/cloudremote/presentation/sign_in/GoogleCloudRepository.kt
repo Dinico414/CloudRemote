@@ -24,23 +24,6 @@ class GoogleCloudRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getDeviceFlow(deviceId: String): Flow<Device?> = callbackFlow {
-        if (deviceId.isBlank()) {
-            trySend(null)
-            close()
-            return@callbackFlow
-        }
-        val listener = db.collection("devices").document(deviceId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                trySend(snapshot?.toObject(Device::class.java))
-            }
-        awaitClose { listener.remove() }
-    }
-
     fun updateDevice(device: Device) {
         if (device.id.isBlank()) return
         db.collection("devices").document(device.id).set(device)
