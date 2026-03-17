@@ -278,10 +278,11 @@ class LocalDeviceManager(private val context: Context) {
             overlayLifecycleOwner?.performRestore(null)
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
 
+            layout.setViewTreeLifecycleOwner(overlayLifecycleOwner)
+            layout.setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
+            layout.setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
+
             val composeView = ComposeView(context).apply {
-                setViewTreeLifecycleOwner(overlayLifecycleOwner)
-                setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
-                setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
                 setContent {
                     PixelWatchFace()
                 }
@@ -294,9 +295,9 @@ class LocalDeviceManager(private val context: Context) {
                 )
             )
 
-            windowManager.addView(layout, params)
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_START)
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            windowManager.addView(layout, params)
 
             curtainView = layout
             isCurtainVisible = true

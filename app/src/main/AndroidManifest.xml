@@ -46,7 +46,9 @@
             android:exported="false"
             android:theme="@style/Theme.Xenon"
             android:launchMode="singleInstance"
-            android:excludeFromRecents="true" />
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true" />
 
         <service
             android:name=".CloudRemoteService"
