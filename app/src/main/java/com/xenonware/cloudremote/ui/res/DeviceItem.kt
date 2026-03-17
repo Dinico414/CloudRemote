@@ -25,8 +25,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
@@ -74,12 +72,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -94,93 +87,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
 import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.viewmodel.MainViewModel
-import kotlinx.coroutines.delay
-
-@Composable
-fun DeviceControlScreen(modifier: Modifier = Modifier, viewModel: MainViewModel) {
-    val devices by viewModel.devices.collectAsState()
-    val localDevice = devices.find { it.id == viewModel.localDeviceId }
-
-    var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(5000)
-            currentTime = System.currentTimeMillis()
-        }
-    }
-
-    val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
-    val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
-        (currentTime - it.lastUpdated) < 60_000 // 1 minute threshold
-    }
-
-    LazyColumn(
-        modifier = modifier
-            .padding(horizontal = 16.dp)
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        localDevice?.let {
-            item {
-                DeviceItem(
-                    device = it,
-                    isLocalDevice = true,
-                    isOnline = true, // Local device is always considered online for UI purposes
-                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
-                )
-            }
-        }
-
-        if (onlineCloudDevices.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Cloud Devices",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            items(onlineCloudDevices) { device ->
-                DeviceItem(
-                    device = device,
-                    isLocalDevice = false,
-                    isOnline = true,
-                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
-                )
-            }
-        }
-
-        if (offlineCloudDevices.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Offline Devices",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            items(offlineCloudDevices) { device ->
-                DeviceItem(
-                    device = device,
-                    isLocalDevice = false,
-                    isOnline = false,
-                    onUpdateDevice = { updatedDevice -> viewModel.updateDevice(updatedDevice) }
-                )
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpdateDevice: (Device) -> Unit) {
     Card(
         shape = RoundedCornerShape(30.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(

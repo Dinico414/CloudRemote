@@ -13,7 +13,9 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -78,7 +80,14 @@ class SwipeableCurtainActivity : ComponentActivity() {
         setContent {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
                 var offsetY by remember { mutableFloatStateOf(0f) }
-                val animatedOffsetY by animateFloatAsState(targetValue = offsetY, label = "offsetY")
+                val animatedOffsetY by animateFloatAsState(
+                    targetValue = offsetY,
+                    label = "offsetY",
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
                 val density = LocalDensity.current.density
 
                 Box(
