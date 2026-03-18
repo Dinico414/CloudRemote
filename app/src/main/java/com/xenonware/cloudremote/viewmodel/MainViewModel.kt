@@ -31,8 +31,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser
 
+    private val _localDeviceName = MutableStateFlow("")
+    val localDeviceName: StateFlow<String> = _localDeviceName
+
     var localDeviceId: String = ""
-    var localDeviceName: String = ""
 
     init {
         viewModelScope.launch {
@@ -47,12 +49,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }.collect { deviceList ->
                 _devices.value = deviceList
+                deviceList.find { it.id == localDeviceId }?.name?.let {
+                    if (it.isNotBlank()) {
+                        _localDeviceName.value = it
+                    }
+                }
             }
         }
     }
 
     fun onSignedIn() {
         _currentUser.value = auth.currentUser
+    }
+
+    fun updateLocalDeviceName(name: String) {
+        _localDeviceName.value = name
+        // Optionally, you might want to persist this name to SharedPreferences here
     }
 
     fun toggleCurrentDevice() {
@@ -62,9 +74,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (isAdded) {
             repository.deleteDevice(localDeviceId)
         } else {
+            val deviceName =
+                _localDeviceName.value.ifBlank { currentUser.value?.displayName ?: "Unknown Device" }
             val newDevice = Device(
                 id = localDeviceId,
-                name = localDeviceName,
+                name = deviceName,
                 batteryLevel = 0,
                 mediaVolume = 0,
                 isDeviceOn = true,

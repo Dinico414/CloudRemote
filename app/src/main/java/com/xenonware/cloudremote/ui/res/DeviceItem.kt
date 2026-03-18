@@ -40,6 +40,8 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Forward30
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
@@ -62,6 +64,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -90,7 +93,14 @@ import com.xenonware.cloudremote.data.Device
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpdateDevice: (Device) -> Unit) {
+fun DeviceItem(
+    device: Device,
+    isLocalDevice: Boolean,
+    isOnline: Boolean,
+    isSharing: Boolean,
+    onUpdateDevice: (Device) -> Unit,
+    onToggleShare: () -> Unit
+) {
     Card(
         shape = RoundedCornerShape(30.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
@@ -98,7 +108,12 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = if (isLocalDevice && !isSharing) 8.dp else 16.dp,
+                    top = if (isLocalDevice) 8.dp else 16.dp
+                )
                 .graphicsLayer(alpha = if (isOnline) 1f else 0.5f)
         ) {
             Row(
@@ -109,11 +124,20 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                 Text(
                     text = device.name.ifBlank { "Unknown Device" },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
+                if (isLocalDevice) {
+                    FilledTonalIconButton(onClick = onToggleShare) {
+                        Icon(
+                            imageVector = if (isSharing) Icons.Rounded.LinkOff else Icons.Rounded.Link,
+                            contentDescription = if (isSharing) "Stop Sharing" else "Share"
+                        )
+                    }
+                }
             }
 
-            if (isOnline) {
+            if (isOnline && (!isLocalDevice || isSharing)) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Media Player
@@ -438,7 +462,7 @@ fun DeviceItem(device: Device, isLocalDevice: Boolean, isOnline: Boolean, onUpda
                         Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
                     }
                 }
-            } else {
+            } else if (!isOnline) {
                 Text(
                     text = "device unavailable",
                     style = MaterialTheme.typography.bodyMedium,

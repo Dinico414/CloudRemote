@@ -1,11 +1,8 @@
 package com.xenonware.cloudremote.ui.layouts.main
 
-import android.app.Application
-import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Intent
 import android.service.quicksettings.TileService
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -23,15 +20,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Curtains
 import androidx.compose.material.icons.rounded.CurtainsClosed
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +66,7 @@ import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.SwipeableCurtainActivity
+import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.presentation.sign_in.SignInViewModel
@@ -157,6 +151,8 @@ fun CompactRemote(
         val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
         val devices by viewModel.devices.collectAsState()
         val localDevice = devices.find { it.id == viewModel.localDeviceId }
+        val localDeviceName by viewModel.localDeviceName.collectAsStateWithLifecycle()
+
 
         Scaffold(snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
@@ -186,15 +182,26 @@ fun CompactRemote(
 
             val defaultToolbarContent = @Composable {
                 Row {
-                    // Add/remove device button
-                    IconButton(
-                        onClick = {
-                            viewModel.toggleCurrentDevice()
-                        }) {
-                        Icon(
-                            imageVector = if (devices.any { it.id == viewModel.localDeviceId }) Icons.Rounded.Link else Icons.Rounded.LinkOff,
-                            contentDescription = "Toggle Device Sharing"
+                    // Curtain button
+                    IconButton(onClick = {
+                        if (CurtainTileService.isCurtainActive) {
+                            val closeIntent =
+                                Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
+                            context.sendBroadcast(closeIntent)
+                        } else {
+                            val intent = Intent(context, SwipeableCurtainActivity::class.java)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        }
+                        CurtainTileService.isCurtainActive = !CurtainTileService.isCurtainActive
+                        TileService.requestListeningState(
+                            context,
+                            ComponentName(context, CurtainTileService::class.java)
                         )
+                    }) {
+                        val icon =
+                            if (localDevice?.isCurtainOn == true) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains
+                        Icon(icon, contentDescription = "Curtain Trigger")
                     }
 
                     // Settings button
@@ -205,39 +212,7 @@ fun CompactRemote(
                     }
                 }
             }
-
-            val fabOverride = @Composable {
-                Crossfade(targetState = isSearchActive, label = "fab_crossfade") { searchActive ->
-                    if (searchActive) {
-                        FloatingActionButton(onClick = { /* No action for add button yet */ }) {
-                            Icon(Icons.Rounded.Add, contentDescription = "Add")
-                        }
-                    } else {
-                        FloatingActionButton(onClick = {
-                            if (CurtainTileService.isCurtainActive) {
-                                val closeIntent =
-                                    Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
-                                context.sendBroadcast(closeIntent)
-                            } else {
-                                val intent = Intent(context, SwipeableCurtainActivity::class.java)
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            }
-                            CurtainTileService.isCurtainActive = !CurtainTileService.isCurtainActive
-                            TileService.requestListeningState(
-                                context,
-                                ComponentName(context, CurtainTileService::class.java)
-                            )
-                        }) {
-                            val icon =
-                                if (localDevice?.isCurtainOn == true) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains
-                            Icon(icon, contentDescription = "Curtain Trigger")
-                        }
-                    }
-                }
-            }
-
-
+            
             FloatingToolbarContent(
                 hazeState = hazeState,
                 onSearchQueryChanged = { },
@@ -252,7 +227,8 @@ fun CompactRemote(
                 isSearchActive = isSearchActive,
                 onIsSearchActiveChange = { isSearchActive = it },
                 defaultContent = { _, _ -> defaultToolbarContent() },
-                fabOverride = if (!isSearchActive) fabOverride else null,
+                fabOverride = null,
+                isFabEnabled = false,
                 isSpannedMode = deviceConfig.isSpannedMode,
                 fabOnLeftInSpannedMode = deviceConfig.fabOnLeft,
                 spannedModeHingeGap = deviceConfig.hingeGapDp,
@@ -300,19 +276,23 @@ fun CompactRemote(
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                localDevice?.let {
-                                    item {
-                                        DeviceItem(
-                                            device = it,
-                                            isLocalDevice = true,
-                                            isOnline = true, // Local device is always considered online for UI purposes
-                                            onUpdateDevice = { updatedDevice ->
-                                                viewModel.updateDevice(
-                                                    updatedDevice
-                                                )
-                                            }
-                                        )
-                                    }
+                                item {
+                                    val isSharing = localDevice != null
+                                    val deviceToDisplay = localDevice ?: Device(
+                                        id = viewModel.localDeviceId,
+                                        name = localDeviceName.ifBlank { currentUser?.displayName ?: "This Device" }
+                                    )
+
+                                    DeviceItem(
+                                        device = deviceToDisplay,
+                                        isLocalDevice = true,
+                                        isOnline = true,
+                                        isSharing = isSharing,
+                                        onUpdateDevice = { updatedDevice ->
+                                            viewModel.updateDevice(updatedDevice)
+                                        },
+                                        onToggleShare = { viewModel.toggleCurrentDevice() }
+                                    )
                                 }
 
                                 if (onlineCloudDevices.isNotEmpty()) {
@@ -321,7 +301,10 @@ fun CompactRemote(
                                             text = "Cloud Devices",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                                            modifier = Modifier.padding(
+                                                top = 16.dp,
+                                                bottom = 8.dp
+                                            )
                                         )
                                     }
 
@@ -330,11 +313,13 @@ fun CompactRemote(
                                             device = device,
                                             isLocalDevice = false,
                                             isOnline = true,
+                                            isSharing = false, // Cloud devices are never "sharing" from this view
                                             onUpdateDevice = { updatedDevice ->
                                                 viewModel.updateDevice(
                                                     updatedDevice
                                                 )
-                                            }
+                                            },
+                                            onToggleShare = {}
                                         )
                                     }
                                 }
@@ -345,7 +330,10 @@ fun CompactRemote(
                                             text = "Offline Devices",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                                            modifier = Modifier.padding(
+                                                top = 16.dp,
+                                                bottom = 8.dp
+                                            )
                                         )
                                     }
 
@@ -354,11 +342,13 @@ fun CompactRemote(
                                             device = device,
                                             isLocalDevice = false,
                                             isOnline = false,
+                                            isSharing = false,
                                             onUpdateDevice = { updatedDevice ->
                                                 viewModel.updateDevice(
                                                     updatedDevice
                                                 )
-                                            }
+                                            },
+                                            onToggleShare = {}
                                         )
                                     }
                                 }
