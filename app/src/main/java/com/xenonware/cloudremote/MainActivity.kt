@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
         val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         val deviceId = androidId ?: UUID.randomUUID().toString()
         viewModel.localDeviceId = deviceId
-        viewModel.localDeviceName = Build.MODEL
+        viewModel.updateLocalDeviceName(Build.MODEL)
 
         checkOverlayPermission()
         checkDoNotDisturbPermission()
