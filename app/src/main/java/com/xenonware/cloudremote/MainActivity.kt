@@ -121,8 +121,7 @@ class MainActivity : ComponentActivity() {
                                 signInViewModel.onSignInResult(signInResult)
                             }
                         }
-                    }
-                )
+                    })
 
                 val traditionalSignInLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult(),
@@ -135,8 +134,7 @@ class MainActivity : ComponentActivity() {
                                 signInViewModel.onSignInResult(signInResult)
                             }
                         }
-                    }
-                )
+                    })
 
                 XenonApp(
                     viewModel = viewModel,
@@ -151,7 +149,10 @@ class MainActivity : ComponentActivity() {
                         lifecycleScope.launch {
                             val signInResult = googleAuthUiClient.signIn()
                             if (signInResult != null) {
-                                oneTapLauncher.launch(IntentSenderRequest.Builder(signInResult.pendingIntent.intentSender).build())
+                                oneTapLauncher.launch(
+                                    IntentSenderRequest.Builder(signInResult.pendingIntent.intentSender)
+                                        .build()
+                                )
                             } else {
                                 traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
                             }
@@ -180,10 +181,7 @@ class MainActivity : ComponentActivity() {
         val currentCoverThemeEnabledSetting = sharedPreferenceManager.coverThemeEnabled
         val currentBlackedOutMode = sharedPreferenceManager.blackedOutModeEnabled
 
-        if (currentThemePref != lastAppliedTheme ||
-            currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled ||
-            currentBlackedOutMode != lastAppliedBlackedOutMode
-        ) {
+        if (currentThemePref != lastAppliedTheme || currentCoverThemeEnabledSetting != lastAppliedCoverThemeEnabled || currentBlackedOutMode != lastAppliedBlackedOutMode) {
             if (currentThemePref != lastAppliedTheme) {
                 updateAppCompatDelegateTheme(currentThemePref)
             }
@@ -294,13 +292,13 @@ fun XenonApp(
     onOpenSettings: () -> Unit,
     appSize: IntSize,
     onSignInClick: () -> Unit
-    ) {
+) {
     MainLayout(
         viewModel = viewModel,
-//        isLandscape = isLandscape,
-//        layoutType = layoutType,
-//        onOpenSettings = onOpenSettings,
+        isLandscape = isLandscape,
+        layoutType = layoutType,
+        onOpenSettings = onOpenSettings,
         appSize = appSize,
         onSignInClick = onSignInClick,
-        )
+    )
 }
