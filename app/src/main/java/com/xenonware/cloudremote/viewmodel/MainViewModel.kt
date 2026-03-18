@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.helper.LocalDeviceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GoogleCloudRepository()
     private val auth = FirebaseAuth.getInstance()
-
+    private val localDeviceManager = LocalDeviceManager(application)
 
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
@@ -71,6 +72,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isCurtainOn = false
             )
             repository.updateDevice(newDevice)
+        }
+    }
+
+    fun toggleLocalCurtain() {
+        val localDevice = _devices.value.find { it.id == localDeviceId }
+        localDevice?.let {
+            val isCurtainOn = !it.isCurtainOn
+            localDeviceManager.setCurtain(isCurtainOn)
+            // Also update the state in Firestore so other devices can see the change
+            updateDevice(it.copy(isCurtainOn = isCurtainOn))
         }
     }
 
