@@ -262,7 +262,8 @@ fun CompactRemote(
                         onClick = deviceConfig.toggleFabSide,
                         modifier = Modifier.padding(bottom = animatedBottomPadding)
                     )
-                })
+                }
+            )
 
         }) { scaffoldPadding ->
             ActivityScreen(
@@ -309,7 +310,8 @@ fun CompactRemote(
                                                 viewModel.updateDevice(
                                                     updatedDevice
                                                 )
-                                            })
+                                            }
+                                        )
                                     }
                                 }
 
@@ -332,7 +334,8 @@ fun CompactRemote(
                                                 viewModel.updateDevice(
                                                     updatedDevice
                                                 )
-                                            })
+                                            }
+                                        )
                                     }
                                 }
 
@@ -355,13 +358,15 @@ fun CompactRemote(
                                                 viewModel.updateDevice(
                                                     updatedDevice
                                                 )
-                                            })
+                                            }
+                                        )
                                     }
                                 }
                             }
                         }
                     }
-                })
+                }
+            )
         }
     }
 }
