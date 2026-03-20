@@ -7,6 +7,7 @@ import com.google.firebase.firestore.PropertyName
 data class Device(
     val id: String = "",
     val name: String = "",
+    val icon: String = "", // Added icon
     val batteryLevel: Int = 0,
     @get:PropertyName("isCharging")
     val isCharging: Boolean = false,
