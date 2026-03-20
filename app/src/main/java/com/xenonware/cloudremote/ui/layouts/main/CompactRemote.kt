@@ -291,7 +291,7 @@ fun CompactRemote(
                                         onUpdateDevice = { updatedDevice ->
                                             viewModel.updateDevice(updatedDevice)
                                         },
-                                        onToggleShare = { viewModel.toggleCurrentDevice() }
+                                        onToggleShare = { name, icon -> viewModel.toggleCurrentDevice(name, icon) }
                                     )
                                 }
 
@@ -319,7 +319,7 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = {}
+                                            onToggleShare = { _, _ -> }
                                         )
                                     }
                                 }
@@ -348,7 +348,7 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = {}
+                                            onToggleShare = { _, _ -> }
                                         )
                                     }
                                 }

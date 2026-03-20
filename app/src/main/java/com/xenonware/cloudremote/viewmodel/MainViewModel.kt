@@ -67,18 +67,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Optionally, you might want to persist this name to SharedPreferences here
     }
 
-    fun toggleCurrentDevice() {
+    fun toggleCurrentDevice(customName: String? = null, customIcon: String = "") {
         val currentDevices = _devices.value
         val isAdded = currentDevices.any { it.id == localDeviceId }
 
         if (isAdded) {
             repository.deleteDevice(localDeviceId)
         } else {
-            val deviceName =
-                _localDeviceName.value.ifBlank { currentUser.value?.displayName ?: "Unknown Device" }
+            val deviceName = customName ?: _localDeviceName.value.ifBlank { currentUser.value?.displayName ?: "Unknown Device" }
             val newDevice = Device(
                 id = localDeviceId,
                 name = deviceName,
+                icon = customIcon,
                 batteryLevel = 0,
                 mediaVolume = 0,
                 isDeviceOn = true,
