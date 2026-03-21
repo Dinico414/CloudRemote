@@ -14,6 +14,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
@@ -41,7 +43,6 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Forward30
-import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
@@ -58,12 +59,9 @@ import androidx.compose.material.icons.rounded.Replay30
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
-import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Tablet
-import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -95,14 +93,48 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
-import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
+
+fun getDeviceIconPrefix(name: String): String? {
+    return when (name) {
+        "old phone", "phone", "" -> "op"
+        "surface duo" -> "sd"
+        "new phone (bigbezel)" -> "npbb"
+        "New Phone (NoBezel)" -> "npnb"
+        "New Phone (SmallNotch)" -> "npsn"
+        "New Phone (BigNotch)" -> "npbn"
+        "New Phone (PillCutOut)" -> "nppc"
+        "New Phone (RoundCutOutCenter)" -> "nprcc"
+        "New Phone (RoundCutOutLeft)" -> "nprcl"
+        "New Phone (RoundCutOutRight)" -> "nprcr"
+        "Flip Phone" -> "fp"
+        "Fold (inwards)" -> "fi"
+        "Fold (outwards)" -> "fo"
+        "LG Wing" -> "lg"
+        "iKKO Mind One" -> "ikko"
+        "Clicks Communicator" -> "cc"
+        "Keyboard Phone" -> "kp"
+        "Tablet" -> "t"
+        "Tablet (Notch)" -> "tn"
+        "Tablet (RoundCutOut)" -> "trc"
+        else -> null
+    }
+}
+
+val allIconNames = listOf(
+    "old phone", "surface duo", "new phone (bigbezel)", "New Phone (NoBezel)",
+    "New Phone (SmallNotch)", "New Phone (BigNotch)", "New Phone (PillCutOut)",
+    "New Phone (RoundCutOutCenter)", "New Phone (RoundCutOutLeft)", "New Phone (RoundCutOutRight)",
+    "Flip Phone", "Fold (inwards)", "Fold (outwards)", "LG Wing", "iKKO Mind One",
+    "Clicks Communicator", "Keyboard Phone", "Tablet", "Tablet (Notch)", "Tablet (RoundCutOut)"
+)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -117,6 +149,8 @@ fun DeviceItem(
     var showShareDialog by remember { mutableStateOf(false) }
     var shareName by remember { mutableStateOf("") }
     var shareIcon by remember { mutableStateOf("old phone") }
+
+    val context = LocalContext.current
 
     if (showShareDialog) {
         AlertDialog(
@@ -136,43 +170,37 @@ fun DeviceItem(
                     Text("Select Icon:")
                     Spacer(Modifier.height(8.dp))
                     Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth()
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
                     ) {
-                        val icons = listOf(
-                            "old phone" to Icons.Rounded.Smartphone,
-                            "surface duo" to Icons.Rounded.Smartphone,
-                            "new phone (bigbezel)" to Icons.Rounded.Smartphone,
-                            "tablet" to Icons.Rounded.Tablet,
-                            "tv" to Icons.Rounded.Tv,
-                            "laptop" to Icons.Rounded.Laptop
-                        )
-                        icons.forEach { (name, icon) ->
-                            IconButton(onClick = { shareIcon = name }) {
-                                if (name == "old phone") {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.op5),
-                                        contentDescription = name,
-                                        tint = if (shareIcon == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        allIconNames.forEach { name ->
+                            IconButton(
+                                onClick = { shareIcon = name },
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (shareIcon == name) MaterialTheme.colorScheme.primaryContainer
+                                        else Color.Transparent
                                     )
-                                } else if (name == "surface duo") {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.sd5),
-                                        contentDescription = name,
-                                        tint = if (shareIcon == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    )
-                                } else if (name == "new phone (bigbezel)") {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.npbb5),
-                                        contentDescription = name,
-                                        tint = if (shareIcon == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = name,
-                                        tint = if (shareIcon == name) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    )
+                            ) {
+                                val prefix = getDeviceIconPrefix(name)
+                                if (prefix != null) {
+                                    val resId = remember(prefix) {
+                                        context.resources.getIdentifier(
+                                            prefix + "5",
+                                            "drawable",
+                                            context.packageName
+                                        )
+                                    }
+                                    if (resId != 0) {
+                                        Image(
+                                            painter = painterResource(id = resId),
+                                            contentDescription = name,
+                                            modifier = Modifier.padding(4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -489,71 +517,26 @@ fun DeviceItem(
                     Text("Device Type: ")
                     Spacer(modifier = Modifier.width(4.dp))
                     
-                    if (device.icon == "old phone" || device.icon == "phone" || device.icon.isEmpty()) {
-                        val targetFrame by animateIntAsState(
-                            targetValue = if (device.isScreenOn) 5 else 1,
-                            animationSpec = tween(durationMillis = 500),
-                            label = "screenOnAnimation"
+                    val prefix = getDeviceIconPrefix(device.icon) ?: "op"
+                    
+                    val targetFrame by animateIntAsState(
+                        targetValue = if (device.isScreenOn) 5 else 1,
+                        animationSpec = tween(durationMillis = 500),
+                        label = "screenOnAnimation"
+                    )
+                    
+                    val resId = remember(prefix, targetFrame) {
+                        context.resources.getIdentifier(
+                            prefix + targetFrame,
+                            "drawable",
+                            context.packageName
                         )
-                        val oldPhone = when (targetFrame) {
-                            1 -> R.drawable.op1
-                            2 -> R.drawable.op2
-                            3 -> R.drawable.op3
-                            4 -> R.drawable.op4
-                            5 -> R.drawable.op5
-                            else -> R.drawable.op1
-                        }
+                    }
+                    
+                    if (resId != 0) {
                         Image(
-                            painter = painterResource(id = oldPhone),
-                            contentDescription = "Device Icon"
-                        )
-                    } else if (device.icon == "surface duo") {
-                        val targetFrame by animateIntAsState(
-                            targetValue = if (device.isScreenOn) 5 else 1,
-                            animationSpec = tween(durationMillis = 500),
-                            label = "screenOnAnimation"
-                        )
-                        val surfaceDuo = when (targetFrame) {
-                            1 -> R.drawable.sd1
-                            2 -> R.drawable.sd2
-                            3 -> R.drawable.sd3
-                            4 -> R.drawable.sd4
-                            5 -> R.drawable.sd5
-                            else -> R.drawable.sd1
-                        }
-                        Image(
-                            painter = painterResource(id = surfaceDuo),
-                            contentDescription = "Device Icon"
-                        )
-                    } else if (device.icon == "new phone (bigbezel)") {
-                        val targetFrame by animateIntAsState(
-                            targetValue = if (device.isScreenOn) 5 else 1,
-                            animationSpec = tween(durationMillis = 500),
-                            label = "screenOnAnimation"
-                        )
-                        val newPhone = when (targetFrame) {
-                            1 -> R.drawable.npbb1
-                            2 -> R.drawable.npbb2
-                            3 -> R.drawable.npbb3
-                            4 -> R.drawable.npbb4
-                            5 -> R.drawable.npbb5
-                            else -> R.drawable.npbb1
-                        }
-                        Image(
-                            painter = painterResource(id = newPhone),
-                            contentDescription = "Device Icon"
-                        )
-                    } else {
-                        val deviceIcon = when (device.icon) {
-                            "tablet" -> Icons.Rounded.Tablet
-                            "tv" -> Icons.Rounded.Tv
-                            "laptop" -> Icons.Rounded.Laptop
-                            else -> Icons.Rounded.Smartphone
-                        }
-                        Icon(
-                            imageVector = deviceIcon,
+                            painter = painterResource(id = resId),
                             contentDescription = "Device Icon",
-                            tint = if (device.isScreenOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
