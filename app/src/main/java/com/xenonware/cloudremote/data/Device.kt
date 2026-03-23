@@ -6,8 +6,9 @@ import com.google.firebase.firestore.PropertyName
 @Keep
 data class Device(
     val id: String = "",
+    val userId: String = "",
     val name: String = "",
-    val icon: String = "", // Added icon
+    val icon: String = "",
     val batteryLevel: Int = 0,
     @get:PropertyName("isCharging")
     val isCharging: Boolean = false,
@@ -32,12 +33,12 @@ data class Device(
     val mediaAlbumArt: String = "",
     @get:PropertyName("isPlaying")
     val isPlaying: Boolean = false,
-    val mediaAction: String = "", // "play", "pause", "next", "previous", "custom1", "custom2"
+    val mediaAction: String = "",
 
     val mediaCustomAction1Title: String = "",
     val mediaCustomAction2Title: String = "",
     val mediaCustomAction1Action: String = "",
     val mediaCustomAction2Action: String = "",
 
-    val pendingAction: String = "" // "lock"
+    val pendingAction: String = ""
 )

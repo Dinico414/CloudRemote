@@ -23,12 +23,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GoogleCloudRepository()
     private val auth = FirebaseAuth.getInstance()
-    private val localDeviceManager = LocalDeviceManager(application)
 
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(null)
+    private val _currentUser = MutableStateFlow(auth.currentUser)
     val currentUser: StateFlow<FirebaseUser?> = _currentUser
 
     private val _localDeviceName = MutableStateFlow("")
@@ -39,15 +38,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             _currentUser.flatMapLatest { user ->
+                Log.d("MainViewModel", "Current user state changed: ${user?.uid}")
                 if (user != null) {
                     repository.getDevicesFlow().catch { e ->
-                        Log.e("MainViewModel", "Error fetching devices", e)
+                        Log.e("MainViewModel", "Error fetching devices from repository", e)
                         emit(emptyList())
                     }
                 } else {
+                    Log.d("MainViewModel", "User is null, emitting empty device list")
                     flowOf(emptyList())
                 }
             }.collect { deviceList ->
+                Log.d("MainViewModel", "Received updated device list of size: ${deviceList.size}")
                 _devices.value = deviceList
                 deviceList.find { it.id == localDeviceId }?.name?.let {
                     if (it.isNotBlank()) {
@@ -59,24 +61,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onSignedIn() {
+        Log.d("MainViewModel", "onSignedIn triggered, updating currentUser")
         _currentUser.value = auth.currentUser
     }
 
     fun updateLocalDeviceName(name: String) {
         _localDeviceName.value = name
-        // Optionally, you might want to persist this name to SharedPreferences here
     }
 
     fun toggleCurrentDevice(customName: String? = null, customIcon: String = "") {
+        if (localDeviceId.isBlank()) {
+            Log.e("MainViewModel", "Cannot toggle current device: localDeviceId is empty")
+            return
+        }
         val currentDevices = _devices.value
         val isAdded = currentDevices.any { it.id == localDeviceId }
 
         if (isAdded) {
+            Log.d("MainViewModel", "Removing device from cloud: $localDeviceId")
             repository.deleteDevice(localDeviceId)
         } else {
+            Log.d("MainViewModel", "Adding device to cloud: $localDeviceId (name: $customName, icon: $customIcon)")
             val deviceName = customName ?: _localDeviceName.value.ifBlank { currentUser.value?.displayName ?: "Unknown Device" }
             val newDevice = Device(
                 id = localDeviceId,
+                userId = auth.currentUser?.uid ?: "",
                 name = deviceName,
                 icon = customIcon,
                 batteryLevel = 0,
@@ -89,31 +98,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun toggleLocalCurtain() {
-        val localDevice = _devices.value.find { it.id == localDeviceId }
-        localDevice?.let {
-            val isCurtainOn = !it.isCurtainOn
-            localDeviceManager.setCurtain(isCurtainOn)
-            // Also update the state in Firestore so other devices can see the change
-            updateDevice(it.copy(isCurtainOn = isCurtainOn))
-        }
-    }
-
     fun updateDevice(device: Device) {
         repository.updateDevice(device)
-    }
-
-    fun signInWithGoogle(idToken: String) {
-        val credential = GoogleAuthProvider.getCredential(idToken, null)
-        auth.signInWithCredential(credential).addOnSuccessListener { result ->
-                _currentUser.value = result.user
-            }.addOnFailureListener { e ->
-                e.printStackTrace()
-            }
-    }
-
-    fun signOut() {
-        auth.signOut()
-        _currentUser.value = null
     }
 }
