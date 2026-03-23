@@ -185,8 +185,7 @@ fun CompactRemote(
                     // Curtain button
                     IconButton(onClick = {
                         if (CurtainTileService.isCurtainActive) {
-                            val closeIntent =
-                                Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
+                            val closeIntent = Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
                             context.sendBroadcast(closeIntent)
                         } else {
                             val intent = Intent(context, SwipeableCurtainActivity::class.java)
@@ -195,8 +194,7 @@ fun CompactRemote(
                         }
                         CurtainTileService.isCurtainActive = !CurtainTileService.isCurtainActive
                         TileService.requestListeningState(
-                            context,
-                            ComponentName(context, CurtainTileService::class.java)
+                            context, ComponentName(context, CurtainTileService::class.java)
                         )
                     }) {
                         val icon =
@@ -212,7 +210,7 @@ fun CompactRemote(
                     }
                 }
             }
-            
+
             FloatingToolbarContent(
                 hazeState = hazeState,
                 onSearchQueryChanged = { },
@@ -238,8 +236,7 @@ fun CompactRemote(
                         onClick = deviceConfig.toggleFabSide,
                         modifier = Modifier.padding(bottom = animatedBottomPadding)
                     )
-                }
-            )
+                })
 
         }) { scaffoldPadding ->
             ActivityScreen(
@@ -274,14 +271,15 @@ fun CompactRemote(
                                     top = ExtraLargePadding,
                                     bottom = scaffoldPadding.calculateBottomPadding() + MediumPadding,
                                 ),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 item {
                                     val isSharing = localDevice != null
                                     val deviceToDisplay = localDevice ?: Device(
                                         id = viewModel.localDeviceId,
-                                        name = localDeviceName.ifBlank { currentUser?.displayName ?: "This Device" }
-                                    )
+                                        name = localDeviceName.ifBlank {
+                                            currentUser?.displayName ?: "This Device"
+                                        })
 
                                     DeviceItem(
                                         device = deviceToDisplay,
@@ -291,8 +289,11 @@ fun CompactRemote(
                                         onUpdateDevice = { updatedDevice ->
                                             viewModel.updateDevice(updatedDevice)
                                         },
-                                        onToggleShare = { name, icon -> viewModel.toggleCurrentDevice(name, icon) }
-                                    )
+                                        onToggleShare = { name, icon ->
+                                            viewModel.toggleCurrentDevice(
+                                                name, icon
+                                            )
+                                        })
                                 }
 
                                 if (onlineCloudDevices.isNotEmpty()) {
@@ -302,8 +303,7 @@ fun CompactRemote(
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(
-                                                top = 16.dp,
-                                                bottom = 8.dp
+                                                top = 8.dp,
                                             )
                                         )
                                     }
@@ -319,8 +319,7 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = { _, _ -> }
-                                        )
+                                            onToggleShare = { _, _ -> })
                                     }
                                 }
 
@@ -331,8 +330,7 @@ fun CompactRemote(
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(
-                                                top = 16.dp,
-                                                bottom = 8.dp
+                                                top = 8.dp,
                                             )
                                         )
                                     }
@@ -348,15 +346,13 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = { _, _ -> }
-                                        )
+                                            onToggleShare = { _, _ -> })
                                     }
                                 }
                             }
                         }
                     }
-                }
-            )
+                })
         }
     }
 }

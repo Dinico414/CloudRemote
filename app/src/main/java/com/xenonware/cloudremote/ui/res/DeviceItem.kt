@@ -1,3 +1,5 @@
+@file:Suppress("AssignedValueIsNeverRead")
+
 package com.xenonware.cloudremote.ui.res
 
 import android.graphics.BitmapFactory
@@ -42,7 +44,12 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.AllInclusive
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Curtains
+import androidx.compose.material.icons.rounded.CurtainsClosed
 import androidx.compose.material.icons.rounded.DoDisturbOn
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FlashOn
@@ -105,6 +112,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
+import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.data.Device
 import kotlinx.coroutines.delay
 
@@ -168,6 +176,7 @@ fun DeviceItem(
     var showShareDialog by remember { mutableStateOf(false) }
     var shareName by remember { mutableStateOf("") }
     var shareIcon by remember { mutableStateOf("old phone") }
+    var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
 
     var previewFrame by remember { mutableIntStateOf(1) }
     LaunchedEffect(Unit) {
@@ -241,10 +250,10 @@ fun DeviceItem(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                }            }
+                }
+            }
         }, confirmButton = {
             TextButton(onClick = {
-                @Suppress("AssignedValueIsNeverRead")
                 showShareDialog = false
                 onToggleShare(
                     shareName.ifBlank { device.name.ifBlank { "Unknown Device" } }, shareIcon
@@ -254,26 +263,27 @@ fun DeviceItem(
             }
         }, dismissButton = {
             TextButton(onClick = {
-                @Suppress("AssignedValueIsNeverRead")
                 showShareDialog = false
             }) {
                 Text("Cancel")
             }
         })
     }
+    val animatedRadius = animateDpAsState(
+        targetValue = if (isCollapsed) 40.dp else 30.dp,
+        animationSpec = tween(durationMillis = 100),
+        label = "cardRadius"
+    )
 
     Card(
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(animatedRadius.value),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceBright),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .padding(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = if (isLocalDevice && !isSharing) 8.dp else 16.dp,
-                    top = if (isLocalDevice) 8.dp else 16.dp
+                    start = 16.dp, end = 16.dp, bottom = 16.dp, top = 16.dp
                 )
                 .graphicsLayer(alpha = if (isOnline) 1f else 0.5f)
         ) {
@@ -312,26 +322,48 @@ fun DeviceItem(
                     modifier = Modifier.weight(1f)
                 )
 
-                if (isLocalDevice) {
-                    FilledTonalIconButton(onClick = {
-                        if (isSharing) {
-                            onToggleShare(device.name, device.icon)
-                        } else {
-                            shareName = ""
-                            shareIcon = "old phone"
-                            @Suppress("AssignedValueIsNeverRead")
-                            showShareDialog = true
+                when {
+                    isLocalDevice -> {
+                        FilledTonalIconButton(onClick = {
+                            if (isSharing) {
+                                onToggleShare(device.name, device.icon)
+                            } else {
+                                shareName = ""
+                                shareIcon = "old phone"
+                                showShareDialog = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = if (isSharing) Icons.Rounded.LinkOff else Icons.Rounded.Link,
+                                contentDescription = if (isSharing) "Stop Sharing" else "Share"
+                            )
                         }
-                    }) {
-                        Icon(
-                            imageVector = if (isSharing) Icons.Rounded.LinkOff else Icons.Rounded.Link,
-                            contentDescription = if (isSharing) "Stop Sharing" else "Share"
-                        )
+                    }
+
+                    isOnline -> {
+                        FilledTonalIconButton(onClick = { isCollapsed = !isCollapsed }) {
+                            Icon(
+                                imageVector = if (isCollapsed) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
+                                contentDescription = if (isCollapsed) "Expand" else "Collapse"
+                            )
+                        }
+                    }
+
+                    else -> {
+                        FilledTonalIconButton(onClick = {
+                            onToggleShare(
+                                device.name, device.icon
+                            )
+                        }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close, contentDescription = "Remove"
+                            )
+                        }
                     }
                 }
             }
 
-            if (isOnline && (!isLocalDevice || isSharing)) {
+            if (!isCollapsed && isOnline && (!isLocalDevice || isSharing)) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Media Player
@@ -479,25 +511,25 @@ fun DeviceItem(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (device.mediaCustomAction1Title.isNotBlank()) {
-                        TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
-                            Text(device.mediaCustomAction1Title)
+                if (BuildConfig.BUILD_TYPE=="debug"){
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (device.mediaCustomAction1Title.isNotBlank()) {
+                            TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
+                                Text(device.mediaCustomAction1Title)
+                            }
                         }
-                    }
 
-                    if (device.mediaCustomAction2Title.isNotBlank()) {
-                        TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
-                            Text(device.mediaCustomAction2Title)
+                        if (device.mediaCustomAction2Title.isNotBlank()) {
+                            TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
+                                Text(device.mediaCustomAction2Title)
+                            }
                         }
                     }
                 }
-
 
                 if (!isLocalDevice) {
                     Row(
@@ -655,15 +687,18 @@ fun DeviceItem(
                         ),
                         enabled = true
                     ) {
-                        Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (device.isCurtainOn) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains,
+                                contentDescription = ""
+                            )
+                            Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+                        }
                     }
                 }
-            } else if (!isOnline) {
-                Text(
-                    text = "device unavailable",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
@@ -720,7 +755,7 @@ fun HorizontalScrollWithIndicator(
     scrollState: ScrollState = rememberScrollState(),
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
     verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
-    content: @Composable RowScope.() -> Unit
+    content: @Composable RowScope.() -> Unit,
 ) {
     Column(modifier = modifier) {
         Row(
