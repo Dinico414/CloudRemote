@@ -762,7 +762,7 @@ fun BatteryIndicator(
     )
     val batteryWarningTextColor by infiniteTransition.animateColor(
         initialValue = LocalRedMaterialColorScheme.current.onPrimary,
-        targetValue = LocalRedMaterialColorScheme.current.onSecondary,
+        targetValue = LocalRedMaterialColorScheme.current.onSecondaryContainer,
         animationSpec = infiniteRepeatable(
             animation = tween(500), repeatMode = RepeatMode.Reverse
         ),
@@ -830,17 +830,26 @@ fun BatteryIndicator(
             .background(progressBackgroundColor)
     ) {
         //IndicatorBox
-        val fraction = (batteryLevel.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
-        Box(
-            modifier = modifier
+        BoxWithConstraints(
+            modifier = Modifier
                 .align(Alignment.CenterStart)
                 .padding(4.dp)
-                .height(32.dp)
-                .widthIn(min = 32.dp)
-                .fillMaxWidth(fraction)
+                .fillMaxSize()
                 .clip(RoundedCornerShape(16.dp))
-                .background(progressColor)
-        )
+        ) {
+            val minWidth = 32.dp
+            val maxWidth = this.maxWidth
+            val fraction = (batteryLevel.coerceIn(0, 100) / 100f)
+            val indicatorWidth = minWidth + (maxWidth - minWidth) * fraction
+
+            Box(
+                modifier = modifier
+                    .height(32.dp)
+                    .width(indicatorWidth)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(progressColor)
+            )
+        }
 
         //TextPositionBox
         Box(
