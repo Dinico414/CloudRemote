@@ -2,10 +2,12 @@
 
 package com.xenonware.cloudremote.ui.res
 
+import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -33,10 +35,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeMute
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.filled.ThumbUp
@@ -85,7 +88,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -165,6 +167,8 @@ val deviceIconCategories = listOf(
     )
 )
 
+@Suppress("SimplifyBooleanWithConstants")
+@SuppressLint("LocalContextResourcesRead", "DiscouragedApi")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DeviceItem(
@@ -513,6 +517,7 @@ fun DeviceItem(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
+                @Suppress("KotlinConstantConditions")
                 if (BuildConfig.BUILD_TYPE == "debug") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -540,6 +545,7 @@ fun DeviceItem(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .animateContentSize()
                                 .clip(RoundedCornerShape(30.dp))
                                 .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
                                 .then(Modifier.combinedClickable(onClick = {}, onLongClick = {
@@ -568,14 +574,8 @@ fun DeviceItem(
 
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Sound Mode:",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -622,14 +622,57 @@ fun DeviceItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Media Volume
-                Text("Media Volume: ${device.mediaVolume}")
-                Slider(
-                    value = device.mediaVolume.toFloat(),
-                    onValueChange = { onUpdateDevice(device.copy(mediaVolume = it.toInt())) },
-                    valueRange = 0f..device.maxMediaVolume.toFloat(),
-                    steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0,
-                    enabled = true
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            val mediaVolumeIcon = when ((device.mediaVolume.toFloat() / device.maxMediaVolume.toFloat() * 100).toInt()) {
+                                in 68..100 -> Icons.AutoMirrored.Rounded.VolumeUp
+                                in 35..67 -> Icons.AutoMirrored.Rounded.VolumeDown
+                                in 1..34 -> Icons.AutoMirrored.Rounded.VolumeMute
+                                else -> Icons.AutoMirrored.Rounded.VolumeOff
+                            }
+                            Icon(
+                                imageVector = mediaVolumeIcon,
+                                contentDescription = "Media Volume",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Box(
+                                modifier = Modifier.width(24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${device.mediaVolume}",
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = QuicksandTitleVariable
+                                )
+                            }
+                        }
+                    }
+                    Slider(
+                        value = device.mediaVolume.toFloat(),
+                        onValueChange = { onUpdateDevice(device.copy(mediaVolume = it.toInt())) },
+                        valueRange = 0f..device.maxMediaVolume.toFloat(),
+                        steps = if (device.maxMediaVolume > 0) device.maxMediaVolume - 1 else 0,
+                        enabled = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 if (!isLocalDevice) {
                     // Curtain toggle
                     Button(
@@ -650,7 +693,7 @@ fun DeviceItem(
                                 imageVector = if (device.isCurtainOn) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains,
                                 contentDescription = ""
                             )
-                            Text(if (device.isCurtainOn) "Turn Curtain Off" else "Turn Curtain On")
+                            Text(if (device.isCurtainOn) "Curtain Off" else "Curtain On")
                         }
                     }
                 }
@@ -704,6 +747,7 @@ fun CustomMediaActionButton(
     }
 }
 
+@SuppressLint("FrequentlyChangingValue")
 @Composable
 fun HorizontalScrollWithIndicator(
     modifier: Modifier = Modifier,
