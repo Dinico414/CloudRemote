@@ -12,6 +12,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -20,10 +21,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -197,6 +201,8 @@ fun DeviceItem(
                 Spacer(Modifier.height(16.dp))
 
                 deviceIconCategories.forEach { (categoryName, iconNames) ->
+                    val scrollState = rememberScrollState()
+
                     Text(
                         text = categoryName,
                         style = MaterialTheme.typography.labelMedium,
@@ -204,11 +210,9 @@ fun DeviceItem(
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                    HorizontalScrollWithIndicator(
+                        scrollState = scrollState,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         iconNames.forEach { name ->
                             val prefix = getDeviceIconPrefix(name)
@@ -237,8 +241,7 @@ fun DeviceItem(
                         }
                     }
                     Spacer(Modifier.height(8.dp))
-                }
-            }
+                }            }
         }, confirmButton = {
             TextButton(onClick = {
                 @Suppress("AssignedValueIsNeverRead")
@@ -707,6 +710,47 @@ fun CustomMediaActionButton(
                 else -> defaultIcon
             }
             Icon(icon, contentDescription = actionTitle)
+        }
+    }
+}
+
+@Composable
+fun HorizontalScrollWithIndicator(
+    modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    verticalAlignment: Alignment.Vertical = Alignment.CenterVertically,
+    content: @Composable RowScope.() -> Unit
+) {
+    Column(modifier = modifier) {
+        Row(
+            horizontalArrangement = horizontalArrangement,
+            verticalAlignment = verticalAlignment,
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(scrollState),
+            content = content
+        )
+        if (scrollState.maxValue > 0) {
+            Spacer(Modifier.height(4.dp))
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            ) {
+                val fraction = scrollState.value.toFloat() / scrollState.maxValue
+                val thumbWidth = maxWidth * 0.25f
+                Box(
+                    modifier = Modifier
+                        .width(thumbWidth)
+                        .fillMaxHeight()
+                        .offset(x = (maxWidth - thumbWidth) * fraction)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
         }
     }
 }
