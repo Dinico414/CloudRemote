@@ -53,7 +53,6 @@ import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
@@ -84,7 +83,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProgressIndicatorDefaults
@@ -116,6 +114,8 @@ import androidx.compose.ui.unit.min
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.ui.theme.LocalGreenMaterialColorScheme
+import com.xenonware.cloudremote.ui.theme.LocalRedMaterialColorScheme
 import kotlinx.coroutines.delay
 
 fun getDeviceIconPrefix(name: String): String? {
@@ -751,43 +751,94 @@ fun BatteryIndicator(
     isCharging: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "colorBlink")
+    val batteryWarningColor by infiniteTransition.animateColor(
+        initialValue = LocalRedMaterialColorScheme.current.primary,
+        targetValue = LocalRedMaterialColorScheme.current.secondaryContainer,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500), repeatMode = RepeatMode.Reverse
+        ),
+        label = "lowBattery"
+    )
+    val batteryWarningTextColor by infiniteTransition.animateColor(
+        initialValue = LocalRedMaterialColorScheme.current.onPrimary,
+        targetValue = LocalRedMaterialColorScheme.current.onSecondary,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500), repeatMode = RepeatMode.Reverse
+        ),
+        label = "lowBatteryText"
+    )
+
+    val batteryChargingColor by infiniteTransition.animateColor(
+        initialValue = LocalGreenMaterialColorScheme.current.primary,
+        targetValue = LocalGreenMaterialColorScheme.current.secondary,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500), repeatMode = RepeatMode.Reverse
+        ),
+        label = "charging"
+    )
+    val batteryChargingTextColor by infiniteTransition.animateColor(
+        initialValue = LocalGreenMaterialColorScheme.current.onPrimary,
+        targetValue = LocalGreenMaterialColorScheme.current.onSecondary,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500), repeatMode = RepeatMode.Reverse
+        ),
+        label = "chargingText"
+    )
+
+
+    val progressColor = if (isCharging) {
+        batteryChargingColor
+    } else if (batteryLevel <= 5) {
+        batteryWarningColor
+    } else if (batteryLevel <= 20) {
+        LocalRedMaterialColorScheme.current.primary
+    } else if (batteryLevel >= 100) {
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+
+    val progressTextColor = if (isCharging) {
+        batteryChargingTextColor
+    } else if (batteryLevel <= 5) {
+        batteryWarningTextColor
+    } else if (batteryLevel <= 20) {
+        LocalRedMaterialColorScheme.current.onPrimary
+    } else if (batteryLevel >= 100) {
+        MaterialTheme.colorScheme.onTertiary
+    } else {
+        MaterialTheme.colorScheme.onPrimary
+    }
+
+    val progressBackgroundColor = if (isCharging) {
+        LocalGreenMaterialColorScheme.current.secondaryContainer
+    } else if (batteryLevel <= 5) {
+        LocalRedMaterialColorScheme.current.secondaryContainer
+    } else if (batteryLevel <= 20) {
+        LocalRedMaterialColorScheme.current.secondaryContainer
+    } else if (batteryLevel >= 100) {
+        MaterialTheme.colorScheme.tertiaryContainer
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
     Box(
         modifier = modifier
             .height(40.dp)
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(ProgressIndicatorDefaults.linearTrackColor)
+            .background(progressBackgroundColor)
     ) {
-        val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
-        val blinkColor by infiniteTransition.animateColor(
-            initialValue = MaterialTheme.colorScheme.error,
-            targetValue = MaterialTheme.colorScheme.errorContainer,
-            animationSpec = infiniteRepeatable(
-                animation = tween(500), repeatMode = RepeatMode.Reverse
-            ),
-            label = "blink"
-        )
-        val progressColor = if (isCharging) {
-            Color.Green
-        } else if (batteryLevel <= 5) {
-            blinkColor
-        } else if (batteryLevel <= 20) {
-            MaterialTheme.colorScheme.error
-        } else if (batteryLevel >= 100) {
-            MaterialTheme.colorScheme.tertiary
-        } else {
-            MaterialTheme.colorScheme.primary
-        }
-
         //IndicatorBox
         val fraction = (batteryLevel.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
         Box(
             modifier = modifier
                 .align(Alignment.CenterStart)
-                .height(40.dp)
-                .widthIn(min = 40.dp)
+                .padding(4.dp)
+                .height(32.dp)
+                .widthIn(min = 32.dp)
                 .fillMaxWidth(fraction)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(progressColor)
         )
 
@@ -803,7 +854,7 @@ fun BatteryIndicator(
             Text(
                 text = "$batteryLevel",
                 modifier.align(Alignment.Center),
-                color = MaterialTheme.colorScheme.onPrimary,
+                color = progressTextColor,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 fontFamily = QuicksandTitleVariable
