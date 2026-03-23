@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.unit.IntSize
 import androidx.core.content.edit
 import com.xenonware.cloudremote.viewmodel.ThemeSetting
+import java.util.UUID
 import kotlin.math.max
 import kotlin.math.min
 
@@ -28,6 +29,15 @@ class SharedPreferenceManager(context: Context) {
         get() = sharedPreferences.getBoolean(isUserLoggedInKey, false)
         set(value) = sharedPreferences.edit { putBoolean(isUserLoggedInKey, value) }
 
+    val localDeviceId: String
+        get() {
+            var id = sharedPreferences.getString("local_device_id", null)
+            if (id == null) {
+                id = UUID.randomUUID().toString()
+                sharedPreferences.edit { putString("local_device_id", id) }
+            }
+            return id
+        }
 
     var theme: Int
         get() = sharedPreferences.getInt(themeKey, ThemeSetting.SYSTEM.ordinal)

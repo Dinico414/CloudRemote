@@ -42,7 +42,6 @@ import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
-import java.util.UUID
 
 class MainActivity : ComponentActivity() {
 
@@ -70,8 +69,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         sharedPreferenceManager = SharedPreferenceManager(applicationContext)
 
-        val androidId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-        val deviceId = androidId ?: UUID.randomUUID().toString()
+        val deviceId = sharedPreferenceManager.localDeviceId
         viewModel.localDeviceId = deviceId
         viewModel.updateLocalDeviceName(Build.MODEL)
 
@@ -143,6 +141,7 @@ class MainActivity : ComponentActivity() {
                     appSize = currentContainerSize,
                     onOpenSettings = {
                         val intent = Intent(currentContext, SettingsActivity::class.java)
+                        intent.putExtra("local_device_id", viewModel.localDeviceId)
                         currentContext.startActivity(intent)
                     },
                     onSignInClick = {

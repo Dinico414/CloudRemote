@@ -80,7 +80,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -88,7 +90,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -101,12 +102,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
 import com.xenonware.cloudremote.data.Device
+import kotlinx.coroutines.delay
 
 fun getDeviceIconPrefix(name: String): String? {
     return when (name) {
-        "old phone", "phone", "" -> "op"
-        "surface duo" -> "sd"
-        "new phone (bigbezel)" -> "npbb"
+        "Old Phone", "" -> "op"
+        "Surface Duo" -> "sd"
+        "New Phone (BigBezel)" -> "npbb"
         "New Phone (NoBezel)" -> "npnb"
         "New Phone (SmallNotch)" -> "npsn"
         "New Phone (BigNotch)" -> "npbn"
@@ -124,16 +126,29 @@ fun getDeviceIconPrefix(name: String): String? {
         "Tablet" -> "t"
         "Tablet (Notch)" -> "tn"
         "Tablet (RoundCutOut)" -> "trc"
-        else -> null
+        else -> "op"
     }
 }
 
-val allIconNames = listOf(
-    "old phone", "surface duo", "new phone (bigbezel)", "New Phone (NoBezel)",
-    "New Phone (SmallNotch)", "New Phone (BigNotch)", "New Phone (PillCutOut)",
-    "New Phone (RoundCutOutCenter)", "New Phone (RoundCutOutLeft)", "New Phone (RoundCutOutRight)",
-    "Flip Phone", "Fold (inwards)", "Fold (outwards)", "LG Wing", "iKKO Mind One",
-    "Clicks Communicator", "Keyboard Phone", "Tablet", "Tablet (Notch)", "Tablet (RoundCutOut)"
+val deviceIconCategories = listOf(
+    "Default" to listOf(
+        "Old Phone",
+        "New Phone (BigBezel)",
+        "Keyboard Phone",
+        "New Phone (SmallNotch)",
+        "New Phone (BigNotch)",
+        "New Phone (RoundCutOutLeft)",
+        "New Phone (RoundCutOutCenter)",
+        "New Phone (RoundCutOutRight)",
+        "New Phone (PillCutOut)",
+        "New Phone (NoBezel)"
+    ), "Foldables" to listOf(
+        "Flip Phone", "Fold (inwards)", "Fold (outwards)"
+    ), "Tablet" to listOf(
+        "Tablet", "Tablet (Notch)", "Tablet (RoundCutOut)"
+    ), "Specific" to listOf(
+        "LG Wing", "Surface Duo", "iKKO Mind One", "Clicks Communicator"
+    )
 )
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -144,57 +159,73 @@ fun DeviceItem(
     isOnline: Boolean,
     isSharing: Boolean,
     onUpdateDevice: (Device) -> Unit,
-    onToggleShare: (String, String) -> Unit
+    onToggleShare: (String, String) -> Unit,
 ) {
     var showShareDialog by remember { mutableStateOf(false) }
     var shareName by remember { mutableStateOf("") }
     var shareIcon by remember { mutableStateOf("old phone") }
 
+    var previewFrame by remember { mutableIntStateOf(1) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(750L)
+            for (f in 2..5) {
+                previewFrame = f
+                delay(100L)
+            }
+            delay(750L)
+            for (f in 4 downTo 1) {
+                previewFrame = f
+                delay(100L)
+            }
+        }
+    }
+
     val context = LocalContext.current
 
     if (showShareDialog) {
-        AlertDialog(
-            onDismissRequest = { showShareDialog = false },
-            title = { Text("Share Device") },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = shareName,
-                        onValueChange = { shareName = it },
-                        placeholder = { Text(device.name.ifBlank { "Unknown Device" }) },
-                        label = { Text("Device Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+        AlertDialog(onDismissRequest = { }, title = { Text("Share Device") }, text = {
+            Column {
+                OutlinedTextField(
+                    value = shareName,
+                    onValueChange = { shareName = it },
+                    placeholder = { Text(device.name.ifBlank { "Unknown Device" }) },
+                    label = { Text("Device Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(16.dp))
+
+                deviceIconCategories.forEach { (categoryName, iconNames) ->
+                    Text(
+                        text = categoryName,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    Spacer(Modifier.height(16.dp))
-                    Text("Select Icon:")
-                    Spacer(Modifier.height(8.dp))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
                     ) {
-                        allIconNames.forEach { name ->
-                            IconButton(
-                                onClick = { shareIcon = name },
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (shareIcon == name) MaterialTheme.colorScheme.primaryContainer
-                                        else Color.Transparent
+                        iconNames.forEach { name ->
+                            val prefix = getDeviceIconPrefix(name)
+                            if (prefix != null) {
+                                val resId = remember(prefix, previewFrame) {
+                                    context.resources.getIdentifier(
+                                        prefix + previewFrame, "drawable", context.packageName
                                     )
-                            ) {
-                                val prefix = getDeviceIconPrefix(name)
-                                if (prefix != null) {
-                                    val resId = remember(prefix) {
-                                        context.resources.getIdentifier(
-                                            prefix + "5",
-                                            "drawable",
-                                            context.packageName
+                                }
+                                if (resId != 0) {
+                                    IconButton(
+                                        onClick = { shareIcon = name },
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            containerColor = if (shareIcon == name) MaterialTheme.colorScheme.primaryContainer
+                                            else Color.Transparent
                                         )
-                                    }
-                                    if (resId != 0) {
+                                    ) {
                                         Image(
                                             painter = painterResource(id = resId),
                                             contentDescription = name,
@@ -205,22 +236,22 @@ fun DeviceItem(
                             }
                         }
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showShareDialog = false
-                    onToggleShare(shareName.ifBlank { device.name.ifBlank { "Unknown Device" } }, shareIcon)
-                }) {
-                    Text("Share")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showShareDialog = false }) {
-                    Text("Cancel")
+                    Spacer(Modifier.height(8.dp))
                 }
             }
-        )
+        }, confirmButton = {
+            TextButton(onClick = {
+                onToggleShare(
+                    shareName.ifBlank { device.name.ifBlank { "Unknown Device" } }, shareIcon
+                )
+            }) {
+                Text("Share")
+            }
+        }, dismissButton = {
+            TextButton(onClick = { }) {
+                Text("Cancel")
+            }
+        })
     }
 
     Card(
@@ -243,12 +274,36 @@ fun DeviceItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val prefix = getDeviceIconPrefix(device.icon) ?: "op"
+
+                val targetFrame by animateIntAsState(
+                    targetValue = if (device.isScreenOn) 5 else 1,
+                    animationSpec = tween(durationMillis = 500),
+                    label = "screenOnAnimation"
+                )
+
+                val resId = remember(prefix, targetFrame) {
+                    context.resources.getIdentifier(
+                        prefix + targetFrame, "drawable", context.packageName
+                    )
+                }
+
+                if (resId != 0) {
+                    Image(
+                        painter = painterResource(id = resId),
+                        contentDescription = "Device Icon",
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Text(
                     text = device.name.ifBlank { "Unknown Device" },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+
                 if (isLocalDevice) {
                     FilledTonalIconButton(onClick = {
                         if (isSharing) {
@@ -256,7 +311,6 @@ fun DeviceItem(
                         } else {
                             shareName = ""
                             shareIcon = "old phone"
-                            showShareDialog = true
                         }
                     }) {
                         Icon(
@@ -281,8 +335,10 @@ fun DeviceItem(
                         val buttonsWidth = 240.dp
                         val spacerWidth = 12.dp
                         val desiredAlbumSize = 96.dp
-                        
-                        val albumWidth = min(desiredAlbumSize, max(0.dp, availableWidth - buttonsWidth - spacerWidth))
+
+                        val albumWidth = min(
+                            desiredAlbumSize, max(0.dp, availableWidth - buttonsWidth - spacerWidth)
+                        )
 
                         Row(
                             modifier = Modifier.fillMaxSize(),
@@ -322,7 +378,6 @@ fun DeviceItem(
                                 }
                             }
 
-
                             Spacer(modifier = Modifier.width(12.dp))
 
                             Column(modifier = Modifier.weight(1f)) {
@@ -351,8 +406,10 @@ fun DeviceItem(
                                     horizontalArrangement = Arrangement.Start,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val button1gone = if (device.mediaCustomAction1Title == "null") 24.dp else 0.dp
-                                    val button2gone = if (device.mediaCustomAction2Title == "null") 24.dp else 0.dp
+                                    val button1gone =
+                                        if (device.mediaCustomAction1Title == "null") 24.dp else 0.dp
+                                    val button2gone =
+                                        if (device.mediaCustomAction2Title == "null") 24.dp else 0.dp
 
                                     Spacer(modifier = Modifier.width(button1gone + button2gone))
                                     IconButton(
@@ -412,7 +469,7 @@ fun DeviceItem(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start,
@@ -438,14 +495,14 @@ fun DeviceItem(
                         modifier = Modifier
                             .clip(RoundedCornerShape(30.dp))
                             .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
-                            .then(
-                                Modifier.combinedClickable(
-                                    onClick = {},
-                                    onLongClick = { if (!device.isLocked) onUpdateDevice(device.copy(pendingAction = "lock")) }
+                            .then(Modifier.combinedClickable(onClick = {}, onLongClick = {
+                                if (!device.isLocked) onUpdateDevice(
+                                    device.copy(
+                                        pendingAction = "lock"
+                                    )
                                 )
-                            )
-                            .padding(vertical = 8.dp, horizontal = 16.dp)
-                    ) {
+                            }))
+                            .padding(vertical = 8.dp, horizontal = 16.dp)) {
                         Icon(
                             tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
                             imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
@@ -512,34 +569,6 @@ fun DeviceItem(
                     color = progressColor,
                     trackColor = trackColor,
                 )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Device Type: ")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    
-                    val prefix = getDeviceIconPrefix(device.icon) ?: "op"
-                    
-                    val targetFrame by animateIntAsState(
-                        targetValue = if (device.isScreenOn) 5 else 1,
-                        animationSpec = tween(durationMillis = 500),
-                        label = "screenOnAnimation"
-                    )
-                    
-                    val resId = remember(prefix, targetFrame) {
-                        context.resources.getIdentifier(
-                            prefix + targetFrame,
-                            "drawable",
-                            context.packageName
-                        )
-                    }
-                    
-                    if (resId != 0) {
-                        Image(
-                            painter = painterResource(id = resId),
-                            contentDescription = "Device Icon",
-                        )
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -634,7 +663,7 @@ fun CustomMediaActionButton(
     actionTitle: String,
     defaultIcon: ImageVector,
     onClick: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
 ) {
     if (actionTitle != "null") {
         IconButton(onClick = onClick, enabled = enabled) {
@@ -642,7 +671,7 @@ fun CustomMediaActionButton(
                 // Add / Checked
                 "Remove from collection", "Aus Sammlung entfernen" -> Icons.Rounded.CheckCircle
                 "Add to collection", "Zu Sammlung hinzufügen" -> Icons.Rounded.AddCircleOutline
-               // Thumbs up
+                // Thumbs up
                 "Mag ich", "Like" -> Icons.Outlined.ThumbUp
                 "Like rückgängig machen", "Undo like" -> Icons.Filled.ThumbUp
                 // Star
@@ -662,7 +691,7 @@ fun CustomMediaActionButton(
                 "Song wiederholen" -> Icons.Rounded.RepeatOn
                 "Wiederholung aus" -> Icons.Rounded.RepeatOneOn
                 // Shuffle
-                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on", "Shuffle", "Zufällig", "Zufallswiedergabe ein", "zufallswiedergabe aus", "Shuffle aktivieren/deaktivieren"-> Icons.Rounded.Shuffle
+                "Toggle shuffle", "Zufallsmix aus", "Zufallsmix ein", "Shuffle off", "Shuffle on", "Shuffle", "Zufällig", "Zufallswiedergabe ein", "zufallswiedergabe aus", "Shuffle aktivieren/deaktivieren" -> Icons.Rounded.Shuffle
                 // Stop
                 "Stopp" -> Icons.Rounded.Stop
                 // Infinity
@@ -681,7 +710,7 @@ fun SoundModeIconButton(
     activeColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean
+    enabled: Boolean,
 ) {
     Column(
         modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally

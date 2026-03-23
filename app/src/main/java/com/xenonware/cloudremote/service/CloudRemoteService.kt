@@ -52,7 +52,6 @@ class CloudRemoteService : Service() {
 
     private val userPresentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            // This is handled by the local state sync, but we still need the receiver
         }
     }
 
@@ -115,65 +114,70 @@ class CloudRemoteService : Service() {
         val deviceId = localDeviceId ?: return
 
         scope.launch {
-            while (auth.currentUser == null) {
+            while (isActive) {
+                if (auth.currentUser == null) {
+                    delay(2000)
+                    continue
+                }
+
+                try {
+                    repository.getDevicesFlow()
+                        .collect { devices ->
+                            val myDevice = devices.find { it.id == deviceId }
+                            if (myDevice == null) {
+                                currentRemoteDevice = null
+                                return@collect
+                            }
+
+                            val prev = currentRemoteDevice
+                            currentRemoteDevice = myDevice
+                            var commandApplied = false
+
+                            if (prev != null) {
+                                if (prev.mediaVolume != myDevice.mediaVolume) {
+                                    localDeviceManager.setVolume(myDevice.mediaVolume)
+                                    commandApplied = true
+                                }
+                                if (prev.ringerMode != myDevice.ringerMode) {
+                                    localDeviceManager.setRingerMode(myDevice.ringerMode)
+                                    commandApplied = true
+                                }
+                                if (prev.isDndActive != myDevice.isDndActive) {
+                                    localDeviceManager.setDnd(myDevice.isDndActive)
+                                    commandApplied = true
+                                }
+                                if (prev.isCurtainOn != myDevice.isCurtainOn) {
+                                    localDeviceManager.setCurtain(myDevice.isCurtainOn)
+                                    commandApplied = true
+                                }
+                                if (myDevice.mediaAction.isNotBlank()) {
+                                    handleMediaAction(myDevice.mediaAction)
+                                    repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
+                                    commandApplied = true
+                                }
+                                if (myDevice.pendingAction == "lock") {
+                                    localDeviceManager.lockDevice()
+                                    val updates = mapOf("pendingAction" to "", "isLocked" to true)
+                                    repository.updateDeviceFields(deviceId, updates)
+                                    commandApplied = true
+                                }
+                            }
+
+                            if (commandApplied) {
+                                lastCommandAppliedAt = System.currentTimeMillis()
+                            }
+
+                            val onlineDevices = devices.filter { (System.currentTimeMillis() - it.lastUpdated) < 60_000 }
+                            broadcastWidgetUpdate(onlineDevices)
+                        }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error syncing devices", e)
+                }
+
                 delay(2000)
             }
-
-            // Listen for remote changes to all devices
-            repository.getDevicesFlow()
-                .catch { e -> Log.e(TAG, "Error syncing devices", e) }
-                .collect { devices ->
-                    val myDevice = devices.find { it.id == deviceId }
-                    if (myDevice == null) {
-                        currentRemoteDevice = null
-                        return@collect
-                    }
-
-                    val prev = currentRemoteDevice
-                    currentRemoteDevice = myDevice
-                    var commandApplied = false
-
-                    if (prev != null) {
-                        if (prev.mediaVolume != myDevice.mediaVolume) {
-                            localDeviceManager.setVolume(myDevice.mediaVolume)
-                            commandApplied = true
-                        }
-                        if (prev.ringerMode != myDevice.ringerMode) {
-                            localDeviceManager.setRingerMode(myDevice.ringerMode)
-                            commandApplied = true
-                        }
-                        if (prev.isDndActive != myDevice.isDndActive) {
-                            localDeviceManager.setDnd(myDevice.isDndActive)
-                            commandApplied = true
-                        }
-                        if (prev.isCurtainOn != myDevice.isCurtainOn) {
-                            localDeviceManager.setCurtain(myDevice.isCurtainOn)
-                            commandApplied = true
-                        }
-                        if (myDevice.mediaAction.isNotBlank()) {
-                            handleMediaAction(myDevice.mediaAction)
-                            repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
-                            commandApplied = true
-                        }
-                        if (myDevice.pendingAction == "lock") {
-                            localDeviceManager.lockDevice()
-                            val updates = mapOf("pendingAction" to "", "isLocked" to true)
-                            repository.updateDeviceFields(deviceId, updates)
-                            commandApplied = true
-                        }
-                    }
-
-                    if (commandApplied) {
-                        lastCommandAppliedAt = System.currentTimeMillis()
-                    }
-
-                    // Update widget with online devices
-                    val onlineDevices = devices.filter { (System.currentTimeMillis() - it.lastUpdated) < 60_000 }
-                    broadcastWidgetUpdate(onlineDevices)
-                }
         }
 
-        // Observe local state changes and upload them
         scope.launch {
             localDeviceManager.observeDeviceState().collectLatest { state ->
                 currentRemoteDevice?.let {
@@ -184,7 +188,6 @@ class CloudRemoteService : Service() {
             }
         }
 
-        // Heartbeat to keep device online
         scope.launch {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
@@ -231,6 +234,7 @@ class CloudRemoteService : Service() {
     ) {
         val device = currentRemoteDevice ?: return
         val deviceId = localDeviceId ?: return
+        if (auth.currentUser == null) return
 
         val updates = mutableMapOf<String, Any>()
         if (device.mediaTitle != title) updates["mediaTitle"] = title
@@ -257,6 +261,7 @@ class CloudRemoteService : Service() {
 
     private fun syncLocalStateToCloud(cachedDevice: Device, state: LocalDeviceManager.DeviceState) {
         val deviceId = localDeviceId ?: return
+        if (auth.currentUser == null) return
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
         if (msSinceCommand < COOLDOWN_MS) return
 

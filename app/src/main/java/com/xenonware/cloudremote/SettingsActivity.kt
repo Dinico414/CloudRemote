@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
+import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import com.xenonware.cloudremote.presentation.sign_in.SignInViewModel
 import com.xenonware.cloudremote.ui.layouts.SettingsLayout
 import com.xenonware.cloudremote.ui.theme.ScreenEnvironment
@@ -42,7 +43,7 @@ object SettingsDestinations {
 
 class SettingsActivity : ComponentActivity() {
 
-    private val sharedPreferenceManager by lazy { SharedPreferenceManager(application) }  // Add if missing
+    private val sharedPreferenceManager by lazy { SharedPreferenceManager(application) }
 
     private lateinit var settingsViewModel: SettingsViewModel
     private lateinit var signInViewModel: SignInViewModel
@@ -53,10 +54,11 @@ class SettingsActivity : ComponentActivity() {
             oneTapClient = Identity.getSignInClient(applicationContext)
         )
     }
+    private var localDeviceId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        localDeviceId = intent.getStringExtra("local_device_id") ?: ""
         settingsViewModel = ViewModelProvider(
             this,
             SettingsViewModel.SettingsViewModelFactory(application)
@@ -151,6 +153,9 @@ class SettingsActivity : ComponentActivity() {
                             },
                             onConfirmSignOut = {
                                 lifecycleScope.launch {
+                                    if (localDeviceId.isNotBlank()) {
+                                        GoogleCloudRepository().deleteDeviceAndAwait(localDeviceId)
+                                    }
                                     googleAuthUiClient.signOut()
                                     sharedPreferenceManager.isUserLoggedIn = false
                                     settingsViewModel.dismissSignOutDialog()
