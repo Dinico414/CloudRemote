@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -112,6 +113,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.data.Device
 import kotlinx.coroutines.delay
@@ -511,7 +513,7 @@ fun DeviceItem(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                if (BuildConfig.BUILD_TYPE=="debug"){
+                if (BuildConfig.BUILD_TYPE == "debug") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start,
@@ -530,90 +532,43 @@ fun DeviceItem(
                         }
                     }
                 }
-
-                if (!isLocalDevice) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
-                            .then(Modifier.combinedClickable(onClick = {}, onLongClick = {
-                                if (!device.isLocked) onUpdateDevice(
-                                    device.copy(
-                                        pendingAction = "lock"
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (!isLocalDevice) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(30.dp))
+                                .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
+                                .then(Modifier.combinedClickable(onClick = {}, onLongClick = {
+                                    if (!device.isLocked) onUpdateDevice(
+                                        device.copy(
+                                            pendingAction = "lock"
+                                        )
                                     )
-                                )
-                            }))
-                            .padding(vertical = 8.dp, horizontal = 16.dp)
-                    ) {
-                        Icon(
-                            tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
-                            imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                            contentDescription = if (device.isLocked) "Locked" else "Unlocked",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            if (device.isLocked) "Locked" else "Unlocked",
-                            color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                                }))
+                                .padding(vertical = 8.dp, horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                                imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                                contentDescription = if (device.isLocked) "Locked" else "Unlocked",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                if (device.isLocked) "Locked" else "Unlocked",
+                                color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
-                }
+                    BatteryIndicator(device.batteryLevel, device.isCharging)
 
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Battery: ${device.batteryLevel}%")
-                    if (device.isCharging) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Rounded.FlashOn,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            contentDescription = ""
-                        )
-                    }
-                }
-
-                val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
-                val blinkColor by infiniteTransition.animateColor(
-                    initialValue = MaterialTheme.colorScheme.error,
-                    targetValue = MaterialTheme.colorScheme.errorContainer,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(500), repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "blink"
-                )
-
-                val progressColor = if (device.isCharging) {
-                    Color.Green
-                } else if (device.batteryLevel <= 5) {
-                    blinkColor
-                } else if (device.batteryLevel <= 20) {
-                    MaterialTheme.colorScheme.error
-                } else if (device.batteryLevel >= 100) {
-                    MaterialTheme.colorScheme.tertiary
-                } else {
-                    MaterialTheme.colorScheme.primary
-                }
-
-                val trackColor = if (!device.isCharging && device.batteryLevel <= 20) {
-                    MaterialTheme.colorScheme.errorContainer
-                } else {
-                    ProgressIndicatorDefaults.linearTrackColor
-                }
-
-                LinearProgressIndicator(
-                    progress = { device.batteryLevel / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .padding(vertical = 8.dp),
-                    color = progressColor,
-                    trackColor = trackColor,
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Sound Mode:",
@@ -789,6 +744,74 @@ fun HorizontalScrollWithIndicator(
         }
     }
 }
+
+@Composable
+fun BatteryIndicator(
+    batteryLevel: Int,
+    isCharging: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(40.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(ProgressIndicatorDefaults.linearTrackColor)
+    ) {
+        val infiniteTransition = rememberInfiniteTransition(label = "batteryBlink")
+        val blinkColor by infiniteTransition.animateColor(
+            initialValue = MaterialTheme.colorScheme.error,
+            targetValue = MaterialTheme.colorScheme.errorContainer,
+            animationSpec = infiniteRepeatable(
+                animation = tween(500), repeatMode = RepeatMode.Reverse
+            ),
+            label = "blink"
+        )
+        val progressColor = if (isCharging) {
+            Color.Green
+        } else if (batteryLevel <= 5) {
+            blinkColor
+        } else if (batteryLevel <= 20) {
+            MaterialTheme.colorScheme.error
+        } else if (batteryLevel >= 100) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.primary
+        }
+
+        //IndicatorBox
+        val fraction = (batteryLevel.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
+        Box(
+            modifier = modifier
+                .align(Alignment.CenterStart)
+                .height(40.dp)
+                .widthIn(min = 40.dp)
+                .fillMaxWidth(fraction)
+                .clip(RoundedCornerShape(20.dp))
+                .background(progressColor)
+        )
+
+        //TextPositionBox
+        Box(
+            modifier
+                .align(Alignment.CenterStart)
+                .height(40.dp)
+                .width(40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Transparent)
+        ) {
+            Text(
+                text = "$batteryLevel",
+                modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.onPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = QuicksandTitleVariable
+            )
+        }
+    }
+}
+
 
 @Composable
 fun SoundModeIconButton(
