@@ -241,6 +241,8 @@ fun DeviceItem(
             }
         }, confirmButton = {
             TextButton(onClick = {
+                @Suppress("AssignedValueIsNeverRead")
+                showShareDialog = false
                 onToggleShare(
                     shareName.ifBlank { device.name.ifBlank { "Unknown Device" } }, shareIcon
                 )
@@ -248,7 +250,10 @@ fun DeviceItem(
                 Text("Share")
             }
         }, dismissButton = {
-            TextButton(onClick = { }) {
+            TextButton(onClick = {
+                @Suppress("AssignedValueIsNeverRead")
+                showShareDialog = false
+            }) {
                 Text("Cancel")
             }
         })
@@ -311,6 +316,8 @@ fun DeviceItem(
                         } else {
                             shareName = ""
                             shareIcon = "old phone"
+                            @Suppress("AssignedValueIsNeverRead")
+                            showShareDialog = true
                         }
                     }) {
                         Icon(
@@ -502,7 +509,8 @@ fun DeviceItem(
                                     )
                                 )
                             }))
-                            .padding(vertical = 8.dp, horizontal = 16.dp)) {
+                            .padding(vertical = 8.dp, horizontal = 16.dp)
+                    ) {
                         Icon(
                             tint = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
                             imageVector = if (device.isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
