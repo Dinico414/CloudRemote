@@ -7,8 +7,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -25,7 +27,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -38,6 +42,8 @@ fun <T> XenonSingleChoiceButtonGroup(
     onOptionSelect: (T) -> Unit,
     label: @Composable (T) -> String,
     modifier: Modifier = Modifier,
+    connected: Boolean = false,
+    height: Dp = 40.dp,
     colors: ToggleButtonColors = ToggleButtonDefaults.toggleButtonColors(
         containerColor = colorScheme.surfaceDim,
         checkedContainerColor = colorScheme.primary,
@@ -90,9 +96,18 @@ fun <T> XenonSingleChoiceButtonGroup(
 
     val pressedIndex = pressedStates.indexOfFirst { it }
 
+    val cornerRadius = if (connected) 100f else 0f
     Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.clip(RoundedCornerShape(cornerRadius)),
+        horizontalArrangement = Arrangement.spacedBy(
+            if (connected) 2.dp
+            else if (height <= 32.dp) 12.dp
+            else if (height <= 40.dp) 12.dp
+            else if (height <= 56.dp) 8.dp
+            else if (height <= 96.dp) 8.dp
+            else if (height <= 136.dp) 8.dp
+            else 8.dp
+        ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         options.forEachIndexed { index, option ->
@@ -121,7 +136,9 @@ fun <T> XenonSingleChoiceButtonGroup(
             ToggleButton(
                 checked = isSelected,
                 onCheckedChange = { if (it) onOptionSelect(option) },
-                modifier = Modifier.weight(weight),
+                modifier = Modifier
+                    .weight(weight)
+                    .height(height),
                 colors = colors,
                 interactionSource = interactionSources[index]
             ) {
