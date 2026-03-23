@@ -20,6 +20,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -82,6 +83,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -91,6 +93,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -169,7 +173,7 @@ val deviceIconCategories = listOf(
 
 @Suppress("SimplifyBooleanWithConstants")
 @SuppressLint("LocalContextResourcesRead", "DiscouragedApi")
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DeviceItem(
     device: Device,
@@ -291,11 +295,17 @@ fun DeviceItem(
                 .padding(
                     start = 16.dp, end = 16.dp, bottom = 16.dp, top = 16.dp
                 )
-                .graphicsLayer(alpha = if (isOnline) 1f else 0.5f)
+                .graphicsLayer(alpha = if (isOnline) 1f else 0.5f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+
+            // Device Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        bottom = if (!isCollapsed && isOnline) 4.dp else 0.dp
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val prefix = getDeviceIconPrefix(device.icon) ?: "op"
@@ -312,21 +322,27 @@ fun DeviceItem(
                     )
                 }
 
-                if (resId != 0) {
-                    Image(
-                        painter = painterResource(id = resId),
-                        contentDescription = "Device Icon",
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clip(RoundedCornerShape(100f)).background(MaterialTheme.colorScheme.secondaryContainer).padding(4.dp)
+                ) {
+                    if (resId != 0) {
+                        Image(
+                            modifier = Modifier.size(40.dp),
+                            painter = painterResource(id = resId),
+                            contentDescription = "Device Icon",
+                        )
+                    }
+
+                    Text(
+                        text = device.name.ifBlank { "Unknown Device" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = device.name.ifBlank { "Unknown Device" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                Spacer(Modifier.weight(1f))
 
                 when {
                     isLocalDevice -> {
@@ -347,7 +363,9 @@ fun DeviceItem(
                     }
 
                     isOnline -> {
-                        FilledTonalIconButton(onClick = { isCollapsed = !isCollapsed }) {
+                        FilledTonalIconButton(onClick = {
+                            isCollapsed = !isCollapsed
+                        }) {
                             Icon(
                                 imageVector = if (isCollapsed) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
                                 contentDescription = if (isCollapsed) "Expand" else "Collapse"
@@ -370,7 +388,6 @@ fun DeviceItem(
             }
 
             if (!isCollapsed && isOnline && (!isLocalDevice || isSharing)) {
-                Spacer(modifier = Modifier.height(8.dp))
 
                 // Media Player
                 if (device.mediaTitle.isNotBlank()) {
@@ -397,8 +414,11 @@ fun DeviceItem(
                             } catch (_: Exception) {
                                 null
                             }
-                            val bitmap =
-                                imageBytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+                            val bitmap = imageBytes?.let {
+                                BitmapFactory.decodeByteArray(
+                                    it, 0, it.size
+                                )
+                            }
 
                             Box(
                                 modifier = Modifier
@@ -461,8 +481,13 @@ fun DeviceItem(
 
                                     Spacer(modifier = Modifier.width(button1gone + button2gone))
                                     IconButton(
-                                        onClick = { onUpdateDevice(device.copy(mediaAction = "previous")) },
-                                        enabled = true
+                                        onClick = {
+                                            onUpdateDevice(
+                                                device.copy(
+                                                    mediaAction = "previous"
+                                                )
+                                            )
+                                        }, enabled = true
                                     ) {
                                         Icon(
                                             Icons.Rounded.SkipPrevious,
@@ -475,7 +500,13 @@ fun DeviceItem(
                                             containerColor = MaterialTheme.colorScheme.primary,
                                             contentColor = MaterialTheme.colorScheme.onPrimary
                                         ),
-                                        onClick = { onUpdateDevice(device.copy(mediaAction = if (device.isPlaying) "pause" else "play")) },
+                                        onClick = {
+                                            onUpdateDevice(
+                                                device.copy(
+                                                    mediaAction = if (device.isPlaying) "pause" else "play"
+                                                )
+                                            )
+                                        },
                                         enabled = true
                                     ) {
                                         Crossfade(
@@ -490,23 +521,42 @@ fun DeviceItem(
                                         }
                                     }
                                     IconButton(
-                                        onClick = { onUpdateDevice(device.copy(mediaAction = "next")) },
-                                        enabled = true
+                                        onClick = {
+                                            onUpdateDevice(
+                                                device.copy(
+                                                    mediaAction = "next"
+                                                )
+                                            )
+                                        }, enabled = true
                                     ) {
-                                        Icon(Icons.Rounded.SkipNext, contentDescription = "Next")
+                                        Icon(
+                                            Icons.Rounded.SkipNext, contentDescription = "Next"
+                                        )
                                     }
 
                                     CustomMediaActionButton(
                                         actionTitle = device.mediaCustomAction1Title,
                                         defaultIcon = Icons.Rounded.Add,
-                                        onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) },
+                                        onClick = {
+                                            onUpdateDevice(
+                                                device.copy(
+                                                    mediaAction = "custom1"
+                                                )
+                                            )
+                                        },
                                         enabled = true
                                     )
 
                                     CustomMediaActionButton(
                                         actionTitle = device.mediaCustomAction2Title,
                                         defaultIcon = Icons.Rounded.Remove,
-                                        onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) },
+                                        onClick = {
+                                            onUpdateDevice(
+                                                device.copy(
+                                                    mediaAction = "custom2"
+                                                )
+                                            )
+                                        },
                                         enabled = true
                                     )
                                     Spacer(modifier = Modifier.width(button1gone + button2gone))
@@ -514,32 +564,44 @@ fun DeviceItem(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                @Suppress("KotlinConstantConditions")
-                if (BuildConfig.BUILD_TYPE == "debug") {
+                @Suppress("KotlinConstantConditions") if (BuildConfig.BUILD_TYPE == "debug") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (device.mediaCustomAction1Title.isNotBlank()) {
-                            TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom1")) }) {
+                            TextButton(onClick = {
+                                onUpdateDevice(
+                                    device.copy(
+                                        mediaAction = "custom1"
+                                    )
+                                )
+                            }) {
                                 Text(device.mediaCustomAction1Title)
                             }
                         }
 
                         if (device.mediaCustomAction2Title.isNotBlank()) {
-                            TextButton(onClick = { onUpdateDevice(device.copy(mediaAction = "custom2")) }) {
+                            TextButton(onClick = {
+                                onUpdateDevice(
+                                    device.copy(
+                                        mediaAction = "custom2"
+                                    )
+                                )
+                            }) {
                                 Text(device.mediaCustomAction2Title)
                             }
                         }
                     }
                 }
+
+                // Control Row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (!isLocalDevice) {
                         Row(
@@ -548,13 +610,15 @@ fun DeviceItem(
                                 .animateContentSize()
                                 .clip(RoundedCornerShape(30.dp))
                                 .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
-                                .then(Modifier.combinedClickable(onClick = {}, onLongClick = {
-                                    if (!device.isLocked) onUpdateDevice(
-                                        device.copy(
-                                            pendingAction = "lock"
+                                .then(
+                                    Modifier.combinedClickable(onClick = {}, onLongClick = {
+                                        if (!device.isLocked) onUpdateDevice(
+                                            device.copy(
+                                                pendingAction = "lock"
+                                            )
                                         )
-                                    )
-                                }))
+                                    })
+                                )
                                 .padding(vertical = 8.dp, horizontal = 16.dp)
                         ) {
                             Icon(
@@ -574,54 +638,47 @@ fun DeviceItem(
 
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
+                // Sound Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // DND toggle — independent of ringerMode
-                    SoundModeIconButton(
+                    IconToggleButton(
                         icon = Icons.Rounded.DoDisturbOn,
                         isActive = device.isDndActive,
                         activeColor = MaterialTheme.colorScheme.error,
-                        onClick = { onUpdateDevice(device.copy(isDndActive = !device.isDndActive)) },
+                        onCheckedChange = { onUpdateDevice(device.copy(isDndActive = it)) },
                         modifier = Modifier.weight(1f),
                         enabled = true
                     )
-                    // Silent: ringerMode = 0
-                    SoundModeIconButton(
-                        icon = Icons.AutoMirrored.Rounded.VolumeOff,
-                        isActive = device.ringerMode == 0,
-                        activeColor = MaterialTheme.colorScheme.primary,
-                        onClick = { onUpdateDevice(device.copy(ringerMode = 0)) },
-                        modifier = Modifier.weight(1f),
-                        enabled = true
-                    )
-                    // Vibrate: ringerMode = 1
-                    SoundModeIconButton(
-                        icon = Icons.Rounded.Vibration,
-                        isActive = device.ringerMode == 1,
-                        activeColor = MaterialTheme.colorScheme.primary,
-                        onClick = { onUpdateDevice(device.copy(ringerMode = 1)) },
-                        modifier = Modifier.weight(1f),
-                        enabled = true
-                    )
-                    // Sound: ringerMode = 2
-                    SoundModeIconButton(
-                        icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                        isActive = device.ringerMode == 2,
-                        activeColor = MaterialTheme.colorScheme.primary,
-                        onClick = { onUpdateDevice(device.copy(ringerMode = 2)) },
-                        modifier = Modifier.weight(1f),
-                        enabled = true
-                    )
+                    XenonSingleChoiceButtonGroup(
+                        options = listOf(0, 1, 2),
+                        selectedOption = device.ringerMode,
+                        connected = false,
+                        onOptionSelect = { onUpdateDevice(device.copy(ringerMode = it)) },
+                        label = { "" },
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            checkedContainerColor = MaterialTheme.colorScheme.primary,
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier.weight(3f),
+                        height = 48.dp,
+                        icon = { option, _ ->
+                            Icon(
+                                imageVector = when (option) {
+                                    0 -> Icons.AutoMirrored.Rounded.VolumeOff
+                                    1 -> Icons.Rounded.Vibration
+                                    else -> Icons.AutoMirrored.Rounded.VolumeUp
+                                }, contentDescription = "Ringer Mode"
+                            )
+                        })
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Media Volume
+                // Media Volume Row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -638,12 +695,13 @@ fun DeviceItem(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier.padding(horizontal = 8.dp)
                         ) {
-                            val mediaVolumeIcon = when ((device.mediaVolume.toFloat() / device.maxMediaVolume.toFloat() * 100).toInt()) {
-                                in 68..100 -> Icons.AutoMirrored.Rounded.VolumeUp
-                                in 35..67 -> Icons.AutoMirrored.Rounded.VolumeDown
-                                in 1..34 -> Icons.AutoMirrored.Rounded.VolumeMute
-                                else -> Icons.AutoMirrored.Rounded.VolumeOff
-                            }
+                            val mediaVolumeIcon =
+                                when ((device.mediaVolume.toFloat() / device.maxMediaVolume.toFloat() * 100).toInt()) {
+                                    in 68..100 -> Icons.AutoMirrored.Rounded.VolumeUp
+                                    in 35..67 -> Icons.AutoMirrored.Rounded.VolumeDown
+                                    in 1..34 -> Icons.AutoMirrored.Rounded.VolumeMute
+                                    else -> Icons.AutoMirrored.Rounded.VolumeOff
+                                }
                             Icon(
                                 imageVector = mediaVolumeIcon,
                                 contentDescription = "Media Volume",
@@ -673,13 +731,12 @@ fun DeviceItem(
                         modifier = Modifier.weight(1f)
                     )
                 }
+
                 if (!isLocalDevice) {
                     // Curtain toggle
                     Button(
                         onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
-                        modifier = Modifier
-                            .padding(top = 8.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                         ),
@@ -917,28 +974,34 @@ fun BatteryIndicator(
 }
 
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SoundModeIconButton(
+fun IconToggleButton(
     icon: ImageVector,
     isActive: Boolean,
     activeColor: Color,
-    onClick: () -> Unit,
+    onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
         modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        IconButton(
-            onClick = onClick,
+        ToggleButton(
+            checked = isActive,
+            onCheckedChange = onCheckedChange,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = if (isActive) activeColor else MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = if (isActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+            colors = ToggleButtonDefaults.toggleButtonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                checkedContainerColor = activeColor,
+                checkedContentColor = if (activeColor == MaterialTheme.colorScheme.error) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
             ),
-            enabled = enabled
+            enabled = enabled,
+            interactionSource = interactionSource
         ) {
             Icon(
                 imageVector = icon, contentDescription = "", modifier = Modifier.size(24.dp)
