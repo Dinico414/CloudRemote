@@ -158,7 +158,7 @@ class CloudRemoteService : Service() {
                                     localDeviceManager.setCurtain(myDevice.isCurtainOn)
                                     commandApplied = true
                                 }
-                                if (myDevice.mediaAction.isNotBlank()) {
+                                if (prev.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
                                     handleMediaAction(myDevice.mediaAction)
                                     repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
                                     commandApplied = true
