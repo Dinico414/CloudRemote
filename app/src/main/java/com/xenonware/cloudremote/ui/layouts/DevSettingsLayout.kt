@@ -29,10 +29,10 @@ fun DevSettingsLayout(
             }
             LayoutType.SMALL, LayoutType.COMPACT, LayoutType.MEDIUM, LayoutType.EXPANDED -> {
                 DevDefaultSettings(
-//                    onNavigateBack = onNavigateBack,
-//                    viewModel = viewModel,
-//                    layoutType = layoutType,
-//                    isLandscape = isLandscape
+                    onNavigateBack = onNavigateBack,
+                    viewModel = viewModel,
+                    layoutType = layoutType,
+                    isLandscape = isLandscape
                 )
             }
         }

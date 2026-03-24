@@ -53,6 +53,7 @@ fun DevSettingsItems(
 
     ) {
     val isDeveloperModeEnabled by viewModel.devModeToggleState.collectAsState()
+    val isInputReceiverEnabled by viewModel.inputReceiverToggleState.collectAsState()
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -112,7 +113,7 @@ fun DevSettingsItems(
                 val newCheckedState = !isDeveloperModeEnabled
                 viewModel.setDeveloperModeEnabled(newCheckedState)
             },
-            shape = tileShapeOverride ?: topShape /*standaloneShape*/,
+            shape = tileShapeOverride ?: if (isDeveloperModeEnabled) topShape else standaloneShape,
             backgroundColor = tileBackgroundColor,
             contentColor = tileContentColor,
             subtitleColor = tileSubtitleColor,
@@ -122,6 +123,24 @@ fun DevSettingsItems(
 
         if (isDeveloperModeEnabled) {
             Spacer(modifier = Modifier.height(SmallSpacing))
+            SettingsSwitchTile(
+                title = stringResource(id = R.string.disable_input_receiver),
+                subtitle = stringResource(id = R.string.disable_input_receiver_subtitle),
+                checked = !isInputReceiverEnabled,
+                onCheckedChange = { newCheckedState ->
+                    viewModel.setInputReceiverEnabled(newCheckedState)
+                },
+                onClick = {
+                    val newCheckedState = !isInputReceiverEnabled
+                    viewModel.setInputReceiverEnabled(newCheckedState)
+                },
+                shape = tileShapeOverride ?: bottomShape,
+                backgroundColor = tileBackgroundColor,
+                contentColor = tileContentColor,
+                subtitleColor = tileSubtitleColor,
+                horizontalPadding = tileHorizontalPadding,
+                verticalPadding = tileVerticalPadding
+            )
         }
     }
 }

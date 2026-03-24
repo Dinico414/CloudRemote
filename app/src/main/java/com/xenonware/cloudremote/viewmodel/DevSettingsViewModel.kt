@@ -16,6 +16,9 @@ class DevSettingsViewModel(application: Application) : AndroidViewModel(applicat
     private val _devModeToggleState = MutableStateFlow(sharedPreferenceManager.developerModeEnabled)
     val devModeToggleState: StateFlow<Boolean> = _devModeToggleState.asStateFlow()
 
+    private val _inputReceiverToggleState = MutableStateFlow(sharedPreferenceManager.inputReceiverEnabled)
+    val inputReceiverToggleState: StateFlow<Boolean> = _inputReceiverToggleState.asStateFlow()
+
 
     fun setDeveloperModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -25,6 +28,13 @@ class DevSettingsViewModel(application: Application) : AndroidViewModel(applicat
             if (!enabled) {
                 //put in any dev settings
             }
+        }
+    }
+
+    fun setInputReceiverEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            sharedPreferenceManager.inputReceiverEnabled = enabled
+            _inputReceiverToggleState.value = enabled
         }
     }
 
