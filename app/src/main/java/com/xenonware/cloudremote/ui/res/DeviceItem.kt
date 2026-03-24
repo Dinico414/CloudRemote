@@ -22,6 +22,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -191,6 +192,7 @@ fun DeviceItem(
     var shareName by remember { mutableStateOf("") }
     var shareIcon by remember { mutableStateOf("old phone") }
     var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
+    var lastRememberedVolume by remember { mutableIntStateOf(device.maxMediaVolume / 2) }
 
     val progressBackgroundColor by animateColorAsState(
         targetValue = if (device.isCharging) {
@@ -726,17 +728,33 @@ fun DeviceItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
-                            contentAlignment = Alignment.Center
+                        LaunchedEffect(device.mediaVolume) {
+                            if (device.mediaVolume != 0) {
+                                lastRememberedVolume = device.mediaVolume
+                            }
+                        }
+                        val isMuted = device.mediaVolume == 0
+                        ToggleButton(
+                            checked = isMuted,
+                            onCheckedChange = { isChecked ->
+                                val newVolume = if (isChecked) {
+                                    0
+                                } else {
+                                    if (lastRememberedVolume == 0) (device.maxMediaVolume * 0.3).toInt() else lastRememberedVolume
+                                }
+                                onUpdateDevice(device.copy(mediaVolume = newVolume))
+                            },
+                            modifier = Modifier.height(48.dp),
+                            colors = ToggleButtonDefaults.toggleButtonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 8.dp)
                             ) {
                                 val mediaVolumeIcon =
                                     when ((device.mediaVolume.toFloat() / device.maxMediaVolume.toFloat() * 100).toInt()) {
@@ -748,7 +766,6 @@ fun DeviceItem(
                                 Icon(
                                     imageVector = mediaVolumeIcon,
                                     contentDescription = "Media Volume",
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Box(
@@ -757,7 +774,6 @@ fun DeviceItem(
                                 ) {
                                     Text(
                                         text = "${device.mediaVolume}",
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold,
                                         fontFamily = QuicksandTitleVariable
