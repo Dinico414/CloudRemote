@@ -304,7 +304,7 @@ fun DeviceItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
-                        bottom = if (!isCollapsed && isOnline) 4.dp else 0.dp
+                        bottom = if (!isCollapsed && isOnline && (!isLocalDevice || isSharing)) 4.dp else 0.dp
                     ),
                 verticalAlignment = Alignment.CenterVertically
             ) {

@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote.data
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatDelegate
@@ -10,7 +11,7 @@ import java.util.UUID
 import kotlin.math.max
 import kotlin.math.min
 
-class SharedPreferenceManager(context: Context) {
+class SharedPreferenceManager(private val context: Context) {
 
     private val prefsName = "AppPrefs"
     private val isUserLoggedInKey = "is_user_logged_in"
@@ -31,9 +32,20 @@ class SharedPreferenceManager(context: Context) {
 
     val localDeviceId: String
         get() {
-            var id = sharedPreferences.getString("local_device_id", null)
+            var id: String? = sharedPreferences.getString("local_device_id", null)
+
             if (id == null) {
-                id = UUID.randomUUID().toString()
+
+                @SuppressLint("HardwareIds")
+                id = android.provider.Settings.Secure.getString(
+                    context.contentResolver,
+                    android.provider.Settings.Secure.ANDROID_ID
+                )
+
+                if (id.isNullOrEmpty() || id == "02:00:00:00:00:00" || id == "9774d56d682e549c") {
+                    id = UUID.randomUUID().toString()
+                }
+                
                 sharedPreferences.edit { putString("local_device_id", id) }
             }
             return id

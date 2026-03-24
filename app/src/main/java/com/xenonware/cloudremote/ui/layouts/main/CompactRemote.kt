@@ -313,7 +313,7 @@ fun CompactRemote(
                                             device = device,
                                             isLocalDevice = false,
                                             isOnline = true,
-                                            isSharing = false, // Cloud devices are never "sharing" from this view
+                                            isSharing = false,
                                             onUpdateDevice = { updatedDevice ->
                                                 viewModel.updateDevice(
                                                     updatedDevice
