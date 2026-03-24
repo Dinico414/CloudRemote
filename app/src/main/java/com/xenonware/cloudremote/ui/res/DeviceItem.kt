@@ -566,7 +566,7 @@ fun DeviceItem(
                     }
                 }
 
-                @Suppress("KotlinConstantConditions") if (BuildConfig.BUILD_TYPE == "debug") {
+                @Suppress("KotlinConstantConditions") if (BuildConfig.BUILD_TYPE == "debug" && device.mediaCustomAction1Title.isNotBlank() && device.mediaCustomAction2Title.isNotBlank()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Start,

@@ -6,7 +6,9 @@ import android.content.Intent
 import android.service.quicksettings.TileService
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -189,37 +192,6 @@ fun CompactRemote(
                 ), label = "bottomPaddingAnimation"
             )
 
-            val defaultToolbarContent = @Composable {
-                Row {
-                    // Curtain button
-                    IconButton(onClick = {
-                        if (CurtainTileService.isCurtainActive) {
-                            val closeIntent = Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
-                            context.sendBroadcast(closeIntent)
-                        } else {
-                            val intent = Intent(context, SwipeableCurtainActivity::class.java)
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
-                        }
-                        CurtainTileService.isCurtainActive = !CurtainTileService.isCurtainActive
-                        TileService.requestListeningState(
-                            context, ComponentName(context, CurtainTileService::class.java)
-                        )
-                    }) {
-                        val icon =
-                            if (localDevice?.isCurtainOn == true) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains
-                        Icon(icon, contentDescription = "Curtain Trigger")
-                    }
-
-                    // Settings button
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Rounded.Settings, contentDescription = "Settings"
-                        )
-                    }
-                }
-            }
-
             FloatingToolbarContent(
                 hazeState = hazeState,
                 onSearchQueryChanged = { },
@@ -233,7 +205,64 @@ fun CompactRemote(
                 onAddModeToggle = { },
                 isSearchActive = isSearchActive,
                 onIsSearchActiveChange = { isSearchActive = it },
-                defaultContent = { _, _ -> defaultToolbarContent() },
+                defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
+                    Row {
+                        val iconAlphaTarget = if (isSearchActive) 0f else 1f
+
+                        val curtainIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 0 else 0
+                            ), label = "CurtainIconAlpha"
+                        )
+
+                        // Curtain button
+                        IconButton(
+                            onClick = {
+                                if (CurtainTileService.isCurtainActive) {
+                                    val closeIntent =
+                                        Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
+                                    context.sendBroadcast(closeIntent)
+                                } else {
+                                    val intent =
+                                        Intent(context, SwipeableCurtainActivity::class.java)
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                }
+                                CurtainTileService.isCurtainActive =
+                                    !CurtainTileService.isCurtainActive
+                                TileService.requestListeningState(
+                                    context, ComponentName(context, CurtainTileService::class.java)
+                                )
+                            },
+                            modifier = Modifier.alpha(curtainIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            val icon =
+                                if (localDevice?.isCurtainOn == true) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains
+                            Icon(icon, contentDescription = "Curtain Trigger")
+                        }
+
+                        val settingsIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 100 else 0
+                            ), label = "SettingsIconAlpha"
+                        )
+
+                        // Settings button
+                        IconButton(
+                            onClick = onOpenSettings,
+                            modifier = Modifier.alpha(settingsIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = "Settings"
+                            )
+                        }
+                    }
+                },
                 fabOverride = null,
                 isFabEnabled = false,
                 isSpannedMode = deviceConfig.isSpannedMode,
@@ -386,7 +415,8 @@ fun CompactRemote(
                             }
                         }
                     }
-                })
+                }
+            )
         }
     }
 }
