@@ -11,11 +11,14 @@ import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -67,6 +70,7 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
@@ -343,6 +347,62 @@ fun DeviceItem(
                     ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val isMediaIndicatorVisible = isCollapsed && device.mediaTitle.isNotBlank()
+                val transition =
+                    updateTransition(targetState = isMediaIndicatorVisible, label = "mediaIndicatorTransition")
+
+                val spacerWidth by transition.animateDp(
+                    transitionSpec = {
+                        if (targetState) { // Enter
+                            tween(durationMillis = 150)
+                        } else { // Exit
+                            tween(durationMillis = 450)
+                        }
+                    }, label = "spacerWidth"
+                ) { isVisible ->
+                    if (isVisible) 8.dp else 0.dp
+                }
+
+                val boxWidth by transition.animateDp(
+                    transitionSpec = {
+                        if (targetState) { // entering
+                            tween(durationMillis = 300)
+                        } else { // exiting
+                            tween(durationMillis = 300)
+                        }
+                    }, label = "boxWidth"
+                ) { isVisible ->
+                    if (isVisible) 40.dp else 0.dp
+                }
+                val iconAlpha by transition.animateFloat(
+                    transitionSpec = {
+                        if (targetState) { // entering
+                            tween(durationMillis = 150, delayMillis = 150)
+                        } else { // exiting
+                            tween(durationMillis = 150)
+                        }
+                    }, label = "iconAlpha"
+                ) { isVisible ->
+                    if (isVisible) 1f else 0f
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .width(boxWidth)
+                            .clip(RoundedCornerShape(100f))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = "Media active",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = iconAlpha),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(spacerWidth))
+                }
                 val prefix = getDeviceIconPrefix(device.icon) ?: "op"
 
                 val targetFrame by animateIntAsState(
