@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -188,6 +189,28 @@ fun DeviceItem(
     var shareIcon by remember { mutableStateOf("old phone") }
     var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
 
+    val progressBackgroundColor by animateColorAsState(
+        targetValue = if (device.isCharging) {
+            LocalGreenMaterialColorScheme.current.secondaryContainer
+        } else if (device.batteryLevel <= 5) {
+            LocalRedMaterialColorScheme.current.secondaryContainer
+        } else if (device.batteryLevel <= 20) {
+            LocalRedMaterialColorScheme.current.secondaryContainer
+        } else if (device.batteryLevel >= 100) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        },
+        animationSpec = tween(durationMillis = 500),
+        label = "progressBackgroundColor"
+    )
+
+    val rowBackgroundColor by animateColorAsState(
+        targetValue = if (isCollapsed && isOnline) progressBackgroundColor else MaterialTheme.colorScheme.secondaryContainer,
+        animationSpec = tween(durationMillis = 500),
+        label = "rowBackgroundColor"
+    )
+
     var previewFrame by remember { mutableIntStateOf(1) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -324,7 +347,10 @@ fun DeviceItem(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clip(RoundedCornerShape(100f)).background(MaterialTheme.colorScheme.secondaryContainer).padding(4.dp)
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(100f))
+                        .background(rowBackgroundColor)
+                        .padding(4.dp)
                 ) {
                     if (resId != 0) {
                         Image(
@@ -888,41 +914,48 @@ fun BatteryIndicator(
     )
 
 
-    val progressColor = if (isCharging) {
-        batteryChargingColor
-    } else if (batteryLevel <= 5) {
-        batteryWarningColor
-    } else if (batteryLevel <= 20) {
-        LocalRedMaterialColorScheme.current.primary
-    } else if (batteryLevel >= 100) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
+    val progressColor by animateColorAsState(
+        targetValue = if (isCharging) {
+            batteryChargingColor
+        } else if (batteryLevel <= 5) {
+            batteryWarningColor
+        } else if (batteryLevel <= 20) {
+            LocalRedMaterialColorScheme.current.primary
+        } else if (batteryLevel >= 100) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.primary
+        }, animationSpec = tween(durationMillis = 500), label = "progressColor"
+    )
 
-    val progressTextColor = if (isCharging) {
-        batteryChargingTextColor
-    } else if (batteryLevel <= 5) {
-        batteryWarningTextColor
-    } else if (batteryLevel <= 20) {
-        LocalRedMaterialColorScheme.current.onPrimary
-    } else if (batteryLevel >= 100) {
-        MaterialTheme.colorScheme.onTertiary
-    } else {
-        MaterialTheme.colorScheme.onPrimary
-    }
+    val progressTextColor by animateColorAsState(
+        targetValue = if (isCharging) {
+            batteryChargingTextColor
+        } else if (batteryLevel <= 5) {
+            batteryWarningTextColor
+        } else if (batteryLevel <= 20) {
+            LocalRedMaterialColorScheme.current.onPrimary
+        } else if (batteryLevel >= 100) {
+            MaterialTheme.colorScheme.onTertiary
+        } else {
+            MaterialTheme.colorScheme.onPrimary
+        }, animationSpec = tween(durationMillis = 500), label = "progressTextColor"
+    )
 
-    val progressBackgroundColor = if (isCharging) {
-        LocalGreenMaterialColorScheme.current.secondaryContainer
-    } else if (batteryLevel <= 5) {
-        LocalRedMaterialColorScheme.current.secondaryContainer
-    } else if (batteryLevel <= 20) {
-        LocalRedMaterialColorScheme.current.secondaryContainer
-    } else if (batteryLevel >= 100) {
-        MaterialTheme.colorScheme.tertiaryContainer
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer
-    }
+    val progressBackgroundColor by animateColorAsState(
+        targetValue = if (isCharging) {
+            LocalGreenMaterialColorScheme.current.secondaryContainer
+        } else if (batteryLevel <= 5) {
+            LocalRedMaterialColorScheme.current.secondaryContainer
+        } else if (batteryLevel <= 20) {
+            LocalRedMaterialColorScheme.current.secondaryContainer
+        } else if (batteryLevel >= 100) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.secondaryContainer
+        }, animationSpec = tween(durationMillis = 500), label = "progressBackgroundColor"
+    )
+
     Box(
         modifier = modifier
             .height(40.dp)
