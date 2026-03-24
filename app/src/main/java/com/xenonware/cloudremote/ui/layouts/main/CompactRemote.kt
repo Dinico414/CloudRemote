@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote.ui.layouts.main
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.service.quicksettings.TileService
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -44,10 +46,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
@@ -58,12 +62,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.res.FloatingToolbarContent
+import com.xenon.mylibrary.res.GoogleProfilBorder
+import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.SpannedModeFAB
 import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
+import com.xenon.mylibrary.values.NoSpacing
+import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.SwipeableCurtainActivity
 import com.xenonware.cloudremote.data.Device
@@ -79,6 +87,7 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
 
+@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompactRemote(
@@ -134,9 +143,9 @@ fun CompactRemote(
                 oneTapClient = Identity.getSignInClient(context.applicationContext)
             )
         }
-
         val signInViewModel: SignInViewModel = viewModel()
         val state by signInViewModel.state.collectAsStateWithLifecycle()
+        val userData = googleAuthUiClient.getSignedInUser()
 
         // ============================================================================
         // 4. Small Utility Functions & Effects
@@ -244,6 +253,31 @@ fun CompactRemote(
                     .fillMaxSize()
                     .hazeSource(hazeState),
                 titleText = stringResource(id = R.string.app_name),
+                expandable = isAppBarExpandable,
+                navigationIconStartPadding = if (state.isSignInSuccessful) SmallPadding else 0.dp,
+                navigationIconPadding = if (state.isSignInSuccessful) SmallPadding else 0.dp,
+                navigationIconSpacing = NoSpacing,
+                hasNavigationIconExtraContent = state.isSignInSuccessful,
+                navigationIconExtraContent = {
+                    if (state.isSignInSuccessful) {
+                        Box(contentAlignment = Alignment.Center) {
+                            GoogleProfilBorder(
+                                isSignedIn = true,
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.5.dp
+                            )
+
+                            GoogleProfilePicture(
+                                noAccIcon = painterResource(id = R.drawable.default_icon),
+                                profilePictureUrl = userData?.profilePictureUrl,
+                                contentDescription = stringResource(R.string.profile_picture),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {},
+                actions = {},
                 content = {
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (currentUser == null) {
