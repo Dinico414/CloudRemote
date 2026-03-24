@@ -33,6 +33,8 @@
     <string name="taps_remaining_to_developer">You are now %d steps away from being a developer.</string>
     <string name="show_dummy_profile_title">Enable Fake Google Profile</string>
     <string name="default_web_client_id">8027822132-4gdatq7k92rvsjvmneecvc3ahb1r6jrm.apps.googleusercontent.com</string>
+    <string name="disable_input_receiver">Disable Input Receiver</string>
+    <string name="disable_input_receiver_subtitle">Disables remote inputs from other devices</string>
 
     <!-- Dialog Titles -->
     <string name="theme_dialog_title">Select Theme</string>

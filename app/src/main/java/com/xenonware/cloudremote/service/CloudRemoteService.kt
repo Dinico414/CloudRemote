@@ -22,6 +22,7 @@ import com.xenonware.cloudremote.MainActivity
 import com.xenonware.cloudremote.helper.MediaNotificationListener
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import com.xenonware.cloudremote.helper.LocalDeviceManager
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,7 @@ class CloudRemoteService : Service() {
 
     private lateinit var repository: GoogleCloudRepository
     private lateinit var localDeviceManager: LocalDeviceManager
+    private lateinit var sharedPreferenceManager: SharedPreferenceManager
     private val auth = FirebaseAuth.getInstance()
 
     @Volatile
@@ -87,6 +89,7 @@ class CloudRemoteService : Service() {
         super.onCreate()
         repository = GoogleCloudRepository()
         localDeviceManager = LocalDeviceManager(this)
+        sharedPreferenceManager = SharedPreferenceManager(this)
         createNotificationChannel()
         LocalBroadcastManager.getInstance(this).registerReceiver(
             mediaUpdateReceiver,
@@ -111,6 +114,11 @@ class CloudRemoteService : Service() {
     }
 
     private fun startSync() {
+        if (!sharedPreferenceManager.inputReceiverEnabled) {
+            Log.d(TAG, "Input receiver is disabled. Skipping sync.")
+            return
+        }
+
         val deviceId = localDeviceId ?: return
 
         scope.launch {

@@ -22,6 +22,7 @@ class SharedPreferenceManager(private val context: Context) {
     private val coverDisplayDimension2Key = "cover_display_dimension_2"
     private val languageTagKey = "app_language_tag"
     private val developerModeKey = "developer_mode_enabled"
+    private val inputReceiverEnabledKey = "input_receiver_enabled"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -83,6 +84,10 @@ class SharedPreferenceManager(private val context: Context) {
         get() = sharedPreferences.getBoolean(developerModeKey, false)
         set(value) = sharedPreferences.edit { putBoolean(developerModeKey, value) }
 
+    var inputReceiverEnabled: Boolean
+        get() = sharedPreferences.getBoolean(inputReceiverEnabledKey, true)
+        set(value) = sharedPreferences.edit { putBoolean(inputReceiverEnabledKey, value) }
+
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false
         val storedDimension1 = sharedPreferences.getInt(coverDisplayDimension1Key, 0)
@@ -102,6 +107,7 @@ class SharedPreferenceManager(private val context: Context) {
             putBoolean(blackedOutModeKey, false)
             putBoolean(coverThemeEnabledKey, false)
             putBoolean(developerModeKey, false)
+            putBoolean(inputReceiverEnabledKey, true)
             putInt(themeKey, ThemeSetting.SYSTEM.ordinal)
             remove(coverDisplayDimension1Key)
             remove(coverDisplayDimension2Key)
