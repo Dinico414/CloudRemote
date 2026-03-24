@@ -3,11 +3,11 @@ package com.xenonware.cloudremote.data
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.unit.IntSize
 import androidx.core.content.edit
 import com.xenonware.cloudremote.viewmodel.ThemeSetting
-import java.util.UUID
 import kotlin.math.max
 import kotlin.math.min
 
@@ -31,21 +31,14 @@ class SharedPreferenceManager(private val context: Context) {
         set(value) = sharedPreferences.edit { putBoolean(isUserLoggedInKey, value) }
 
     val localDeviceId: String
+        @SuppressLint("HardwareIds")
         get() {
-            var id: String? = sharedPreferences.getString("local_device_id", null)
-
+            var id = sharedPreferences.getString("local_device_id", null)
             if (id == null) {
-
-                @SuppressLint("HardwareIds")
-                id = android.provider.Settings.Secure.getString(
+                id = Settings.Secure.getString(
                     context.contentResolver,
-                    android.provider.Settings.Secure.ANDROID_ID
-                )
-
-                if (id.isNullOrEmpty() || id == "02:00:00:00:00:00" || id == "9774d56d682e549c") {
-                    id = UUID.randomUUID().toString()
-                }
-                
+                    Settings.Secure.ANDROID_ID
+                ) ?: "unknown_device"
                 sharedPreferences.edit { putString("local_device_id", id) }
             }
             return id

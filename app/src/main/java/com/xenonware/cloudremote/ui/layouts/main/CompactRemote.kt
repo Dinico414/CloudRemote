@@ -316,14 +316,14 @@ fun CompactRemote(
 
                             LaunchedEffect(Unit) {
                                 while (true) {
-                                    delay(5000)
+                                    delay(30000)
                                     currentTime = System.currentTimeMillis()
                                 }
                             }
 
                             val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
                             val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
-                                (currentTime - it.lastUpdated) < 60_000 // 1 minute threshold
+                                (currentTime - it.lastUpdated) < 180_000 // 3 minute threshold
                             }
 
                             LazyColumn(
