@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
@@ -23,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.res.SettingsSwitchTile
+import com.xenon.mylibrary.res.SettingsTile
 import com.xenon.mylibrary.values.ExtraLargeSpacing
 import com.xenon.mylibrary.values.LargerPadding
 import com.xenon.mylibrary.values.MediumCornerRadius
@@ -128,15 +132,35 @@ fun DevSettingsItems(
                 subtitle = stringResource(id = R.string.disable_input_receiver_subtitle),
                 checked = !isInputReceiverEnabled,
                 onCheckedChange = { newCheckedState ->
-                    viewModel.setInputReceiverEnabled(newCheckedState)
+                    viewModel.setInputReceiverEnabled(!newCheckedState)
                 },
                 onClick = {
-                    val newCheckedState = !isInputReceiverEnabled
-                    viewModel.setInputReceiverEnabled(newCheckedState)
+                    viewModel.setInputReceiverEnabled(!isInputReceiverEnabled)
+                },
+                shape = tileShapeOverride ?: middleShape,
+                backgroundColor = tileBackgroundColor,
+                contentColor = tileContentColor,
+                subtitleColor = tileSubtitleColor,
+                horizontalPadding = tileHorizontalPadding,
+                verticalPadding = tileVerticalPadding
+            )
+            Spacer(modifier = Modifier.height(SmallSpacing))
+            SettingsTile(
+                title = "Force Crash",
+                subtitle = "Triggers a crash to test the crash logger",
+                onClick = {
+                    throw RuntimeException("Test Crash from Developer Settings!")
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = "Force Crash",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 },
                 shape = tileShapeOverride ?: bottomShape,
                 backgroundColor = tileBackgroundColor,
-                contentColor = tileContentColor,
+                contentColor = MaterialTheme.colorScheme.error,
                 subtitleColor = tileSubtitleColor,
                 horizontalPadding = tileHorizontalPadding,
                 verticalPadding = tileVerticalPadding

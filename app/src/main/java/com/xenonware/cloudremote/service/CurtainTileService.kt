@@ -19,7 +19,9 @@ class CurtainTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (isCurtainActive) {
-            val closeIntent = Intent(SwipeableCurtainActivity.Companion.ACTION_CLOSE_CURTAIN)
+            val closeIntent = Intent(SwipeableCurtainActivity.Companion.ACTION_CLOSE_CURTAIN).apply {
+                setPackage(packageName)
+            }
             sendBroadcast(closeIntent)
         } else {
             val intent = Intent(this, SwipeableCurtainActivity::class.java)
