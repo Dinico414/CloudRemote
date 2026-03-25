@@ -58,6 +58,11 @@
             android:theme="@style/Theme.Xenon" />
 
         <activity
+            android:name=".FirstLaunchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Xenon" />
+
+        <activity
             android:name=".SwipeableCurtainActivity"
             android:exported="false"
             android:theme="@style/Theme.Xenon"

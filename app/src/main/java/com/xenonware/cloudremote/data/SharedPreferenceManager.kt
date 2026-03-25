@@ -23,6 +23,7 @@ class SharedPreferenceManager(private val context: Context) {
     private val languageTagKey = "app_language_tag"
     private val developerModeKey = "developer_mode_enabled"
     private val inputReceiverEnabledKey = "input_receiver_enabled"
+    private val isFirstLaunchKey = "is_first_launch"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -87,6 +88,10 @@ class SharedPreferenceManager(private val context: Context) {
     var inputReceiverEnabled: Boolean
         get() = sharedPreferences.getBoolean(inputReceiverEnabledKey, true)
         set(value) = sharedPreferences.edit { putBoolean(inputReceiverEnabledKey, value) }
+
+    var isFirstLaunch: Boolean
+        get() = sharedPreferences.getBoolean(isFirstLaunchKey, true)
+        set(value) = sharedPreferences.edit { putBoolean(isFirstLaunchKey, value) }
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false
