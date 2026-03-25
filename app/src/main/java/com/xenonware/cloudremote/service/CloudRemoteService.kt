@@ -10,7 +10,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.media.session.MediaSessionManager
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -109,7 +111,17 @@ class CloudRemoteService : Service() {
             localDeviceId = id
             startSync()
         }
-        startForeground(NOTIFICATION_ID, createNotification())
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIFICATION_ID, createNotification())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground", e)
+        }
+        
         return START_STICKY
     }
 
@@ -199,7 +211,7 @@ class CloudRemoteService : Service() {
         scope.launch {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
-                if (auth.currentUser != null) {
+                if (auth.currentUser != null && currentRemoteDevice != null) {
                     val fields = mapOf("lastUpdated" to System.currentTimeMillis())
                     repository.updateDeviceFields(deviceId, fields)
                 }

@@ -26,6 +26,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = GoogleCloudRepository()
     private val auth = FirebaseAuth.getInstance()
+    private val localDeviceManager = LocalDeviceManager(application)
 
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices
@@ -103,25 +104,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun forceUpdateDeviceValues() {
-        viewModelScope.launch {
-            try {
-                val audioManager = getApplication<Application>().getSystemService(Context.AUDIO_SERVICE) as AudioManager
-                val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-
-                if (currentVolume < maxVolume) {
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume + 1, 0)
-                    delay(100)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
-                } else {
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume - 1, 0)
-                    delay(100)
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
-                }
-            } catch (e: Exception) {
-                Log.e("MainViewModel", "Failed to force update device values", e)
-            }
-        }
+        localDeviceManager.forceUpdateMediaVolume()
     }
 
     fun updateDevice(device: Device) {
