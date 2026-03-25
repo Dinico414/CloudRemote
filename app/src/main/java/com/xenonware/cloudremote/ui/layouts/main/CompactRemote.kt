@@ -221,7 +221,9 @@ fun CompactRemote(
                             onClick = {
                                 if (CurtainTileService.isCurtainActive) {
                                     val closeIntent =
-                                        Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN)
+                                        Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN).apply {
+                                            setPackage(context.packageName)
+                                        }
                                     context.sendBroadcast(closeIntent)
                                 } else {
                                     val intent =
