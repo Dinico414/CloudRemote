@@ -112,7 +112,7 @@ fun SettingsItems(
     }
 
     SettingsGoogleTile(
-        title = if (state.isSignInSuccessful) userData?.username ?: "Signed in" else "Sign in with Google",
+        title = if (state.isSignInSuccessful) userData?.username ?: stringResource(id = R.string.signed_in) else stringResource(id = R.string.sign_in),
         subtitle = if (state.isSignInSuccessful) userData?.email else null,
         profilePictureUrl = userData?.profilePictureUrl,
         noAccIcon = painterResource(R.drawable.default_icon),
