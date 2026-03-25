@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
+import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 
 class PermissionActivity : ComponentActivity() {
@@ -113,19 +115,24 @@ class PermissionActivity : ComponentActivity() {
 
         setContent {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    PermissionScreen(
-                        permissions = requiredPermissions,
-                        isFirstLaunch = sharedPreferenceManager.isFirstLaunch,
-                        onFinish = {
-                            if (sharedPreferenceManager.isFirstLaunch) {
-                                startActivity(Intent(this, FirstLaunchActivity::class.java))
-                            } else {
-                                startActivity(Intent(this, MainActivity::class.java))
+                AnimatedGradientBackground {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        PermissionScreen(
+                            permissions = requiredPermissions,
+                            isFirstLaunch = sharedPreferenceManager.isFirstLaunch,
+                            onFinish = {
+                                if (sharedPreferenceManager.isFirstLaunch) {
+                                    startActivity(Intent(this, FirstLaunchActivity::class.java))
+                                } else {
+                                    startActivity(Intent(this, MainActivity::class.java))
+                                }
+                                finish()
                             }
-                            finish()
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }

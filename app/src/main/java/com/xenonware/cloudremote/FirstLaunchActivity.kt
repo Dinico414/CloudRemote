@@ -28,9 +28,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xenonware.cloudremote.data.SharedPreferenceManager
+import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlinx.coroutines.delay
 
@@ -43,12 +45,17 @@ class FirstLaunchActivity : ComponentActivity() {
 
         setContent {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    FirstLaunchScreen(onFinish = {
-                        sharedPreferenceManager.isFirstLaunch = false
-                        startActivity(Intent(this, MainActivity::class.java))
-                        finish()
-                    })
+                AnimatedGradientBackground {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        FirstLaunchScreen(onFinish = {
+                            sharedPreferenceManager.isFirstLaunch = false
+                            startActivity(Intent(this, MainActivity::class.java))
+                            finish()
+                        })
+                    }
                 }
             }
         }
