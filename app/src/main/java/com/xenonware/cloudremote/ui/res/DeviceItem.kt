@@ -355,7 +355,7 @@ fun DeviceItem(
 
     val animatedRadius = animateDpAsState(
         targetValue = if (isCollapsed) 40.dp else 30.dp,
-        animationSpec = tween(durationMillis = 100),
+        animationSpec = tween(durationMillis = 600),
         label = "cardRadius"
     )
 
@@ -904,7 +904,8 @@ fun DeviceItem(
                             onClick = { onUpdateDevice(device.copy(isCurtainOn = !device.isCurtainOn)) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                containerColor = if (device.isCurtainOn) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                contentColor = if (device.isCurtainOn) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
                             ),
                             enabled = true
                         ) {

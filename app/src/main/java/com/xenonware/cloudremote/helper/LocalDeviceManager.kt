@@ -153,6 +153,28 @@ class LocalDeviceManager(private val context: Context) {
             DeviceState()
         }
     }
+    
+    fun forceUpdateMediaVolume() {
+        try {
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+            // Nudge volume up then down (or down then up) to trigger a state broadcast update
+            if (currentVolume < maxVolume) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume + 1, 0)
+                mainHandler.postDelayed({
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
+                }, 100)
+            } else {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume - 1, 0)
+                mainHandler.postDelayed({
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
+                }, 100)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to force update device values", e)
+        }
+    }
 
     fun setVolume(volume: Int) {
         try {

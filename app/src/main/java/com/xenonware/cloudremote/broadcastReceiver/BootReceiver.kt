@@ -3,20 +3,29 @@ package com.xenonware.cloudremote.broadcastReceiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
+import android.util.Log
+import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.service.CloudRemoteService
-import java.util.UUID
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
-            val deviceId = androidId ?: UUID.randomUUID().toString()
+        val action = intent.action
+        if (action == Intent.ACTION_BOOT_COMPLETED || 
+            action == Intent.ACTION_LOCKED_BOOT_COMPLETED || 
+            action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            
+            val sharedPrefs = SharedPreferenceManager(context)
+            val deviceId = sharedPrefs.localDeviceId
 
             val serviceIntent = Intent(context, CloudRemoteService::class.java).apply {
-                putExtra(CloudRemoteService.Companion.EXTRA_DEVICE_ID, deviceId)
+                putExtra(CloudRemoteService.EXTRA_DEVICE_ID, deviceId)
             }
-            context.startForegroundService(serviceIntent)
+            
+            try {
+                context.startForegroundService(serviceIntent)
+            } catch (e: Exception) {
+                Log.e("BootReceiver", "Failed to start foreground service", e)
+            }
         }
     }
 }
