@@ -87,7 +87,6 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Vibration
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -119,8 +118,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -128,6 +129,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
+import androidx.compose.ui.window.DialogProperties
+import com.xenon.mylibrary.res.XenonDialog
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.R
@@ -196,12 +199,15 @@ fun DeviceItem(
     isSharing: Boolean,
     onUpdateDevice: (Device) -> Unit,
     onToggleShare: (String, String) -> Unit,
+    onRemoveDevice: (Device) -> Unit = {},
 ) {
     var showShareDialog by remember { mutableStateOf(false) }
+    var showRemoveDialog by remember { mutableStateOf(false) }
     var shareName by remember { mutableStateOf("") }
     var shareIcon by remember { mutableStateOf("old phone") }
     var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
     var lastRememberedVolume by remember { mutableIntStateOf(device.maxMediaVolume / 2) }
+    val haptic = LocalHapticFeedback.current
 
     val progressBackgroundColor by animateColorAsState(
         targetValue = if (device.isCharging) {
@@ -252,8 +258,24 @@ fun DeviceItem(
     val context = LocalContext.current
 
     if (showShareDialog) {
-        AlertDialog(onDismissRequest = { }, title = { Text(stringResource(id = R.string.share_device))}, text = {
-            Column {
+        val placeholder = stringResource(id = R.string.device_name_placeholder)
+        XenonDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = stringResource(id = R.string.share_device),
+            properties = DialogProperties(usePlatformDefaultWidth = true),
+            confirmButtonText = stringResource(id = R.string.share),
+            onConfirmButtonClick = {
+                showShareDialog = false
+                onToggleShare(
+                    shareName.ifBlank { device.name.ifBlank { placeholder } }, shareIcon
+                )
+            },
+            contentManagesScrolling = false
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
                 OutlinedTextField(
                     value = shareName,
                     onValueChange = { shareName = it },
@@ -308,24 +330,29 @@ fun DeviceItem(
                     Spacer(Modifier.height(8.dp))
                 }
             }
-        }, confirmButton = {
-            val placeholder = stringResource(id = R.string.device_name_placeholder)
-            TextButton(onClick = {
-                showShareDialog = false
-                onToggleShare(
-                    shareName.ifBlank { device.name.ifBlank { placeholder } }, shareIcon
-                )
-            }) {
-                Text(stringResource(id = R.string.share))
-            }
-        }, dismissButton = {
-            TextButton(onClick = {
-                showShareDialog = false
-            }) {
-                Text(stringResource(id = R.string.cancel))
-            }
-        })
+        }
     }
+    
+    if (showRemoveDialog) {
+        XenonDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = true),
+            title = stringResource(id = R.string.remove_device),
+            confirmButtonText = stringResource(id = R.string.remove),
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            dismissIconButtonContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+            dismissIconButtonContentColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+            confirmContainerColor = MaterialTheme.colorScheme.error,
+            confirmContentColor = MaterialTheme.colorScheme.onError,
+            onConfirmButtonClick = {
+                showRemoveDialog = false
+                onRemoveDevice(device)
+            }
+        ) {
+            Text(stringResource(id = R.string.remove_device_message, device.name))
+        }
+    }
+
     val animatedRadius = animateDpAsState(
         targetValue = if (isCollapsed) 40.dp else 30.dp,
         animationSpec = tween(durationMillis = 100),
@@ -490,8 +517,9 @@ fun DeviceItem(
 
                     else -> {
                         FilledTonalIconButton(onClick = {
-                            onToggleShare(
-                                device.name, device.icon
+                            showRemoveDialog = true
+                            haptic.performHapticFeedback(
+                                HapticFeedbackType.LongPress
                             )
                         }) {
                             Icon(
@@ -751,7 +779,9 @@ fun DeviceItem(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    if (device.isLocked) "Locked" else "Unlocked",
+                                    if (device.isLocked) stringResource(R.string.locked) else stringResource(
+                                        R.string.unlocked
+                                    ),
                                     color = if (!device.isLocked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }

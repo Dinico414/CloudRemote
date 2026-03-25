@@ -113,6 +113,9 @@
 
     <!-- App Specific Strings -->
     <string name="share_device">Share Device</string>
+    <string name="remove_device">Remove Device</string>
+    <string name="remove_device_message">Are you sure you want to remove %s from the list?</string>
+    <string name="remove">Remove</string>
     <string name="device_name_placeholder">Unknown Device</string>
     <string name="share">Share</string>
     <string name="curtain_off">Curtain Off</string>
@@ -122,4 +125,6 @@
     <string name="category_foldables">Foldables</string>
     <string name="category_tablet">Tablet</string>
     <string name="category_specific">Specific</string>
+    <string name="locked">Locked</string>
+    <string name="unlocked">Unlocked</string>
 </resources>

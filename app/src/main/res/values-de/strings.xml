@@ -113,6 +113,9 @@
 
     <!-- App Specific Strings -->
     <string name="share_device">Gerät teilen</string>
+    <string name="remove_device">Gerät entfernen</string>
+    <string name="remove_device_message">Bist du sicher, dass du %s aus der Liste entfernen willst?</string>
+    <string name="remove">Entfernen</string>
     <string name="device_name_placeholder">Unbekanntes Gerät</string>
     <string name="share">Teilen</string>
     <string name="curtain_off">Vorhang aus</string>
@@ -122,4 +125,6 @@
     <string name="category_foldables">Faltbare Geräte</string>
     <string name="category_tablet">Tablet</string>
     <string name="category_specific">Spezifisch</string>
+    <string name="locked">Gesperrt</string>
+    <string name="unlocked">Entsperrt</string>
 </resources>

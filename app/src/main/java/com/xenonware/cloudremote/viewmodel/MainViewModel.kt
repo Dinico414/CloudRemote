@@ -1,6 +1,8 @@
 package com.xenonware.cloudremote.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.media.AudioManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +13,7 @@ import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.helper.LocalDeviceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -95,10 +98,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 isCurtainOn = false
             )
             repository.updateDevice(newDevice)
+            forceUpdateDeviceValues()
+        }
+    }
+
+    private fun forceUpdateDeviceValues() {
+        viewModelScope.launch {
+            try {
+                val audioManager = getApplication<Application>().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+
+                if (currentVolume < maxVolume) {
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume + 1, 0)
+                    delay(100)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
+                } else {
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume - 1, 0)
+                    delay(100)
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume, 0)
+                }
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Failed to force update device values", e)
+            }
         }
     }
 
     fun updateDevice(device: Device) {
         repository.updateDevice(device)
+    }
+
+    fun removeDevice(device: Device) {
+        repository.deleteDevice(device.id)
     }
 }

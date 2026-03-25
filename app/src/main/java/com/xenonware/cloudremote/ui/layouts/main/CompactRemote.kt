@@ -356,6 +356,9 @@ fun CompactRemote(
                                             viewModel.toggleCurrentDevice(
                                                 name, icon
                                             )
+                                        },
+                                        onRemoveDevice = { removedDevice ->
+                                            viewModel.removeDevice(removedDevice)
                                         })
                                 }
 
@@ -382,7 +385,10 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = { _, _ -> })
+                                            onToggleShare = { _, _ -> },
+                                            onRemoveDevice = { removedDevice ->
+                                                viewModel.removeDevice(removedDevice)
+                                            })
                                     }
                                 }
 
@@ -409,7 +415,10 @@ fun CompactRemote(
                                                     updatedDevice
                                                 )
                                             },
-                                            onToggleShare = { _, _ -> })
+                                            onToggleShare = { _, _ -> },
+                                            onRemoveDevice = { removedDevice ->
+                                                viewModel.removeDevice(removedDevice)
+                                            })
                                     }
                                 }
                             }
