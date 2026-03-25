@@ -72,6 +72,13 @@ class MainActivity : ComponentActivity() {
             return
         }
 
+        if (sharedPreferenceManager.isFirstLaunch) {
+            val intent = Intent(this, FirstLaunchActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+
 
         val deviceId = sharedPreferenceManager.localDeviceId
         viewModel.localDeviceId = deviceId

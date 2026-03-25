@@ -41,10 +41,12 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
+import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 
 class PermissionActivity : ComponentActivity() {
 
+    private lateinit var sharedPreferenceManager: SharedPreferenceManager
     private val requiredPermissions = listOf(
         Permission(
             name = "Display over other apps",
@@ -107,14 +109,20 @@ class PermissionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        sharedPreferenceManager = SharedPreferenceManager(this)
 
         setContent {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     PermissionScreen(
                         permissions = requiredPermissions,
+                        isFirstLaunch = sharedPreferenceManager.isFirstLaunch,
                         onFinish = {
-                            startActivity(Intent(this, MainActivity::class.java))
+                            if (sharedPreferenceManager.isFirstLaunch) {
+                                startActivity(Intent(this, FirstLaunchActivity::class.java))
+                            } else {
+                                startActivity(Intent(this, MainActivity::class.java))
+                            }
                             finish()
                         }
                     )
@@ -125,7 +133,7 @@ class PermissionActivity : ComponentActivity() {
 }
 
 @Composable
-fun PermissionScreen(permissions: List<Permission>, onFinish: () -> Unit) {
+fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFinish: () -> Unit) {
     var currentPermissionIndex by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
@@ -205,7 +213,8 @@ fun PermissionScreen(permissions: List<Permission>, onFinish: () -> Unit) {
             Text(
                 text = when {
                     isPermissionGranted && !allPermissionsGranted -> "Next"
-                    allPermissionsGranted -> "Finish"
+                    allPermissionsGranted && isFirstLaunch -> "Next"
+                    allPermissionsGranted && !isFirstLaunch -> "Finish"
                     else -> "Grant Permission"
                 }
             )
