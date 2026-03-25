@@ -18,7 +18,9 @@
     <string name="time_format">Time Format</string>
     <string name="date_format">Date Format</string>
     <string name="date_time_format"><![CDATA[Time & Date Format]]></string>
-    <string name="sign_out">Sign out</string>
+    <string name="signed_in">Logged in</string>
+    <string name="sign_in">Log in with Google</string>
+    <string name="sign_out">Log out</string>
     <string name="version">Version</string>
     <string name="app_version">App Version</string>
     <string name="xenon_ui_version">Xenon-UI Version</string>
@@ -110,5 +112,14 @@
     <string name="restart_app_description">restart app</string>
 
     <!-- App Specific Strings -->
-
+    <string name="share_device">Share Device</string>
+    <string name="device_name_placeholder">Unknown Device</string>
+    <string name="share">Share</string>
+    <string name="curtain_off">Curtain Off</string>
+    <string name="curtain_on">Curtain On</string>
+    <string name="device_name">Device Name</string>
+    <string name="category_default">Default</string>
+    <string name="category_foldables">Foldables</string>
+    <string name="category_tablet">Tablet</string>
+    <string name="category_specific">Specific</string>
 </resources>

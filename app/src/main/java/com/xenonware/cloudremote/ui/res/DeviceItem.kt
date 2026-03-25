@@ -13,6 +13,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -25,7 +26,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -117,10 +117,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -128,6 +130,7 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.ui.theme.LocalGreenMaterialColorScheme
 import com.xenonware.cloudremote.ui.theme.LocalRedMaterialColorScheme
@@ -148,6 +151,8 @@ fun getDeviceIconPrefix(name: String): String? {
         "Flip Phone" -> "fp"
         "Fold (inwards)" -> "fi"
         "Fold (outwards)" -> "fo"
+        "Trifold (Z-Shape)" -> "tfz"
+        "Trifold (G-Shape)" -> "tfg"
         "LG Wing" -> "lg"
         "iKKO Mind One" -> "ikko"
         "Clicks Communicator" -> "cc"
@@ -160,7 +165,7 @@ fun getDeviceIconPrefix(name: String): String? {
 }
 
 val deviceIconCategories = listOf(
-    "Default" to listOf(
+    R.string.category_default to listOf(
         "Old Phone",
         "New Phone (BigBezel)",
         "Keyboard Phone",
@@ -171,11 +176,11 @@ val deviceIconCategories = listOf(
         "New Phone (RoundCutOutRight)",
         "New Phone (PillCutOut)",
         "New Phone (NoBezel)"
-    ), "Foldables" to listOf(
-        "Flip Phone", "Fold (inwards)", "Fold (outwards)"
-    ), "Tablet" to listOf(
+    ), R.string.category_foldables to listOf(
+        "Flip Phone", "Fold (inwards)", "Fold (outwards)", "Trifold (Z-Shape)", "Trifold (G-Shape)"
+    ), R.string.category_tablet to listOf(
         "Tablet", "Tablet (Notch)", "Tablet (RoundCutOut)"
-    ), "Specific" to listOf(
+    ), R.string.category_specific to listOf(
         "LG Wing", "Surface Duo", "iKKO Mind One", "Clicks Communicator"
     )
 )
@@ -221,17 +226,25 @@ fun DeviceItem(
     )
 
     var previewFrame by remember { mutableIntStateOf(1) }
+    var previewFrame9 by remember { mutableIntStateOf(1) }
+
     LaunchedEffect(Unit) {
         while (true) {
             delay(750L)
-            for (f in 2..5) {
-                previewFrame = f
-                delay(100L)
+            for (i in 1..8) {
+                previewFrame9 = i + 1
+                if (i % 2 == 0) {
+                    previewFrame = (i / 2) + 1
+                }
+                delay(50L)
             }
             delay(750L)
-            for (f in 4 downTo 1) {
-                previewFrame = f
-                delay(100L)
+            for (i in 1..8) {
+                previewFrame9 = 9 - i
+                if (i % 2 == 0) {
+                    previewFrame = 5 - (i / 2)
+                }
+                delay(50L)
             }
         }
     }
@@ -239,23 +252,23 @@ fun DeviceItem(
     val context = LocalContext.current
 
     if (showShareDialog) {
-        AlertDialog(onDismissRequest = { }, title = { Text("Share Device") }, text = {
+        AlertDialog(onDismissRequest = { }, title = { Text(stringResource(id = R.string.share_device))}, text = {
             Column {
                 OutlinedTextField(
                     value = shareName,
                     onValueChange = { shareName = it },
-                    placeholder = { Text(device.name.ifBlank { "Unknown Device" }) },
-                    label = { Text("Device Name") },
+                    placeholder = { Text(device.name.ifBlank { stringResource(id = R.string.device_name_placeholder) }) },
+                    label = { Text(stringResource(id = R.string.device_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
 
-                deviceIconCategories.forEach { (categoryName, iconNames) ->
+                deviceIconCategories.forEach { (categoryId, iconNames) ->
                     val scrollState = rememberScrollState()
 
                     Text(
-                        text = categoryName,
+                        text = stringResource(id = categoryId),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -268,9 +281,10 @@ fun DeviceItem(
                         iconNames.forEach { name ->
                             val prefix = getDeviceIconPrefix(name)
                             if (prefix != null) {
-                                val resId = remember(prefix, previewFrame) {
+                                val currentFrame = if (name == "Trifold (G-Shape)") previewFrame9 else previewFrame
+                                val resId = remember(prefix, currentFrame) {
                                     context.resources.getIdentifier(
-                                        prefix + previewFrame, "drawable", context.packageName
+                                        prefix + currentFrame, "drawable", context.packageName
                                     )
                                 }
                                 if (resId != 0) {
@@ -295,19 +309,20 @@ fun DeviceItem(
                 }
             }
         }, confirmButton = {
+            val placeholder = stringResource(id = R.string.device_name_placeholder)
             TextButton(onClick = {
                 showShareDialog = false
                 onToggleShare(
-                    shareName.ifBlank { device.name.ifBlank { "Unknown Device" } }, shareIcon
+                    shareName.ifBlank { device.name.ifBlank { placeholder } }, shareIcon
                 )
             }) {
-                Text("Share")
+                Text(stringResource(id = R.string.share))
             }
         }, dismissButton = {
             TextButton(onClick = {
                 showShareDialog = false
             }) {
-                Text("Cancel")
+                Text(stringResource(id = R.string.cancel))
             }
         })
     }
@@ -406,7 +421,9 @@ fun DeviceItem(
                 val prefix = getDeviceIconPrefix(device.icon) ?: "op"
 
                 val targetFrame by animateIntAsState(
-                    targetValue = if (device.isScreenOn) 5 else 1,
+                    targetValue = if (device.isScreenOn) {
+                        if (device.icon == "Trifold (G-Shape)") 9 else 5
+                    } else 1,
                     animationSpec = tween(durationMillis = 500),
                     label = "screenOnAnimation"
                 )
@@ -433,7 +450,7 @@ fun DeviceItem(
                     }
 
                     Text(
-                        text = device.name.ifBlank { "Unknown Device" },
+                        text = device.name.ifBlank { stringResource(id = R.string.device_name_placeholder) },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -869,7 +886,7 @@ fun DeviceItem(
                                     imageVector = if (device.isCurtainOn) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains,
                                     contentDescription = ""
                                 )
-                                Text(if (device.isCurtainOn) "Curtain Off" else "Curtain On")
+                                Text(if (device.isCurtainOn) stringResource(id = R.string.curtain_off) else stringResource(id = R.string.curtain_on))
                             }
                         }
                     }
@@ -1008,12 +1025,8 @@ fun BatteryIndicator(
     )
 
 
-    val progressColor by animateColorAsState(
-        targetValue = if (isCharging) {
-            batteryChargingColor
-        } else if (batteryLevel <= 5) {
-            batteryWarningColor
-        } else if (batteryLevel <= 20) {
+    val baseProgressColor by animateColorAsState(
+        targetValue = if (batteryLevel <= 20) {
             LocalRedMaterialColorScheme.current.primary
         } else if (batteryLevel >= 100) {
             MaterialTheme.colorScheme.tertiary
@@ -1022,18 +1035,38 @@ fun BatteryIndicator(
         }, animationSpec = tween(durationMillis = 500), label = "progressColor"
     )
 
-    val progressTextColor by animateColorAsState(
-        targetValue = if (isCharging) {
-            batteryChargingTextColor
-        } else if (batteryLevel <= 5) {
-            batteryWarningTextColor
-        } else if (batteryLevel <= 20) {
+    val baseProgressTextColor by animateColorAsState(
+        targetValue = if (batteryLevel <= 20) {
             LocalRedMaterialColorScheme.current.onPrimary
         } else if (batteryLevel >= 100) {
             MaterialTheme.colorScheme.onTertiary
         } else {
             MaterialTheme.colorScheme.onPrimary
         }, animationSpec = tween(durationMillis = 500), label = "progressTextColor"
+    )
+
+    val chargingWeight by animateFloatAsState(
+        targetValue = if (isCharging) 1f else 0f,
+        animationSpec = tween(500),
+        label = "chargingWeight"
+    )
+
+    val warningWeight by animateFloatAsState(
+        targetValue = if (!isCharging && batteryLevel <= 5) 1f else 0f,
+        animationSpec = tween(500),
+        label = "warningWeight"
+    )
+
+    val progressColor = lerp(
+        start = lerp(baseProgressColor, batteryWarningColor, warningWeight),
+        stop = batteryChargingColor,
+        fraction = chargingWeight
+    )
+
+    val progressTextColor = lerp(
+        start = lerp(baseProgressTextColor, batteryWarningTextColor, warningWeight),
+        stop = batteryChargingTextColor,
+        fraction = chargingWeight
     )
 
     val progressBackgroundColor by animateColorAsState(
