@@ -135,7 +135,7 @@ fun CompactRemote(
         val lazyListState = rememberLazyListState()
 
         var isSearchActive by rememberSaveable { mutableStateOf(false) }
-
+        var searchQuery by rememberSaveable { mutableStateOf("") }
 
         // ============================================================================
         // 3. Authentication & Preferences
@@ -194,8 +194,8 @@ fun CompactRemote(
 
             FloatingToolbarContent(
                 hazeState = hazeState,
-                onSearchQueryChanged = { },
-                currentSearchQuery = "",
+                onSearchQueryChanged = { searchQuery = it },
+                currentSearchQuery = searchQuery,
                 lazyListState = lazyListState,
                 allowToolbarScrollBehavior = !isAppBarExpandable,
                 isSelectedColor = MaterialTheme.colorScheme.background,
@@ -204,7 +204,10 @@ fun CompactRemote(
                 isAddModeActive = false,
                 onAddModeToggle = { },
                 isSearchActive = isSearchActive,
-                onIsSearchActiveChange = { isSearchActive = it },
+                onIsSearchActiveChange = { 
+                    isSearchActive = it
+                    if (!it) searchQuery = ""
+                },
                 defaultContent = { iconsAlphaDuration, showActionIconsExceptSearch ->
                     Row {
                         val iconAlphaTarget = if (isSearchActive) 0f else 1f
@@ -327,6 +330,7 @@ fun CompactRemote(
                             }
 
                             val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
+                                .filter { it.name.contains(searchQuery, ignoreCase = true) }
                             val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
                                 (currentTime - it.lastUpdated) < 180_000 // 3 minute threshold
                             }
