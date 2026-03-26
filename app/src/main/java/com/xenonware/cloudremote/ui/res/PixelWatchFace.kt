@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,20 +52,10 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 @Composable
-fun PixelWatchFace() {
+fun PixelWatchFace(isActive: Boolean) {
     val textMeasurer = rememberTextMeasurer()
     val context = LocalContext.current
     val is24Hour = DateFormat.is24HourFormat(context)
-
-    var touchCount by remember { mutableIntStateOf(0) }
-    var isActive by remember { mutableStateOf(true) }
-
-    // Start 10-second active timer, resets on every touch
-    LaunchedEffect(touchCount) {
-        isActive = true
-        delay(10000)
-        isActive = false
-    }
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.4f, animationSpec = tween(500), label = "alpha"
@@ -132,10 +123,7 @@ fun PixelWatchFace() {
                 translationX = burnInOffset.x,
                 translationY = burnInOffset.y
             )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = { touchCount++ })
-            }) {
+    ) {
         val w = size.width
         val h = size.height
 
@@ -307,5 +295,20 @@ fun PixelWatchFace() {
 @Preview(widthDp = 300, heightDp = 300)
 @Composable
 fun PixelWatchFacePreview() {
-    PixelWatchFace()
+    var isActive by remember { mutableStateOf(true) }
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            delay(5000)
+            isActive = false
+        }
+    }
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(Unit) {
+            detectTapGestures {
+                isActive = !isActive
+            }
+        }) {
+        PixelWatchFace(isActive = isActive)
+    }
 }

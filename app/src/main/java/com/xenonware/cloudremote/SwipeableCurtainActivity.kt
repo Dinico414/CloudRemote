@@ -14,14 +14,22 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -38,6 +47,9 @@ import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlin.math.roundToInt
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class SwipeableCurtainActivity : ComponentActivity() {
 
@@ -79,6 +91,22 @@ class SwipeableCurtainActivity : ComponentActivity() {
                         stiffness = Spring.StiffnessLow
                     )
                 )
+
+                var isActive by remember { mutableStateOf(true) }
+
+                val animatedTextAlpha by animateFloatAsState(
+                    targetValue = if (isActive) 0.5f else 0f,
+                    label = "textAlpha",
+                    animationSpec = tween(durationMillis = 500)
+                )
+
+                LaunchedEffect(isActive) {
+                    if (isActive) {
+                        delay(10000)
+                        isActive = false
+                    }
+                }
+
                 val density = LocalDensity.current.density
 
                 Box(
@@ -87,24 +115,44 @@ class SwipeableCurtainActivity : ComponentActivity() {
                         .background(Color.Black)
                         .offset { IntOffset(0, animatedOffsetY.roundToInt()) }
                         .pointerInput(Unit) {
-                            detectVerticalDragGestures(
-                                onDragEnd = {
-                                    if (offsetY < -200 * density) {
-                                        finishAndRemoveTask()
-                                    } else {
-                                        offsetY = 0f
-                                    }
+                            coroutineScope {
+                                launch {
+                                    detectTapGestures(onPress = {
+                                        isActive = true
+                                        tryAwaitRelease()
+                                    })
                                 }
-                            ) { _, dragAmount ->
-                                val newOffsetY = offsetY + dragAmount
-                                if (newOffsetY < 0) {
-                                    offsetY = newOffsetY
+                                launch {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { isActive = true },
+                                        onDragEnd = {
+                                            if (offsetY < -200 * density) {
+                                                finishAndRemoveTask()
+                                            } else {
+                                                offsetY = 0f
+                                            }
+                                        }
+                                    ) { _, dragAmount ->
+                                        val newOffsetY = offsetY + dragAmount
+                                        if (newOffsetY < 0) {
+                                            offsetY = newOffsetY
+                                        }
+                                    }
                                 }
                             }
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    PixelWatchFace()
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        PixelWatchFace(isActive = isActive)
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(text = "Swipe up to unlock", color = Color.White.copy(alpha = animatedTextAlpha))
+                        Spacer(modifier = Modifier.weight(0.2f))
+
+                    }
                 }
             }
         }

@@ -23,6 +23,22 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color.Companion.White
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -38,6 +54,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
@@ -296,6 +313,11 @@ class LocalDeviceManager(private val context: Context) {
             layout.isClickable = true
             layout.isFocusable = true
             layout.isFocusableInTouchMode = true
+            
+            @Suppress("DEPRECATION")
+            layout.systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN
 
             // Setup lifecycle owner for ComposeView
             overlayLifecycleOwner = OverlayLifecycleOwner()
@@ -308,8 +330,38 @@ class LocalDeviceManager(private val context: Context) {
 
             val composeView = ComposeView(context).apply {
                 setContent {
-                    PixelWatchFace()
-                }
+                    var isActive by remember { mutableStateOf(true) }
+
+                    val animatedTextAlpha by animateFloatAsState(
+                        targetValue = if (isActive) 0.5f else 0f,
+                        label = "textAlpha",
+                        animationSpec = tween(durationMillis = 500)
+                    )
+
+                    LaunchedEffect(isActive) {
+                        if (isActive) {
+                            delay(10000)
+                            isActive = false
+                        }
+                    }
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(onPress = {
+                                    isActive = true
+                                    tryAwaitRelease()
+                                })
+                            }
+                    ) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        PixelWatchFace(isActive = isActive)
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(text = "Locked", color = White.copy(alpha = animatedTextAlpha))
+                        Spacer(modifier = Modifier.weight(0.2f))
+
+                    }                }
             }
 
             layout.addView(
