@@ -54,7 +54,6 @@ fun DevSettingsItems(
     tileVerticalPadding: Dp = LargerPadding,
     switchColorsOverride: SwitchColors? = null,
     useGroupStyling: Boolean = true,
-
     ) {
     val isDeveloperModeEnabled by viewModel.devModeToggleState.collectAsState()
     val isInputReceiverEnabled by viewModel.inputReceiverToggleState.collectAsState()
