@@ -622,9 +622,9 @@ fun DeviceItem(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         val button1gone =
-                                            if (device.mediaCustomAction1Title == "null") 24.dp else 0.dp
+                                            if (device.mediaCustomAction1Title == "null" || device.mediaCustomAction1Title.isBlank()) 24.dp else 0.dp
                                         val button2gone =
-                                            if (device.mediaCustomAction2Title == "null") 24.dp else 0.dp
+                                            if (device.mediaCustomAction2Title == "null" || device.mediaCustomAction2Title.isBlank()) 24.dp else 0.dp
 
                                         Spacer(modifier = Modifier.width(button1gone + button2gone))
                                         IconButton(
@@ -934,7 +934,7 @@ fun CustomMediaActionButton(
     onClick: () -> Unit,
     enabled: Boolean,
 ) {
-    if (actionTitle != "null") {
+    if (actionTitle != "null" && actionTitle.isNotBlank()) {
         IconButton(onClick = onClick, enabled = enabled) {
             val icon = when (actionTitle) {
                 // Add / Checked
