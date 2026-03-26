@@ -5,6 +5,7 @@ package com.xenonware.cloudremote.ui.res
 import android.annotation.SuppressLint
 import android.graphics.BitmapFactory
 import android.util.Base64
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColor
@@ -220,9 +221,7 @@ fun DeviceItem(
             MaterialTheme.colorScheme.tertiaryContainer
         } else {
             MaterialTheme.colorScheme.secondaryContainer
-        },
-        animationSpec = tween(durationMillis = 500),
-        label = "progressBackgroundColor"
+        }, animationSpec = tween(durationMillis = 500), label = "progressBackgroundColor"
     )
 
     val rowBackgroundColor by animateColorAsState(
@@ -273,8 +272,7 @@ fun DeviceItem(
             contentManagesScrolling = false
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
                     value = shareName,
@@ -303,7 +301,8 @@ fun DeviceItem(
                         iconNames.forEach { name ->
                             val prefix = getDeviceIconPrefix(name)
                             if (prefix != null) {
-                                val currentFrame = if (name == "Trifold (G-Shape)") previewFrame9 else previewFrame
+                                val currentFrame =
+                                    if (name == "Trifold (G-Shape)") previewFrame9 else previewFrame
                                 val resId = remember(prefix, currentFrame) {
                                     context.resources.getIdentifier(
                                         prefix + currentFrame, "drawable", context.packageName
@@ -332,7 +331,7 @@ fun DeviceItem(
             }
         }
     }
-    
+
     if (showRemoveDialog) {
         XenonDialog(
             onDismissRequest = { showRemoveDialog = false },
@@ -347,8 +346,7 @@ fun DeviceItem(
             onConfirmButtonClick = {
                 showRemoveDialog = false
                 onRemoveDevice(device)
-            }
-        ) {
+            }) {
             Text(stringResource(id = R.string.remove_device_message, device.name))
         }
     }
@@ -386,12 +384,12 @@ fun DeviceItem(
                     .fillMaxWidth()
                     .padding(
                         bottom = animatedBottomPadding
-                    ),
-                verticalAlignment = Alignment.CenterVertically
+                    ), verticalAlignment = Alignment.CenterVertically
             ) {
                 val isMediaIndicatorVisible = isCollapsed && device.mediaTitle.isNotBlank()
-                val transition =
-                    updateTransition(targetState = isMediaIndicatorVisible, label = "mediaIndicatorTransition")
+                val transition = updateTransition(
+                    targetState = isMediaIndicatorVisible, label = "mediaIndicatorTransition"
+                )
 
                 val spacerWidth by transition.animateDp(
                     transitionSpec = {
@@ -677,8 +675,7 @@ fun DeviceItem(
                                             }, enabled = true
                                         ) {
                                             Icon(
-                                                Icons.Rounded.SkipNext,
-                                                contentDescription = "Next"
+                                                Icons.Rounded.SkipNext, contentDescription = "Next"
                                             )
                                         }
 
@@ -751,6 +748,8 @@ fun DeviceItem(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        val message = stringResource(R.string.long_press_to_lock_device_remotely)
+                        val errorMsg = stringResource(R.string.device_is_already_locked)
                         if (!isLocalDevice) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -759,15 +758,23 @@ fun DeviceItem(
                                     .clip(RoundedCornerShape(30.dp))
                                     .background(if (!device.isLocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer)
                                     .then(
-                                        Modifier.combinedClickable(
-                                            onClick = {},
-                                            onLongClick = {
-                                                if (!device.isLocked) onUpdateDevice(
-                                                    device.copy(
-                                                        pendingAction = "lock"
-                                                    )
+                                        Modifier.combinedClickable(onClick = {
+                                            Toast.makeText(context, message, Toast.LENGTH_SHORT)
+                                                .show()
+                                        }, onLongClick = {
+                                            if (!device.isLocked) onUpdateDevice(
+                                                device.copy(
+                                                    pendingAction = "lock"
                                                 )
-                                            })
+                                            ) else
+                                                Toast.makeText(
+                                                    context,
+                                                    errorMsg,
+                                                    Toast.LENGTH_SHORT
+                                                )
+                                                    .show()
+
+                                        })
                                     )
                                     .padding(vertical = 8.dp, horizontal = 16.dp)
                             ) {
@@ -917,7 +924,11 @@ fun DeviceItem(
                                     imageVector = if (device.isCurtainOn) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains,
                                     contentDescription = ""
                                 )
-                                Text(if (device.isCurtainOn) stringResource(id = R.string.curtain_off) else stringResource(id = R.string.curtain_on))
+                                Text(
+                                    if (device.isCurtainOn) stringResource(id = R.string.curtain_off) else stringResource(
+                                        id = R.string.curtain_on
+                                    )
+                                )
                             }
                         }
                     }
