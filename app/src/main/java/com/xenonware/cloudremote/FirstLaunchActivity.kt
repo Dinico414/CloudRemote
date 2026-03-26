@@ -17,20 +17,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
@@ -65,7 +70,7 @@ class FirstLaunchActivity : ComponentActivity() {
 @Composable
 fun FirstLaunchScreen(onFinish: () -> Unit) {
     var isButtonEnabled by remember { mutableStateOf(false) }
-    var countdown by remember { mutableStateOf(5) }
+    var countdown by remember { mutableIntStateOf(5) }
 
     LaunchedEffect(Unit) {
         while (countdown > 0) {
@@ -85,22 +90,42 @@ fun FirstLaunchScreen(onFinish: () -> Unit) {
     ) {
         Text(
             text = "Welcome to Cloud Remote!",
-            style = MaterialTheme.typography.headlineLarge,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.headlineLarge.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.25f),
+                    offset = Offset(x = 2f, y = 4f),
+                    blurRadius = 8f
+                )
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            fontFamily = QuicksandTitleVariable,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "This app offers widgets to display device information on your home screen and a quick settings tile to easily toggle the local curtain feature.",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyLarge.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    offset = Offset(x = 1f, y = 2f),
+                    blurRadius = 2f
+                )
+            ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.weight(1f))
         Button(
             onClick = onFinish,
             enabled = isButtonEnabled,
-            modifier = Modifier.fillMaxWidth()
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface
+            ), modifier = Modifier
+                .fillMaxWidth()
+                .height(136.dp)
         ) {
-            Text(if (isButtonEnabled) "Finish" else "Finish ($countdown)")
+            Text(text = (if (isButtonEnabled) "Finish" else "Finish ($countdown)"),
+                style = MaterialTheme.typography.headlineLarge,
+                fontFamily = QuicksandTitleVariable,)
         }
     }
 }
