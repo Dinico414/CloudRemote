@@ -1,5 +1,6 @@
 package com.xenonware.cloudremote
 
+import android.R
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,13 +36,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
@@ -56,37 +61,32 @@ class PermissionActivity : ComponentActivity() {
             isGranted = { Settings.canDrawOverlays(this) },
             request = {
                 val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    "package:$packageName".toUri()
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()
                 )
                 startActivity(intent)
-            }
-        ),
-        Permission(
+            }), Permission(
             name = "Do Not Disturb access",
             description = "This permission is needed to control the Do Not Disturb mode on your device.",
             isGranted = {
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val notificationManager =
+                    getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 notificationManager.isNotificationPolicyAccessGranted
             },
             request = {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
                 startActivity(intent)
-            }
-        ),
-        Permission(
+            }), Permission(
             name = "Notification access",
             description = "This permission is required to read media notifications and display them in the app.",
             isGranted = {
-                val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                val enabledListeners =
+                    Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
                 enabledListeners?.contains(packageName) == true
             },
             request = {
                 val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 startActivity(intent)
-            }
-        ),
-        Permission(
+            }), Permission(
             name = "Device Admin",
             description = "Cloud Remote needs this permission to lock the screen remotely.",
             isGranted = {
@@ -104,8 +104,7 @@ class PermissionActivity : ComponentActivity() {
                     )
                 }
                 startActivity(intent)
-            }
-        )
+            })
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -117,8 +116,7 @@ class PermissionActivity : ComponentActivity() {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
                 AnimatedGradientBackground {
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = Color.Transparent
+                        modifier = Modifier.fillMaxSize(), color = Color.Transparent
                     ) {
                         PermissionScreen(
                             permissions = requiredPermissions,
@@ -130,8 +128,7 @@ class PermissionActivity : ComponentActivity() {
                                     startActivity(Intent(this, MainActivity::class.java))
                                 }
                                 finish()
-                            }
-                        )
+                            })
                     }
                 }
             }
@@ -191,14 +188,27 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
     ) {
         Text(
             text = currentPermission.name,
-            style = MaterialTheme.typography.headlineLarge,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.headlineLarge.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.25f),
+                    offset = Offset(x = 2f, y = 4f),
+                    blurRadius = 8f
+                )
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            fontFamily = QuicksandTitleVariable,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = currentPermission.description,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.bodyLarge.copy(
+                shadow = Shadow(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    offset = Offset(x = 1f, y = 2f),
+                    blurRadius = 2f
+                )
+            ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.weight(1f))
         Button(
@@ -213,8 +223,12 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
                 } else {
                     currentPermission.request(context)
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
+            }, colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface
+            ), modifier = Modifier
+                .fillMaxWidth()
+                .height(136.dp)
         ) {
             val allPermissionsGranted = permissions.all { it.isGranted(context) }
             Text(
@@ -223,7 +237,9 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
                     allPermissionsGranted && isFirstLaunch -> "Next"
                     allPermissionsGranted && !isFirstLaunch -> "Finish"
                     else -> "Grant Permission"
-                }
+                },
+                style = MaterialTheme.typography.headlineLarge,
+                fontFamily = QuicksandTitleVariable,
             )
         }
     }
