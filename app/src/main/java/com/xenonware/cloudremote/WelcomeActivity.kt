@@ -37,6 +37,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
@@ -102,6 +104,8 @@ fun WelcomeScreen(onFinish: () -> Unit) {
             Text(
                 text = stringResource(R.string.welcome_title),
                 style = MaterialTheme.typography.headlineLarge.copy(
+                    hyphens = Hyphens.Auto,
+                    lineBreak = LineBreak.Paragraph,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.25f),
                         offset = Offset(x = 2f, y = 4f),
@@ -116,6 +120,8 @@ fun WelcomeScreen(onFinish: () -> Unit) {
             Text(
                 text = stringResource(R.string.welcome_description),
                 style = MaterialTheme.typography.bodyLarge.copy(
+                    hyphens = Hyphens.Auto,
+                    lineBreak = LineBreak.Paragraph,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.5f),
                         offset = Offset(x = 1f, y = 2f),
@@ -138,7 +144,7 @@ fun WelcomeScreen(onFinish: () -> Unit) {
         ) {
             Text(
                 text = (if (isButtonEnabled) stringResource(R.string.finish) else stringResource(R.string.finish) + " ($countdown)"),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontFamily = QuicksandTitleVariable,
             )
         }
