@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -121,7 +122,8 @@ class PermissionActivity : ComponentActivity() {
             XenonTheme(darkTheme = isSystemInDarkTheme()) {
                 AnimatedGradientBackground {
                     Surface(
-                        modifier = Modifier.fillMaxSize(), color = Color.Transparent
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
                     ) {
                         PermissionScreen(
                             permissions = requiredPermissions,
@@ -256,6 +258,7 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
                 containerColor = MaterialTheme.colorScheme.inverseSurface,
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface
             ), modifier = Modifier
+                .widthIn(max = 420.dp)
                 .fillMaxWidth()
                 .height(96.dp)
         ) {
