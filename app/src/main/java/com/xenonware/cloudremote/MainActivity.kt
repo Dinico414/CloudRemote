@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
         }
 
         if (sharedPreferenceManager.isFirstLaunch) {
-            val intent = Intent(this, FirstLaunchActivity::class.java)
+            val intent = Intent(this, WelcomeActivity::class.java)
             startActivity(intent)
             finish()
             return

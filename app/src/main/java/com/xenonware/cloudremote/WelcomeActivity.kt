@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
@@ -41,7 +44,7 @@ import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlinx.coroutines.delay
 
-class FirstLaunchActivity : ComponentActivity() {
+class WelcomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -55,7 +58,7 @@ class FirstLaunchActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = Color.Transparent
                     ) {
-                        FirstLaunchScreen(onFinish = {
+                        WelcomeScreen(onFinish = {
                             sharedPreferenceManager.isFirstLaunch = false
                             startActivity(Intent(this, MainActivity::class.java))
                             finish()
@@ -68,7 +71,7 @@ class FirstLaunchActivity : ComponentActivity() {
 }
 
 @Composable
-fun FirstLaunchScreen(onFinish: () -> Unit) {
+fun WelcomeScreen(onFinish: () -> Unit) {
     var isButtonEnabled by remember { mutableStateOf(false) }
     var countdown by remember { mutableIntStateOf(5) }
 
@@ -85,34 +88,42 @@ fun FirstLaunchScreen(onFinish: () -> Unit) {
             .fillMaxSize()
             .padding(WindowInsets.safeDrawing.asPaddingValues())
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Welcome to Cloud Remote!",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.25f),
-                    offset = Offset(x = 2f, y = 4f),
-                    blurRadius = 8f
-                )
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            fontFamily = QuicksandTitleVariable,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "This app offers widgets to display device information on your home screen and a quick settings tile to easily toggle the local curtain feature.",
-            style = MaterialTheme.typography.bodyLarge.copy(
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    offset = Offset(x = 1f, y = 2f),
-                    blurRadius = 2f
-                )
-            ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.weight(1f))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = stringResource(R.string.welcome_title),
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.25f),
+                        offset = Offset(x = 2f, y = 4f),
+                        blurRadius = 8f
+                    )
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                fontFamily = QuicksandTitleVariable,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.welcome_description),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        offset = Offset(x = 1f, y = 2f),
+                        blurRadius = 2f
+                    )
+                ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
+            )
+        }
+
         Button(
             onClick = onFinish,
             enabled = isButtonEnabled,
@@ -121,11 +132,13 @@ fun FirstLaunchScreen(onFinish: () -> Unit) {
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface
             ), modifier = Modifier
                 .fillMaxWidth()
-                .height(136.dp)
+                .height(96.dp)
         ) {
-            Text(text = (if (isButtonEnabled) "Finish" else "Finish ($countdown)"),
-                style = MaterialTheme.typography.headlineLarge,
-                fontFamily = QuicksandTitleVariable,)
+            Text(
+                text = (if (isButtonEnabled) stringResource(R.string.finish) else stringResource(R.string.finish) + " ($countdown)"),
+                style = MaterialTheme.typography.headlineMedium,
+                fontFamily = QuicksandTitleVariable,
+            )
         }
     }
 }
