@@ -114,7 +114,8 @@ class CloudRemoteService : Service() {
         
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                // Using specialUse to avoid the 6-hour timeout restriction for dataSync on Android 15
+                startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(NOTIFICATION_ID, createNotification())
             }
@@ -123,6 +124,14 @@ class CloudRemoteService : Service() {
         }
         
         return START_STICKY
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        super.onTimeout(startId, fgsType)
+        Log.w(TAG, "Foreground service timed out for fgsType: $fgsType")
+        // No longer needed for specialUse since it does not have a timeout, but kept for safety.
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun startSync() {

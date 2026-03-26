@@ -100,8 +100,10 @@
     <string name="underline_text">Underline Text</string>
     <string name="change_text_size">Change Text Size</string>
     <string name="change_layout">Change Layout</string>
-    <string name="profile_picture">Profilepicture</string>
+    <string name="profile_picture">Profile picture</string>
     <string name="more_infos">More infos</string>
+    <string name="finish">Finish</string>
+    <string name="next">Next</string>
 
     <!-- Universal Accessibility Strings -->
     <string name="navigate_back_description">Navigate back</string>
@@ -110,6 +112,17 @@
     <string name="open_navigation_menu">Open navigation menu</string>
     <string name="switch_units_description">Switch units</string>
     <string name="restart_app_description">restart app</string>
+
+    <!-- Permissions -->
+    <string name="display_over_other_apps">Display over other apps</string>
+    <string name="display_over_other_apps_description">This permission is required for the curtain feature to work. It allows the app to draw over other apps.</string>
+    <string name="do_not_disturb_access">Do Not Disturb access</string>
+    <string name="do_not_disturb_access_description">This permission is needed to control the Do Not Disturb mode on your device.</string>
+    <string name="notification_access">Notification access</string>
+    <string name="notification_access_description">This permission is required to read media notifications and display them in the app.</string>
+    <string name="device_admin">Device Admin</string>
+    <string name="device_admin_description">Cloud Remote needs this permission to lock the screen remotely.</string>
+    <string name="grant_permission">Grant Permission</string>
 
     <!-- App Specific Strings -->
     <string name="share_device">Share Device</string>
@@ -127,4 +140,9 @@
     <string name="category_specific">Specific</string>
     <string name="locked">Locked</string>
     <string name="unlocked">Unlocked</string>
+    <string name="welcome_title">Welcome to Cloud Remote!</string>
+    <string name="welcome_description">This app offers widgets to display device information on your home screen and a quick settings tile to easily toggle the local curtain feature.</string>
+    <string name="offline_devices">Offline Devices</string>
+    <string name="cloud_devices">Cloud Devices</string>
+
 </resources>

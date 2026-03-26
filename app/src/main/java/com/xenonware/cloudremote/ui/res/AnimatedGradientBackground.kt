@@ -34,7 +34,7 @@ fun BlurryBlobsBackground(modifier: Modifier = Modifier) {
     val colors = listOf(
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.secondary,
-            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.tertiaryContainer,
             MaterialTheme.colorScheme.primaryContainer,
             MaterialTheme.colorScheme.secondaryContainer
         )

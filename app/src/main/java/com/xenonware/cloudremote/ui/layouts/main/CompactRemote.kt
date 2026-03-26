@@ -312,7 +312,10 @@ fun CompactRemote(
                 content = {
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (currentUser == null) {
-                            LoginScreen(onSignInClick = onSignInClick)
+                            LoginScreen(
+                                onSignInClick = onSignInClick,
+                                modifier = Modifier.align(Alignment.Center).padding(horizontal = 16.dp).padding(bottom = scaffoldPadding.calculateBottomPadding())
+                            )
                         } else {
                             var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
@@ -367,7 +370,7 @@ fun CompactRemote(
                                 if (onlineCloudDevices.isNotEmpty()) {
                                     item {
                                         Text(
-                                            text = "Cloud Devices",
+                                            text = stringResource(R.string.cloud_devices),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(
@@ -397,7 +400,7 @@ fun CompactRemote(
                                 if (offlineCloudDevices.isNotEmpty()) {
                                     item {
                                         Text(
-                                            text = "Offline Devices",
+                                            text = stringResource(R.string.offline_devices),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.padding(

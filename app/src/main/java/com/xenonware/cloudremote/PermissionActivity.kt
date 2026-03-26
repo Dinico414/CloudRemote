@@ -1,6 +1,5 @@
 package com.xenonware.cloudremote
 
-import android.R
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -22,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +42,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -54,61 +57,63 @@ import com.xenonware.cloudremote.ui.theme.XenonTheme
 class PermissionActivity : ComponentActivity() {
 
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
-    private val requiredPermissions = listOf(
-        Permission(
-            name = "Display over other apps",
-            description = "This permission is required for the curtain feature to work. It allows the app to draw over other apps.",
-            isGranted = { Settings.canDrawOverlays(this) },
-            request = {
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()
-                )
-                startActivity(intent)
-            }), Permission(
-            name = "Do Not Disturb access",
-            description = "This permission is needed to control the Do Not Disturb mode on your device.",
-            isGranted = {
-                val notificationManager =
-                    getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                notificationManager.isNotificationPolicyAccessGranted
-            },
-            request = {
-                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                startActivity(intent)
-            }), Permission(
-            name = "Notification access",
-            description = "This permission is required to read media notifications and display them in the app.",
-            isGranted = {
-                val enabledListeners =
-                    Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-                enabledListeners?.contains(packageName) == true
-            },
-            request = {
-                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                startActivity(intent)
-            }), Permission(
-            name = "Device Admin",
-            description = "Cloud Remote needs this permission to lock the screen remotely.",
-            isGranted = {
-                val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-                val componentName = ComponentName(this, AdminReceiver::class.java)
-                dpm.isAdminActive(componentName)
-            },
-            request = {
-                val componentName = ComponentName(this, AdminReceiver::class.java)
-                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
-                    putExtra(
-                        DevicePolicyManager.EXTRA_ADD_EXPLANATION,
-                        "Cloud Remote needs this permission to lock the screen remotely."
-                    )
-                }
-                startActivity(intent)
-            })
-    )
+    private lateinit var requiredPermissions: List<Permission>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requiredPermissions = listOf(
+            Permission(
+                name = getString(R.string.display_over_other_apps),
+                description = getString(R.string.display_over_other_apps_description),
+                isGranted = { Settings.canDrawOverlays(this) },
+                request = {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()
+                    )
+                    startActivity(intent)
+                }), Permission(
+                name = getString(R.string.do_not_disturb_access),
+                description = getString(R.string.do_not_disturb_access_description),
+                isGranted = {
+                    val notificationManager =
+                        getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    notificationManager.isNotificationPolicyAccessGranted
+                },
+                request = {
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                    startActivity(intent)
+                }), Permission(
+                name = getString(R.string.notification_access),
+                description = getString(R.string.notification_access_description),
+                isGranted = {
+                    val enabledListeners =
+                        Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                    enabledListeners?.contains(packageName) == true
+                },
+                request = {
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                    startActivity(intent)
+                }), Permission(
+                name = getString(R.string.device_admin),
+                description = getString(R.string.device_admin_description),
+                isGranted = {
+                    val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                    val componentName = ComponentName(this, AdminReceiver::class.java)
+                    dpm.isAdminActive(componentName)
+                },
+                request = {
+                    val componentName = ComponentName(this, AdminReceiver::class.java)
+                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                        putExtra(
+                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            "Cloud Remote needs this permission to lock the screen remotely."
+                        )
+                    }
+                    startActivity(intent)
+                })
+        )
+
         enableEdgeToEdge()
         sharedPreferenceManager = SharedPreferenceManager(this)
 
@@ -123,7 +128,7 @@ class PermissionActivity : ComponentActivity() {
                             isFirstLaunch = sharedPreferenceManager.isFirstLaunch,
                             onFinish = {
                                 if (sharedPreferenceManager.isFirstLaunch) {
-                                    startActivity(Intent(this, FirstLaunchActivity::class.java))
+                                    startActivity(Intent(this, WelcomeActivity::class.java))
                                 } else {
                                     startActivity(Intent(this, MainActivity::class.java))
                                 }
@@ -138,7 +143,7 @@ class PermissionActivity : ComponentActivity() {
 
 @Composable
 fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFinish: () -> Unit) {
-    var currentPermissionIndex by remember { mutableStateOf(0) }
+    var currentPermissionIndex by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
 
     // Find the first permission that is not granted
@@ -169,11 +174,24 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
         val lifecycleObserver = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isPermissionGranted = currentPermission.isGranted(context)
+                
+                // Automatically move to the next screen if the permission was granted via system settings
+                if (isPermissionGranted) {
+                    val nextPermissionIndex = permissions.indexOfFirst { !it.isGranted(context) }
+                    when {
+                        nextPermissionIndex != -1 -> {
+                            currentPermissionIndex = nextPermissionIndex
+                        }
+                        else -> {
+                            onFinish()
+                        }
+                    }
+                }
             }
         }
         (context as ComponentActivity).lifecycle.addObserver(lifecycleObserver)
         onDispose {
-            (context as ComponentActivity).lifecycle.removeObserver(lifecycleObserver)
+            context.lifecycle.removeObserver(lifecycleObserver)
         }
     }
 
@@ -183,42 +201,53 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
             .fillMaxSize()
             .padding(WindowInsets.safeDrawing.asPaddingValues())
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = currentPermission.name,
-            style = MaterialTheme.typography.headlineLarge.copy(
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.25f),
-                    offset = Offset(x = 2f, y = 4f),
-                    blurRadius = 8f
-                )
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-            fontFamily = QuicksandTitleVariable,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = currentPermission.description,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                shadow = Shadow(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    offset = Offset(x = 1f, y = 2f),
-                    blurRadius = 2f
-                )
-            ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.weight(1f))
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = currentPermission.name,
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.25f),
+                        offset = Offset(x = 2f, y = 4f),
+                        blurRadius = 8f
+                    )
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                fontFamily = QuicksandTitleVariable,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = currentPermission.description,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        offset = Offset(x = 1f, y = 2f),
+                        blurRadius = 2f
+                    )
+                ), color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center
+            )
+        }
+
         Button(
             onClick = {
                 if (isPermissionGranted) {
                     val nextPermissionIndex = permissions.indexOfFirst { !it.isGranted(context) }
-                    if (nextPermissionIndex != -1) {
-                        currentPermissionIndex = nextPermissionIndex
-                    } else {
-                        onFinish()
+                    when {
+                        nextPermissionIndex != -1 -> {
+                            currentPermissionIndex = nextPermissionIndex
+                        }
+                        else -> {
+                            onFinish()
+                        }
                     }
                 } else {
                     currentPermission.request(context)
@@ -228,17 +257,16 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface
             ), modifier = Modifier
                 .fillMaxWidth()
-                .height(136.dp)
+                .height(96.dp)
         ) {
             val allPermissionsGranted = permissions.all { it.isGranted(context) }
             Text(
                 text = when {
+                    allPermissionsGranted && !isFirstLaunch -> stringResource(R.string.finish)
                     isPermissionGranted && !allPermissionsGranted -> "Next"
-                    allPermissionsGranted && isFirstLaunch -> "Next"
-                    allPermissionsGranted && !isFirstLaunch -> "Finish"
-                    else -> "Grant Permission"
+                    else -> stringResource(R.string.grant_permission)
                 },
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 fontFamily = QuicksandTitleVariable,
             )
         }
