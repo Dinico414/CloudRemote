@@ -12,6 +12,7 @@ import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -19,6 +20,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
@@ -212,11 +214,11 @@ fun DeviceItem(
 
     val progressBackgroundColor by animateColorAsState(
         targetValue = if (device.isCharging) {
-            LocalGreenMaterialColorScheme.current.secondaryContainer
+            LocalGreenMaterialColorScheme.current.primaryContainer
         } else if (device.batteryLevel <= 5) {
-            LocalRedMaterialColorScheme.current.secondaryContainer
+            LocalRedMaterialColorScheme.current.primaryContainer
         } else if (device.batteryLevel <= 20) {
-            LocalRedMaterialColorScheme.current.secondaryContainer
+            LocalRedMaterialColorScheme.current.primaryContainer
         } else if (device.batteryLevel >= 100) {
             MaterialTheme.colorScheme.tertiaryContainer
         } else {
@@ -226,11 +228,11 @@ fun DeviceItem(
 
     val progressTextColor by animateColorAsState(
         targetValue = if (device.isCharging) {
-            LocalGreenMaterialColorScheme.current.onSecondaryContainer
+            LocalGreenMaterialColorScheme.current.onPrimaryContainer
         } else if (device.batteryLevel <= 5) {
-            LocalRedMaterialColorScheme.current.onSecondaryContainer
+            LocalRedMaterialColorScheme.current.onPrimaryContainer
         } else if (device.batteryLevel <= 20) {
-            LocalRedMaterialColorScheme.current.onSecondaryContainer
+            LocalRedMaterialColorScheme.current.onPrimaryContainer
         } else if (device.batteryLevel >= 100) {
             MaterialTheme.colorScheme.onTertiaryContainer
         } else {
@@ -524,12 +526,21 @@ fun DeviceItem(
                     }
 
                     isOnline -> {
+                        val rotation by animateFloatAsState(
+                            targetValue = if (isCollapsed) 0f else 180f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            ),
+                            label = "rotation"
+                        )
                         FilledTonalIconButton(onClick = {
                             isCollapsed = !isCollapsed
                         }) {
                             Icon(
-                                imageVector = if (isCollapsed) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
-                                contentDescription = if (isCollapsed) "Expand" else "Collapse"
+                                imageVector = Icons.Rounded.ExpandMore,
+                                contentDescription = if (isCollapsed) "Expand" else "Collapse",
+                                modifier = Modifier.graphicsLayer(rotationZ = rotation)
                             )
                         }
                     }
@@ -1055,7 +1066,7 @@ fun BatteryIndicator(
     val infiniteTransition = rememberInfiniteTransition(label = "colorBlink")
     val batteryWarningColor by infiniteTransition.animateColor(
         initialValue = LocalRedMaterialColorScheme.current.primary,
-        targetValue = LocalRedMaterialColorScheme.current.secondaryContainer,
+        targetValue = LocalRedMaterialColorScheme.current.primary.copy(alpha = 0f),
         animationSpec = infiniteRepeatable(
             animation = tween(500), repeatMode = RepeatMode.Reverse
         ),
@@ -1063,7 +1074,7 @@ fun BatteryIndicator(
     )
     val batteryWarningTextColor by infiniteTransition.animateColor(
         initialValue = LocalRedMaterialColorScheme.current.onPrimary,
-        targetValue = LocalRedMaterialColorScheme.current.onSecondaryContainer,
+        targetValue = LocalRedMaterialColorScheme.current.onPrimaryContainer,
         animationSpec = infiniteRepeatable(
             animation = tween(500), repeatMode = RepeatMode.Reverse
         ),
@@ -1134,11 +1145,11 @@ fun BatteryIndicator(
 
     val progressBackgroundColor by animateColorAsState(
         targetValue = if (isCharging) {
-            LocalGreenMaterialColorScheme.current.secondaryContainer
+            LocalGreenMaterialColorScheme.current.primaryContainer
         } else if (batteryLevel <= 5) {
-            LocalRedMaterialColorScheme.current.secondaryContainer
+            LocalRedMaterialColorScheme.current.primaryContainer
         } else if (batteryLevel <= 20) {
-            LocalRedMaterialColorScheme.current.secondaryContainer
+            LocalRedMaterialColorScheme.current.primaryContainer
         } else if (batteryLevel >= 100) {
             MaterialTheme.colorScheme.tertiaryContainer
         } else {
