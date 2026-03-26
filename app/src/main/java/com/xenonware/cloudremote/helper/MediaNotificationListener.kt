@@ -33,6 +33,10 @@ class MediaNotificationListener : NotificationListenerService() {
     private var lastAlbumArt: String? = null
     private lateinit var mediaSessionManager: MediaSessionManager
 
+    private val sessionsChangedListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        handleControllersChanged(controllers)
+    }
+
     override fun onCreate() {
         super.onCreate()
         mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
@@ -52,7 +56,14 @@ class MediaNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        val componentName = ComponentName(this, this.javaClass)
+        mediaSessionManager.addOnActiveSessionsChangedListener(sessionsChangedListener, componentName)
         findActiveMediaController()
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsChangedListener)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -62,17 +73,38 @@ class MediaNotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun findActiveMediaController() {
-        val componentName = ComponentName(this, this.javaClass)
-        val controllers = mediaSessionManager.getActiveSessions(componentName)
-        if (controllers.isNotEmpty()) {
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        if (sbn?.notification?.category == "transport") {
+            findActiveMediaController()
+        }
+    }
+
+    private fun handleControllersChanged(controllers: List<MediaController>?) {
+        if (!controllers.isNullOrEmpty()) {
             val newController = controllers[0]
             if (newController != activeMediaController) {
                 activeMediaController?.unregisterCallback(mediaControllerCallback)
                 activeMediaController = newController
                 activeMediaController?.registerCallback(mediaControllerCallback)
                 updateMediaInfo(activeMediaController?.metadata, activeMediaController?.playbackState)
+            } else {
+                updateMediaInfo(activeMediaController?.metadata, activeMediaController?.playbackState)
             }
+        } else {
+            activeMediaController?.unregisterCallback(mediaControllerCallback)
+            activeMediaController = null
+            updateMediaInfo(null, null)
+        }
+    }
+
+    private fun findActiveMediaController() {
+        val componentName = ComponentName(this, this.javaClass)
+        try {
+            val controllers = mediaSessionManager.getActiveSessions(componentName)
+            handleControllersChanged(controllers)
+        } catch (e: SecurityException) {
+            // Permission might have been revoked
         }
     }
 
@@ -97,10 +129,10 @@ class MediaNotificationListener : NotificationListenerService() {
             putExtra(EXTRA_ARTIST, artist)
             putExtra(EXTRA_ALBUM_ART, lastAlbumArt)
             putExtra(EXTRA_IS_PLAYING, isPlaying)
-            putExtra(EXTRA_CUSTOM_ACTION_1_TITLE, customAction1?.name.toString())
-            putExtra(EXTRA_CUSTOM_ACTION_1_ACTION, customAction1?.action)
-            putExtra(EXTRA_CUSTOM_ACTION_2_TITLE, customAction2?.name.toString())
-            putExtra(EXTRA_CUSTOM_ACTION_2_ACTION, customAction2?.action)
+            putExtra(EXTRA_CUSTOM_ACTION_1_TITLE, customAction1?.name?.toString() ?: "")
+            putExtra(EXTRA_CUSTOM_ACTION_1_ACTION, customAction1?.action ?: "")
+            putExtra(EXTRA_CUSTOM_ACTION_2_TITLE, customAction2?.name?.toString() ?: "")
+            putExtra(EXTRA_CUSTOM_ACTION_2_ACTION, customAction2?.action ?: "")
         }
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
