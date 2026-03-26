@@ -44,6 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -54,6 +56,7 @@ import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
+
 
 class PermissionActivity : ComponentActivity() {
 
@@ -216,6 +219,8 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
             Text(
                 text = currentPermission.name,
                 style = MaterialTheme.typography.headlineLarge.copy(
+                    hyphens = Hyphens.Auto,
+                    lineBreak = LineBreak.Paragraph,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.25f),
                         offset = Offset(x = 2f, y = 4f),
@@ -230,6 +235,8 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
             Text(
                 text = currentPermission.description,
                 style = MaterialTheme.typography.bodyLarge.copy(
+                    hyphens = Hyphens.Auto,
+                    lineBreak = LineBreak.Paragraph,
                     shadow = Shadow(
                         color = Color.Black.copy(alpha = 0.5f),
                         offset = Offset(x = 1f, y = 2f),
@@ -269,7 +276,7 @@ fun PermissionScreen(permissions: List<Permission>, isFirstLaunch: Boolean, onFi
                     isPermissionGranted && !allPermissionsGranted -> "Next"
                     else -> stringResource(R.string.grant_permission)
                 },
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontFamily = QuicksandTitleVariable,
             )
         }
@@ -280,5 +287,5 @@ data class Permission(
     val name: String,
     val description: String,
     val isGranted: (Context) -> Boolean,
-    val request: (Context) -> Unit
+    val request: (Context) -> Unit,
 )

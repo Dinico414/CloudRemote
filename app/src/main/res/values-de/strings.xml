@@ -116,10 +116,10 @@
     <!-- Permissions -->
     <string name="display_over_other_apps">Über anderen Apps einblenden</string>
     <string name="display_over_other_apps_description">Diese Berechtigung wird für die Vorhangsfunktion benötigt. Sie ermöglicht der App, über andere Anwendungen einzublenden</string>
-    <string name="do_not_disturb_access">Bitte nicht stören Zugriff</string>
-    <string name="do_not_disturb_access_description">Diese Berechtigung wird benötigt, um den Bitte nicht stören-Modus auf deinem Gerät zu steuern.</string>
-    <string name="notification_access">Benachrichtigungszugriff</string>
-    <string name="notification_access_description">Diese Berechtigung wird benötigt, um Medienbenachrichtigungen zu lesen und sie in der App anzuzeigen.</string>
+    <string name="do_not_disturb_access">\"Bitte nicht stören\" Zugriff</string>
+    <string name="do_not_disturb_access_description">Diese Berechtigung wird benötigt, um den \"Bitte nicht stören\"-Modus auf deinem Gerät zu steuern.</string>
+    <string name="notification_access">Benachrichtigungs\u00ADzugriff</string>
+    <string name="notification_access_description">Diese Berechtigung wird benötigt, um Medien\u00ADbenachrichtigungen zu lesen und sie in der App anzuzeigen.</string>
     <string name="device_admin">Gerät-Admin</string>
     <string name="device_admin_description">Diese Berechtigung wird benötigt, um den Bildschirm gesteuert zu sperren.</string>
     <string name="grant_permission">Berechtigung erteilen</string>
@@ -141,7 +141,7 @@
     <string name="locked">Gesperrt</string>
     <string name="unlocked">Entsperrt</string>
     <string name="welcome_title">Willkommen in Cloud Remote!</string>
-    <string name="welcome_description">Diese App bietet Widgets zur Anzeige von Geräteinformationen auf Ihrem Startbildschirm, sowie eine Schnellzugriffskachel um die lokale Vorhangfunktion einfach aktivieren können.</string>
+    <string name="welcome_description">Diese App bietet Widgets zur Anzeige von Geräte\u00ADinformationen auf Ihrem Startbildschirm, sowie eine Schnell\u00ADzugriffskachel um die lokale Vorhangfunktion einfach aktivieren können.</string>
     <string name="offline_devices">Offline Devices</string>
     <string name="cloud_devices">Cloud Devices</string>
 

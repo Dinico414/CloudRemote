@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.R
@@ -60,8 +61,9 @@ fun LoginScreen(
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = stringResource(R.string.sign_in),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 fontFamily = QuicksandTitleVariable,
+                textAlign = TextAlign.Center,
             )
         }
     }
