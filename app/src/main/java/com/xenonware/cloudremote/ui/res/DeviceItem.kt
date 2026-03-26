@@ -224,10 +224,30 @@ fun DeviceItem(
         }, animationSpec = tween(durationMillis = 500), label = "progressBackgroundColor"
     )
 
+    val progressTextColor by animateColorAsState(
+        targetValue = if (device.isCharging) {
+            LocalGreenMaterialColorScheme.current.onSecondaryContainer
+        } else if (device.batteryLevel <= 5) {
+            LocalRedMaterialColorScheme.current.onSecondaryContainer
+        } else if (device.batteryLevel <= 20) {
+            LocalRedMaterialColorScheme.current.onSecondaryContainer
+        } else if (device.batteryLevel >= 100) {
+            MaterialTheme.colorScheme.onTertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSecondaryContainer
+        }, animationSpec = tween(durationMillis = 500), label = "progressBackgroundColor"
+    )
+
     val rowBackgroundColor by animateColorAsState(
         targetValue = if (isCollapsed && isOnline) progressBackgroundColor else MaterialTheme.colorScheme.secondaryContainer,
         animationSpec = tween(durationMillis = 500),
         label = "rowBackgroundColor"
+    )
+
+    val rowTextColor by animateColorAsState(
+        targetValue = if (isCollapsed && isOnline) progressTextColor else MaterialTheme.colorScheme.onSecondaryContainer,
+        animationSpec = tween(durationMillis = 500),
+        label = "rowTextColor"
     )
 
     var previewFrame by remember { mutableIntStateOf(1) }
@@ -477,6 +497,7 @@ fun DeviceItem(
                     Text(
                         text = device.name.ifBlank { stringResource(id = R.string.device_name_placeholder) },
                         style = MaterialTheme.typography.titleMedium,
+                        color = rowTextColor,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
