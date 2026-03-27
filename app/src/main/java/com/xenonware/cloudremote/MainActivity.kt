@@ -218,15 +218,13 @@ class MainActivity : ComponentActivity() {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val enabledListeners =
             Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        val myListener =
-            ComponentName(this, com.xenonware.cloudremote.helper.MediaNotificationListener::class.java).flattenToString()
         val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val componentName = ComponentName(this, AdminReceiver::class.java)
 
         return !Settings.canDrawOverlays(this) ||
                 !notificationManager.isNotificationPolicyAccessGranted ||
                 !dpm.isAdminActive(componentName) ||
-                enabledListeners == null || !enabledListeners.contains(myListener)
+                enabledListeners == null || !enabledListeners.contains(packageName)
     }
 
 

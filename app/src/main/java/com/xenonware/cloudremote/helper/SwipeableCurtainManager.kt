@@ -162,7 +162,6 @@ object SwipeableCurtainManager {
                             }
                         )
 
-                        // Calculate dynamic alpha based on swipe offset to fade out as you drag
                         val dragAlphaFactor = (1f - (kotlin.math.abs(contentOffsetY) / screenHeight)).coerceIn(0f, 1f)
                         val finalBgAlpha = animatedBgAlpha * dragAlphaFactor
 
@@ -266,10 +265,13 @@ object SwipeableCurtainManager {
         
         curtainView?.let { view ->
             try {
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-                windowManager.removeView(view)
+                // Safely remove view avoiding double removal crashes
+                if (view.isAttachedToWindow) {
+                    overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+                    overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+                    overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+                    windowManager.removeViewImmediate(view)
+                }
                 Log.d(TAG, "Curtain removed")
             } catch (e: Exception) {
                 Log.e(TAG, "Error removing curtain view", e)

@@ -16,7 +16,7 @@ class CurtainTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         instance = this
-        updateTile()
+        updateTileState()
     }
 
     override fun onStopListening() {
@@ -43,10 +43,6 @@ class CurtainTileService : TileService() {
     }
 
     fun updateTileState() {
-        updateTile()
-    }
-
-    private fun updateTile() {
         val tile = qsTile ?: return
         if (isCurtainActive) {
             tile.state = Tile.STATE_ACTIVE
