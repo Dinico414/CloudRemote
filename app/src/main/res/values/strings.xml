@@ -146,5 +146,7 @@
     <string name="cloud_devices">Cloud Devices</string>
     <string name="long_press_to_lock_device_remotely">Long-press to lock device remotely</string>
     <string name="device_is_already_locked">Device is already locked</string>
+    <string name="swipe_up_to_unlock">Swipe up to unlock</string>
+    <string name="locked_extern">Locked remotely</string>
 
 </resources>

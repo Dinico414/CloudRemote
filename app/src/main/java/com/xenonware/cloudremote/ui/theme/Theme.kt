@@ -587,12 +587,23 @@ fun XenonTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
+            var contextToFind = view.context
+            var window: android.view.Window? = null
+            while (contextToFind is android.content.ContextWrapper) {
+                if (contextToFind is Activity) {
+                    window = contextToFind.window
+                    break
+                }
+                contextToFind = contextToFind.baseContext
+            }
+            
+            if (window != null) {
+                WindowCompat.setDecorFitsSystemWindows(window, false)
 
-            val insetsController = WindowCompat.getInsetsController(window, view)
-            insetsController.isAppearanceLightStatusBars = !darkTheme
-            insetsController.isAppearanceLightNavigationBars = !darkTheme
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !darkTheme
+                insetsController.isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 

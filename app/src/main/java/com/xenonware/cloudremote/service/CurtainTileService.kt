@@ -1,37 +1,48 @@
 package com.xenonware.cloudremote.service
 
-import android.app.PendingIntent
-import android.content.Intent
+import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.annotation.RequiresApi
-import com.xenonware.cloudremote.SwipeableCurtainActivity
+import com.xenonware.cloudremote.helper.SwipeableCurtainManager
 
 class CurtainTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()
+        instance = this
         updateTile()
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        if (instance == this) {
+            instance = null
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onClick() {
         super.onClick()
+        val handler = Handler(Looper.getMainLooper())
+        
         if (isCurtainActive) {
-            val closeIntent = Intent(SwipeableCurtainActivity.Companion.ACTION_CLOSE_CURTAIN).apply {
-                setPackage(packageName)
+            handler.post {
+                SwipeableCurtainManager.hideCurtain(applicationContext)
             }
-            sendBroadcast(closeIntent)
         } else {
-            val intent = Intent(this, SwipeableCurtainActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val pendingIntent = PendingIntent.getActivity(
-                this, 0, intent, PendingIntent.FLAG_IMMUTABLE
-            )
-            startActivityAndCollapse(pendingIntent)
+            handler.post {
+                SwipeableCurtainManager.showCurtain(applicationContext)
+            }
         }
-        isCurtainActive = !isCurtainActive
+    }
+
+    fun updateTileState() {
         updateTile()
     }
 
@@ -49,5 +60,19 @@ class CurtainTileService : TileService() {
 
     companion object {
         var isCurtainActive = false
+        @SuppressLint("StaticFieldLeak")
+        var instance: CurtainTileService? = null
+
+        fun requestTileUpdate(context: Context) {
+            try {
+                instance?.updateTileState()
+                TileService.requestListeningState(
+                    context,
+                    ComponentName(context, CurtainTileService::class.java)
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 }

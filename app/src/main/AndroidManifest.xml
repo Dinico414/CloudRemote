@@ -48,13 +48,6 @@
             android:theme="@style/Theme.Xenon" />
 
         <activity
-            android:name=".CurtainActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Xenon"
-            android:launchMode="singleInstance"
-            android:excludeFromRecents="true" />
-
-        <activity
             android:name=".PermissionActivity"
             android:exported="false"
             android:theme="@style/Theme.Xenon" />
@@ -64,14 +57,14 @@
             android:exported="false"
             android:theme="@style/Theme.Xenon" />
 
-        <activity
-            android:name=".SwipeableCurtainActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Xenon"
-            android:launchMode="singleInstance"
-            android:excludeFromRecents="true"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true" />
+<!--        <activity-->
+<!--            android:name=".SwipeableCurtainActivity"-->
+<!--            android:exported="false"-->
+<!--            android:theme="@style/Theme.Xenon"-->
+<!--            android:launchMode="singleInstance"-->
+<!--            android:excludeFromRecents="true"-->
+<!--            android:showOnLockScreen="true"-->
+<!--            android:turnScreenOn="true" />-->
 
         <service
             android:name=".service.CloudRemoteService"

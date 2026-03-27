@@ -27,10 +27,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -117,7 +119,6 @@ fun PixelWatchFace(isActive: Boolean) {
             .widthIn(max = 420.dp)
             .heightIn(max = 420.dp)
             .fillMaxSize()
-            .background(Color.Black)
             .graphicsLayer(
                 alpha = animatedAlpha,
                 translationX = burnInOffset.x,
@@ -226,17 +227,7 @@ fun PixelWatchFace(isActive: Boolean) {
 
         // --- DRAWING ORDER ---
 
-        // 1. Minute Numbers (to be occluded)
-        drawDial(
-            currentMinuteFloat,
-            rInnerNum,
-            rInnerTickIn,
-            rInnerTickOut,
-            drawTicks = false,
-            drawNumbers = true
-        )
-
-        // 2. Pill Solid Background (to occlude minute numbers)
+        // 1. Calculate Pill Path
         val pillHeight = r * 0.36f
         val pillTop = cy - pillHeight / 2f
         val pillBottom = cy + pillHeight / 2f
@@ -257,9 +248,20 @@ fun PixelWatchFace(isActive: Boolean) {
                 )
             )
         }
-        drawPath(pillPath, color = Color.Black)
 
-        // 3. Minute Ticks (on top of pill background)
+        // 2. Minute Numbers (clipped out where the pill is)
+        clipPath(path = pillPath, clipOp = ClipOp.Difference) {
+            drawDial(
+                currentMinuteFloat,
+                rInnerNum,
+                rInnerTickIn,
+                rInnerTickOut,
+                drawTicks = false,
+                drawNumbers = true
+            )
+        }
+
+        // 3. Minute Ticks
         drawDial(
             currentMinuteFloat,
             rInnerNum,
@@ -269,7 +271,7 @@ fun PixelWatchFace(isActive: Boolean) {
             drawNumbers = false
         )
 
-        // 4. Second Ring (on top of pill background)
+        // 4. Second Ring
         if (pillRightWeight > 0f) {
             drawDial(
                 currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight

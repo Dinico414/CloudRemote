@@ -32,7 +32,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -176,7 +175,7 @@ class CloudRemoteService : Service() {
                                     commandApplied = true
                                 }
                                 if (prev.isCurtainOn != myDevice.isCurtainOn) {
-                                    localDeviceManager.setCurtain(myDevice.isCurtainOn)
+                                    localDeviceManager.setCloudCurtain(myDevice.isCurtainOn)
                                     commandApplied = true
                                 }
                                 if (prev.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
