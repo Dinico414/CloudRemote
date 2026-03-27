@@ -38,6 +38,7 @@ import com.xenon.mylibrary.res.ThemeSetting
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoCornerRadius
 import com.xenon.mylibrary.values.NoSpacing
+import com.xenon.mylibrary.values.SmallCornerRadius
 import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.presentation.sign_in.SignInState
 import com.xenonware.cloudremote.BuildConfig
@@ -145,7 +146,7 @@ fun CoverSettings(
                     tileBackgroundColor = coverScreenBackgroundColor,
                     tileContentColor = coverScreenContentColor,
                     tileSubtitleColor = coverScreenContentColor.copy(alpha = 0.7f),
-                    tileShapeOverride = RoundedCornerShape(NoCornerRadius),
+                    tileShapeOverride = RoundedCornerShape(SmallCornerRadius),
                     tileHorizontalPadding = MediumPadding,
                     tileVerticalPadding = MediumPadding,
                     useGroupStyling = false,
