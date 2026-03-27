@@ -76,9 +76,9 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.cloudremote.R
-import com.xenonware.cloudremote.SwipeableCurtainActivity
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
+import com.xenonware.cloudremote.helper.SwipeableCurtainManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.presentation.sign_in.SignInViewModel
 import com.xenonware.cloudremote.service.CurtainTileService
@@ -222,18 +222,7 @@ fun CompactRemote(
                         // Curtain button
                         IconButton(
                             onClick = {
-                                if (CurtainTileService.isCurtainActive) {
-                                    val closeIntent =
-                                        Intent(SwipeableCurtainActivity.ACTION_CLOSE_CURTAIN).apply {
-                                            setPackage(context.packageName)
-                                        }
-                                    context.sendBroadcast(closeIntent)
-                                } else {
-                                    val intent =
-                                        Intent(context, SwipeableCurtainActivity::class.java)
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    context.startActivity(intent)
-                                }
+                                SwipeableCurtainManager.showCurtain(context.applicationContext)
                                 CurtainTileService.isCurtainActive =
                                     !CurtainTileService.isCurtainActive
                                 TileService.requestListeningState(

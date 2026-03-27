@@ -12,7 +12,6 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.BatteryManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -40,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -51,6 +51,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import kotlinx.coroutines.channels.awaitClose
@@ -270,14 +271,14 @@ class LocalDeviceManager(private val context: Context) {
         }
     }
 
-    fun setCurtain(enabled: Boolean) {
+    fun setCloudCurtain(enabled: Boolean) {
         mainHandler.post {
-            Log.d(TAG, "setCurtain: $enabled, currentVisible=$isCurtainVisible")
-            if (enabled) showCurtain() else hideCurtain()
+            Log.d(TAG, "setCloudCurtain: $enabled, currentVisible=$isCurtainVisible")
+            if (enabled) showCloudCurtain() else hideCurtain()
         }
     }
 
-    private fun showCurtain() {
+    private fun showCloudCurtain() {
         if (isCurtainVisible) {
             Log.d(TAG, "Curtain already visible")
             return
@@ -358,7 +359,7 @@ class LocalDeviceManager(private val context: Context) {
                         Spacer(modifier = Modifier.weight(1f))
                         PixelWatchFace(isActive = isActive)
                         Spacer(modifier = Modifier.weight(1f))
-                        Text(text = "Locked", color = White.copy(alpha = animatedTextAlpha))
+                        Text(text = stringResource(R.string.locked_extern), color = White.copy(alpha = animatedTextAlpha))
                         Spacer(modifier = Modifier.weight(0.2f))
 
                     }                }
