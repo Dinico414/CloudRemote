@@ -17,7 +17,7 @@ configure<ApplicationExtension> {
             minSdk = 29
             targetSdk = 36
             versionCode = 1
-            versionName = "1.2.0"
+            versionName = "1.2.5"
 
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
             buildConfigField("String", "XENON_COMMONS_VERSION", "\"${libs.versions.xenonCommons.get()}\"")
@@ -100,5 +100,5 @@ dependencies {
     implementation (libs.play.services.auth)
     implementation (libs.androidx.navigation.compose)
     implementation (libs.coil.compose)
-    implementation ("com.google.code.gson:gson:2.10.1")
+    implementation (libs.gson)
 }
