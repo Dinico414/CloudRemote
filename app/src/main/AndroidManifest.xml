@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- Required for sending media events on Android 12+ or some custom ROMs -->
+    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" tools:ignore="ProtectedPermissions"/>
+
     <application
         android:name=".CloudRemoteApplication"
         android:allowBackup="true"
@@ -56,15 +59,6 @@
             android:name=".WelcomeActivity"
             android:exported="false"
             android:theme="@style/Theme.Xenon" />
-
-<!--        <activity-->
-<!--            android:name=".SwipeableCurtainActivity"-->
-<!--            android:exported="false"-->
-<!--            android:theme="@style/Theme.Xenon"-->
-<!--            android:launchMode="singleInstance"-->
-<!--            android:excludeFromRecents="true"-->
-<!--            android:showOnLockScreen="true"-->
-<!--            android:turnScreenOn="true" />-->
 
         <service
             android:name=".service.CloudRemoteService"
