@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -68,8 +69,10 @@ import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
 import com.xenon.mylibrary.res.GoogleProfilePicture
 import com.xenon.mylibrary.res.SpannedModeFAB
+import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
+import com.xenonware.cloudremote.ui.theme.LocalExtendedMaterialColorScheme
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
@@ -165,9 +168,41 @@ fun CompactRemote(
         val localDevice = devices.find { it.id == viewModel.localDeviceId }
         val localDeviceName by viewModel.localDeviceName.collectAsStateWithLifecycle()
 
+        val networkState by viewModel.networkState.collectAsStateWithLifecycle()
+        val offlineMessage = stringResource(id = R.string.offline_message)
+        val badConnectionMessage = stringResource(id = R.string.bad_connection_message)
+
+        LaunchedEffect(networkState) {
+            when (networkState) {
+                MainViewModel.NetworkState.OFFLINE -> {
+                    snackbarHostState.showSnackbar(
+                        message = offlineMessage,
+                        duration = SnackbarDuration.Indefinite
+                    )
+                }
+                MainViewModel.NetworkState.BAD_CONNECTION -> {
+                    snackbarHostState.showSnackbar(
+                        message = badConnectionMessage,
+                        duration = SnackbarDuration.Indefinite
+                    )
+                }
+                MainViewModel.NetworkState.ONLINE -> {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
+        }
+
+        val extendedColors = LocalExtendedMaterialColorScheme.current
 
         Scaffold(snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState)
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                XenonSnackbar(
+                    backgroundColor = extendedColors.inverseError,
+                    contentColor = extendedColors.inverseOnError,
+                    snackbarData = data,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }, bottomBar = {
             val bottomPaddingNavigationBar =
                 WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
