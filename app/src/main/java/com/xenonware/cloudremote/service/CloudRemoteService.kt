@@ -12,6 +12,8 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.session.MediaSessionManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -133,6 +135,14 @@ class CloudRemoteService : Service() {
         stopSelf()
     }
 
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+               capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
     private fun startSync() {
         if (!sharedPreferenceManager.inputReceiverEnabled) {
             Log.d(TAG, "Input receiver is disabled. Skipping sync.")
@@ -142,6 +152,7 @@ class CloudRemoteService : Service() {
         val deviceId = localDeviceId ?: return
 
         scope.launch {
+            var retryDelay = 2000L
             while (isActive) {
                 if (auth.currentUser == null) {
                     delay(2000)
@@ -151,6 +162,7 @@ class CloudRemoteService : Service() {
                 try {
                     repository.getDevicesFlow()
                         .collect { devices ->
+                            retryDelay = 2000L // Reset delay on successful emission
                             val myDevice = devices.find { it.id == deviceId }
                             if (myDevice == null) {
                                 currentRemoteDevice = null
@@ -202,7 +214,8 @@ class CloudRemoteService : Service() {
                     Log.e(TAG, "Error syncing devices", e)
                 }
 
-                delay(2000)
+                delay(retryDelay)
+                retryDelay = (retryDelay * 2).coerceAtMost(60_000L) // Exponential backoff max 1 min
             }
         }
 
@@ -220,8 +233,12 @@ class CloudRemoteService : Service() {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
                 if (auth.currentUser != null && currentRemoteDevice != null) {
-                    val fields = mapOf("lastUpdated" to System.currentTimeMillis())
-                    repository.updateDeviceFields(deviceId, fields)
+                    if (isNetworkAvailable()) {
+                        val fields = mapOf("lastUpdated" to System.currentTimeMillis())
+                        repository.updateDeviceFields(deviceId, fields)
+                    } else {
+                        Log.d(TAG, "Network unavailable, skipping heartbeat update to save battery")
+                    }
                 }
             }
         }
@@ -277,6 +294,7 @@ class CloudRemoteService : Service() {
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
             repository.updateDeviceFields(deviceId, updates)
+            
             currentRemoteDevice = device.copy(
                 mediaTitle = title, mediaArtist = artist, mediaAlbumArt = albumArt,
                 isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title,
@@ -307,6 +325,7 @@ class CloudRemoteService : Service() {
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
             repository.updateDeviceFields(deviceId, updates)
+
             currentRemoteDevice = cachedDevice.copy(
                 batteryLevel = state.batteryLevel, isCharging = state.isCharging,
                 mediaVolume = state.mediaVolume, maxMediaVolume = state.maxMediaVolume,

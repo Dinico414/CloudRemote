@@ -2,18 +2,20 @@ package com.xenonware.cloudremote.viewmodel
 
 import android.app.Application
 import android.content.Context
-import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.os.Build
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.GoogleAuthProvider
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.helper.LocalDeviceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -23,6 +25,8 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    enum class NetworkState { ONLINE, OFFLINE, BAD_CONNECTION }
 
     private val repository = GoogleCloudRepository()
     private val auth = FirebaseAuth.getInstance()
@@ -37,9 +41,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _localDeviceName = MutableStateFlow("")
     val localDeviceName: StateFlow<String> = _localDeviceName
 
+    private val _networkState = MutableStateFlow(NetworkState.ONLINE)
+    val networkState: StateFlow<NetworkState> = _networkState
+
     var localDeviceId: String = ""
 
     init {
+        setupNetworkObserver(application)
+        
         viewModelScope.launch {
             _currentUser.flatMapLatest { user ->
                 Log.d("MainViewModel", "Current user state changed: ${user?.uid}")
@@ -61,6 +70,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+        }
+    }
+
+    private fun setupNetworkObserver(context: Context) {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        // Initial check
+        val activeNetwork = connectivityManager.activeNetwork
+        val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
+        val isInitiallyConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        _networkState.value = if (isInitiallyConnected) NetworkState.ONLINE else NetworkState.OFFLINE
+
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                // Wait for onCapabilitiesChanged to evaluate the true state.
+            }
+
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                val isConnected = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                if (!isConnected) {
+                    _networkState.value = NetworkState.OFFLINE
+                } else {
+                    val bandwidth = networkCapabilities.linkDownstreamBandwidthKbps
+                    // If reported bandwidth is extremely low, it's a bad connection.
+                    // (0 usually implies it's unknown or unmetered in some emulators, so we check > 0)
+                    if (bandwidth in 1..500) {
+                        _networkState.value = NetworkState.BAD_CONNECTION
+                    } else {
+                        _networkState.value = NetworkState.ONLINE
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                _networkState.value = NetworkState.OFFLINE
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        } else {
+            val request = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            connectivityManager.registerNetworkCallback(request, networkCallback)
         }
     }
 

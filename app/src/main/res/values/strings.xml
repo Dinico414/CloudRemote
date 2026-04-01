@@ -149,5 +149,7 @@
     <string name="swipe_up_to_unlock">Swipe up to unlock</string>
     <string name="locked_extern">Locked remotely</string>
     <string name="reset_all_settings_description">Does only effect Settings</string>
+    <string name="offline_message">You are currently offline</string>
+    <string name="bad_connection_message">Poor network connection</string>
 
 </resources>

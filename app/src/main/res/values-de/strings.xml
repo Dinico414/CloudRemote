@@ -149,5 +149,7 @@
     <string name="device_is_already_locked">Gerät ist bereits gesperrt</string>
     <string name="swipe_up_to_unlock">Hoch wischen zum Entsperren</string>
     <string name="locked_extern">extern Gesperrt</string>
+    <string name="offline_message">Du bist derzeit offline</string>
+    <string name="bad_connection_message">Schlechte Internet Verbindung</string>
 
 </resources>
