@@ -13,9 +13,12 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.media.session.MediaSessionManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -34,7 +37,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -55,6 +60,19 @@ class CloudRemoteService : Service() {
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
 
+    private enum class ConnectionQuality { GOOD, BAD, NONE }
+    @Volatile
+    private var currentConnectionQuality = ConnectionQuality.GOOD
+    @Volatile
+    private var isNetworkMetered = false
+
+    private data class MediaUpdate(
+        val title: String, val artist: String, val albumArt: String, val isPlaying: Boolean,
+        val customAction1Title: String, val customAction1Action: String,
+        val customAction2Title: String, val customAction2Action: String
+    )
+    private val mediaUpdateFlow = MutableSharedFlow<MediaUpdate>(extraBufferCapacity = 1)
+
     private val userPresentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
         }
@@ -63,15 +81,17 @@ class CloudRemoteService : Service() {
     private val mediaUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let {
-                val title = it.getStringExtra(MediaNotificationListener.EXTRA_TITLE) ?: ""
-                val artist = it.getStringExtra(MediaNotificationListener.EXTRA_ARTIST) ?: ""
-                val albumArt = it.getStringExtra(MediaNotificationListener.EXTRA_ALBUM_ART) ?: ""
-                val isPlaying = it.getBooleanExtra(MediaNotificationListener.EXTRA_IS_PLAYING, false)
-                val customAction1Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_TITLE) ?: ""
-                val customAction1Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_ACTION) ?: ""
-                val customAction2Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_TITLE) ?: ""
-                val customAction2Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_ACTION) ?: ""
-                updateMediaState(title, artist, albumArt, isPlaying, customAction1Title, customAction1Action, customAction2Title, customAction2Action)
+                val update = MediaUpdate(
+                    title = it.getStringExtra(MediaNotificationListener.EXTRA_TITLE) ?: "",
+                    artist = it.getStringExtra(MediaNotificationListener.EXTRA_ARTIST) ?: "",
+                    albumArt = it.getStringExtra(MediaNotificationListener.EXTRA_ALBUM_ART) ?: "",
+                    isPlaying = it.getBooleanExtra(MediaNotificationListener.EXTRA_IS_PLAYING, false),
+                    customAction1Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_TITLE) ?: "",
+                    customAction1Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_1_ACTION) ?: "",
+                    customAction2Title = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_TITLE) ?: "",
+                    customAction2Action = it.getStringExtra(MediaNotificationListener.EXTRA_CUSTOM_ACTION_2_ACTION) ?: ""
+                )
+                scope.launch { mediaUpdateFlow.emit(update) }
             }
         }
     }
@@ -94,11 +114,74 @@ class CloudRemoteService : Service() {
         localDeviceManager = LocalDeviceManager(this)
         sharedPreferenceManager = SharedPreferenceManager(this)
         createNotificationChannel()
+        setupNetworkCallback()
+        
         LocalBroadcastManager.getInstance(this).registerReceiver(
             mediaUpdateReceiver,
             IntentFilter(MediaNotificationListener.ACTION_MEDIA_UPDATE)
         )
         registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
+
+        // Debounced media updates with dynamic delay
+        scope.launch {
+            mediaUpdateFlow.debounce { getSyncDebounceMs() }.collectLatest { update ->
+                updateMediaState(
+                    update.title, update.artist, update.albumArt, update.isPlaying,
+                    update.customAction1Title, update.customAction1Action,
+                    update.customAction2Title, update.customAction2Action
+                )
+            }
+        }
+    }
+
+    private fun setupNetworkCallback() {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        // Initial state
+        val activeNetwork = connectivityManager.activeNetwork
+        val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
+        updateNetworkState(caps)
+        isNetworkMetered = connectivityManager.isActiveNetworkMetered
+
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+            
+        connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                updateNetworkState(networkCapabilities)
+                isNetworkMetered = !networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            }
+            
+            override fun onLost(network: Network) {
+                currentConnectionQuality = ConnectionQuality.NONE
+            }
+        })
+    }
+
+    private fun updateNetworkState(caps: NetworkCapabilities?) {
+        if (caps == null || !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+            currentConnectionQuality = ConnectionQuality.NONE
+            return
+        }
+        
+        val bandwidth = caps.linkDownstreamBandwidthKbps
+        currentConnectionQuality = if (bandwidth in 1..800) {
+            ConnectionQuality.BAD
+        } else {
+            ConnectionQuality.GOOD
+        }
+    }
+
+    private fun getSyncDebounceMs(): Long {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return when {
+            currentConnectionQuality == ConnectionQuality.NONE -> 60_000L
+            powerManager.isPowerSaveMode -> 20_000L
+            currentConnectionQuality == ConnectionQuality.BAD -> 15_000L
+            !powerManager.isInteractive -> 10_000L
+            else -> 3_000L
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -115,7 +198,6 @@ class CloudRemoteService : Service() {
         
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Using specialUse to avoid the 6-hour timeout restriction for dataSync on Android 15
                 startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(NOTIFICATION_ID, createNotification())
@@ -130,18 +212,11 @@ class CloudRemoteService : Service() {
     override fun onTimeout(startId: Int, fgsType: Int) {
         super.onTimeout(startId, fgsType)
         Log.w(TAG, "Foreground service timed out for fgsType: $fgsType")
-        // No longer needed for specialUse since it does not have a timeout, but kept for safety.
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-               capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    }
+    private fun isNetworkAvailable(): Boolean = currentConnectionQuality != ConnectionQuality.NONE
 
     private fun startSync() {
         if (!sharedPreferenceManager.inputReceiverEnabled) {
@@ -151,18 +226,29 @@ class CloudRemoteService : Service() {
 
         val deviceId = localDeviceId ?: return
 
+        // Remote -> Local sync
         scope.launch {
             var retryDelay = 2000L
             while (isActive) {
                 if (auth.currentUser == null) {
-                    delay(2000)
+                    delay(5000)
+                    continue
+                }
+
+                if (!isNetworkAvailable()) {
+                    delay(15000)
                     continue
                 }
 
                 try {
                     repository.getDevicesFlow()
                         .collect { devices ->
-                            retryDelay = 2000L // Reset delay on successful emission
+                            retryDelay = 2000L 
+                            
+                            if (!isNetworkAvailable()) {
+                                throw Exception("Network lost during collection")
+                            }
+
                             val myDevice = devices.find { it.id == deviceId }
                             if (myDevice == null) {
                                 currentRemoteDevice = null
@@ -207,38 +293,53 @@ class CloudRemoteService : Service() {
                                 lastCommandAppliedAt = System.currentTimeMillis()
                             }
 
+                            // Only broadcast widget update if online devices changed significantly
                             val onlineDevices = devices.filter { (System.currentTimeMillis() - it.lastUpdated) < 60_000 }
                             broadcastWidgetUpdate(onlineDevices)
                         }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error syncing devices", e)
+                    Log.e(TAG, "Error syncing devices: ${e.message}")
                 }
 
                 delay(retryDelay)
-                retryDelay = (retryDelay * 2).coerceAtMost(60_000L) // Exponential backoff max 1 min
+                retryDelay = (retryDelay * 2).coerceAtMost(120_000L) // Increase max retry delay to 2 min
             }
         }
 
+        // Local -> Remote sync with dynamic debouncing
         scope.launch {
-            localDeviceManager.observeDeviceState().collectLatest { state ->
-                currentRemoteDevice?.let {
-                    if (auth.currentUser != null) {
-                        syncLocalStateToCloud(it, state)
+            localDeviceManager.observeDeviceState()
+                .debounce { getSyncDebounceMs() }
+                .collectLatest { state ->
+                    currentRemoteDevice?.let {
+                        if (auth.currentUser != null) {
+                            syncLocalStateToCloud(it, state)
+                        }
                     }
                 }
-            }
         }
 
+        // Dynamic Heartbeat with aggressive battery saving
         scope.launch {
             while (isActive) {
-                delay(HEARTBEAT_INTERVAL_MS)
-                if (auth.currentUser != null && currentRemoteDevice != null) {
-                    if (isNetworkAvailable()) {
-                        val fields = mapOf("lastUpdated" to System.currentTimeMillis())
-                        repository.updateDeviceFields(deviceId, fields)
-                    } else {
-                        Log.d(TAG, "Network unavailable, skipping heartbeat update to save battery")
-                    }
+                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                val batteryLevel = localDeviceManager.getBatteryLevel()
+                val isLowBattery = batteryLevel < 20 && !localDeviceManager.isCharging()
+                
+                val interval = when {
+                    currentConnectionQuality == ConnectionQuality.NONE -> 900_000L // 15 min
+                    currentConnectionQuality == ConnectionQuality.BAD -> 600_000L // 10 min
+                    powerManager.isPowerSaveMode -> 600_000L // 10 min
+                    isLowBattery -> 420_000L // 7 min
+                    !powerManager.isInteractive -> 300_000L // 5 min
+                    else -> HEARTBEAT_INTERVAL_MS // 30s
+                }
+                
+                delay(interval)
+                
+                if (auth.currentUser != null && currentRemoteDevice != null && isNetworkAvailable()) {
+                    val fields = mapOf("lastUpdated" to System.currentTimeMillis())
+                    repository.updateDeviceFields(deviceId, fields)
                 }
             }
         }
@@ -279,12 +380,20 @@ class CloudRemoteService : Service() {
     ) {
         val device = currentRemoteDevice ?: return
         val deviceId = localDeviceId ?: return
-        if (auth.currentUser == null) return
+        if (auth.currentUser == null || !isNetworkAvailable()) return
 
         val updates = mutableMapOf<String, Any>()
         if (device.mediaTitle != title) updates["mediaTitle"] = title
         if (device.mediaArtist != artist) updates["mediaArtist"] = artist
-        if (device.mediaAlbumArt != albumArt) updates["mediaAlbumArt"] = albumArt
+        
+        // Disable album art completely on bad/metered connection to save battery/data
+        val shouldSkipArt = isNetworkMetered || currentConnectionQuality == ConnectionQuality.BAD
+        if (device.mediaAlbumArt != albumArt) {
+            if (!shouldSkipArt || albumArt.isEmpty()) {
+                updates["mediaAlbumArt"] = albumArt
+            }
+        }
+        
         if (device.isPlaying != isPlaying) updates["isPlaying"] = isPlaying
         if (device.mediaCustomAction1Title != customAction1Title) updates["mediaCustomAction1Title"] = customAction1Title
         if (device.mediaCustomAction1Action != customAction1Action) updates["mediaCustomAction1Action"] = customAction1Action
@@ -296,7 +405,8 @@ class CloudRemoteService : Service() {
             repository.updateDeviceFields(deviceId, updates)
             
             currentRemoteDevice = device.copy(
-                mediaTitle = title, mediaArtist = artist, mediaAlbumArt = albumArt,
+                mediaTitle = title, mediaArtist = artist, 
+                mediaAlbumArt = if (updates.containsKey("mediaAlbumArt")) albumArt else device.mediaAlbumArt,
                 isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title,
                 mediaCustomAction1Action = customAction1Action,
                 mediaCustomAction2Title = customAction2Title,
@@ -307,13 +417,22 @@ class CloudRemoteService : Service() {
 
     private fun syncLocalStateToCloud(cachedDevice: Device, state: LocalDeviceManager.DeviceState) {
         val deviceId = localDeviceId ?: return
-        if (auth.currentUser == null) return
+        if (auth.currentUser == null || !isNetworkAvailable()) return
         val msSinceCommand = System.currentTimeMillis() - lastCommandAppliedAt
         if (msSinceCommand < COOLDOWN_MS) return
 
         val updates = mutableMapOf<String, Any>()
-        if (cachedDevice.batteryLevel != state.batteryLevel) updates["batteryLevel"] = state.batteryLevel
-        if (cachedDevice.isCharging != state.isCharging) updates["isCharging"] = state.isCharging
+        
+        // Increase battery change threshold to 5% if connection is bad or power save is on
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val threshold = if (currentConnectionQuality == ConnectionQuality.BAD || powerManager.isPowerSaveMode) 5 else 2
+        
+        val batteryDiff = Math.abs(cachedDevice.batteryLevel - state.batteryLevel)
+        if (batteryDiff >= threshold || cachedDevice.isCharging != state.isCharging) {
+            updates["batteryLevel"] = state.batteryLevel
+            updates["isCharging"] = state.isCharging
+        }
+
         if (cachedDevice.mediaVolume != state.mediaVolume) updates["mediaVolume"] = state.mediaVolume
         if (cachedDevice.maxMediaVolume != state.maxMediaVolume) updates["maxMediaVolume"] = state.maxMediaVolume
         if (cachedDevice.ringerMode != state.ringerMode) updates["ringerMode"] = state.ringerMode

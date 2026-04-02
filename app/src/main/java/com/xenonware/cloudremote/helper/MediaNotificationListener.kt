@@ -26,11 +26,13 @@ class MediaNotificationListener : NotificationListenerService() {
         const val EXTRA_CUSTOM_ACTION_1_ACTION = "extra_custom_action_1_action"
         const val EXTRA_CUSTOM_ACTION_2_TITLE = "extra_custom_action_2_title"
         const val EXTRA_CUSTOM_ACTION_2_ACTION = "extra_custom_action_2_action"
-        private const val MAX_ALBUM_ART_SIZE = 512
+        private const val MAX_ALBUM_ART_SIZE = 96 // Further reduced to save battery/bandwidth
     }
 
     private var activeMediaController: MediaController? = null
-    private var lastAlbumArt: String? = null
+    private var lastSentIntent: Intent? = null
+    private var lastBitmapRef: Bitmap? = null
+    private var lastEncodedArt: String = ""
     private lateinit var mediaSessionManager: MediaSessionManager
 
     private val sessionsChangedListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
@@ -114,33 +116,58 @@ class MediaNotificationListener : NotificationListenerService() {
         val isPlaying = playbackState?.state == PlaybackState.STATE_PLAYING
 
         val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
-        val albumArtString = albumArtBitmap?.let { encodeBitmap(it) } ?: ""
-
-        if (albumArtString != lastAlbumArt) {
-            lastAlbumArt = albumArtString
+        val albumArtString = if (albumArtBitmap != null) {
+            if (albumArtBitmap == lastBitmapRef) {
+                lastEncodedArt
+            } else {
+                lastBitmapRef = albumArtBitmap
+                lastEncodedArt = encodeBitmap(albumArtBitmap)
+                lastEncodedArt
+            }
+        } else {
+            lastBitmapRef = null
+            lastEncodedArt = ""
+            ""
         }
 
         val customActions = playbackState?.customActions ?: emptyList()
         val customAction1 = customActions.getOrNull(0)
         val customAction2 = customActions.getOrNull(1)
 
-        val intent = Intent(ACTION_MEDIA_UPDATE).apply {
+        val newIntent = Intent(ACTION_MEDIA_UPDATE).apply {
             putExtra(EXTRA_TITLE, title)
             putExtra(EXTRA_ARTIST, artist)
-            putExtra(EXTRA_ALBUM_ART, lastAlbumArt)
+            putExtra(EXTRA_ALBUM_ART, albumArtString)
             putExtra(EXTRA_IS_PLAYING, isPlaying)
             putExtra(EXTRA_CUSTOM_ACTION_1_TITLE, customAction1?.name?.toString() ?: "")
             putExtra(EXTRA_CUSTOM_ACTION_1_ACTION, customAction1?.action ?: "")
             putExtra(EXTRA_CUSTOM_ACTION_2_TITLE, customAction2?.name?.toString() ?: "")
             putExtra(EXTRA_CUSTOM_ACTION_2_ACTION, customAction2?.action ?: "")
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+        if (isSameAsLast(newIntent)) return
+        
+        lastSentIntent = newIntent
+        LocalBroadcastManager.getInstance(this).sendBroadcast(newIntent)
+    }
+
+    private fun isSameAsLast(newIntent: Intent): Boolean {
+        val last = lastSentIntent ?: return false
+        return newIntent.getStringExtra(EXTRA_TITLE) == last.getStringExtra(EXTRA_TITLE) &&
+                newIntent.getStringExtra(EXTRA_ARTIST) == last.getStringExtra(EXTRA_ARTIST) &&
+                newIntent.getStringExtra(EXTRA_ALBUM_ART) == last.getStringExtra(EXTRA_ALBUM_ART) &&
+                newIntent.getBooleanExtra(EXTRA_IS_PLAYING, false) == last.getBooleanExtra(EXTRA_IS_PLAYING, false) &&
+                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_1_TITLE) == last.getStringExtra(EXTRA_CUSTOM_ACTION_1_TITLE) &&
+                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) == last.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) &&
+                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_2_TITLE) == last.getStringExtra(EXTRA_CUSTOM_ACTION_2_TITLE) &&
+                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_2_ACTION) == last.getStringExtra(EXTRA_CUSTOM_ACTION_2_ACTION)
     }
 
     private fun encodeBitmap(bitmap: Bitmap): String {
         val resizedBitmap = resizeBitmap(bitmap, MAX_ALBUM_ART_SIZE)
         val outputStream = ByteArrayOutputStream()
-        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, outputStream) // Compress to 30% quality
+        // Low quality and small size for background sync
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 15, outputStream)
         val byteArray = outputStream.toByteArray()
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }

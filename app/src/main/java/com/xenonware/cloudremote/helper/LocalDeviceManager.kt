@@ -77,6 +77,10 @@ class LocalDeviceManager(private val context: Context) {
     private var lastKnownRingVolume = -1
     private var onCurtainStateChanged: (() -> Unit)? = null
 
+    // Cached values to avoid redundant system calls
+    private var lastBatteryLevel = -1
+    private var lastIsCharging = false
+
     companion object {
         private const val TAG = "LocalDeviceManager"
     }
@@ -94,26 +98,39 @@ class LocalDeviceManager(private val context: Context) {
     )
 
     fun getBatteryLevel(): Int {
-        val batteryIntent = context.registerReceiver(null,
-            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        )
-        val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
-        val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        return if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
+        if (lastBatteryLevel != -1) return lastBatteryLevel
+        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        return parseBatteryLevel(batteryIntent)
+    }
+
+    private fun parseBatteryLevel(intent: Intent?): Int {
+        val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+        val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+        val result = if (level != -1 && scale != -1) (level * 100 / scale.toFloat()).toInt() else 0
+        lastBatteryLevel = result
+        return result
     }
 
     fun isCharging(): Boolean {
-        val batteryIntent = context.registerReceiver(null,
-            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        )
-        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
-        return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
+        val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        return parseIsCharging(batteryIntent)
+    }
+
+    private fun parseIsCharging(intent: Intent?): Boolean {
+        val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+        val result = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL || plugged != 0
+        lastIsCharging = result
+        return result
     }
 
     fun observeDeviceState(): Flow<DeviceState> = callbackFlow {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
+                if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+                    parseBatteryLevel(intent)
+                    parseIsCharging(intent)
+                }
                 trySend(getCurrentState())
             }
         }
@@ -137,8 +154,8 @@ class LocalDeviceManager(private val context: Context) {
 
     private fun getCurrentState(): DeviceState {
         return try {
-            val batteryLevel = getBatteryLevel()
-            val isCharging = isCharging()
+            val batteryLevel = if (lastBatteryLevel != -1) lastBatteryLevel else getBatteryLevel()
+            val isCharging = lastIsCharging // Updated by observer or initial call
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -167,7 +184,7 @@ class LocalDeviceManager(private val context: Context) {
                 isLocked
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error getting device state", e)
             DeviceState()
         }
     }
@@ -177,7 +194,6 @@ class LocalDeviceManager(private val context: Context) {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
-            // Nudge volume up then down (or down then up) to trigger a state broadcast update
             if (currentVolume < maxVolume) {
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume + 1, 0)
                 mainHandler.postDelayed({
@@ -199,7 +215,7 @@ class LocalDeviceManager(private val context: Context) {
             val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume.coerceIn(0, max), 0)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error setting volume", e)
         }
     }
 
@@ -213,7 +229,7 @@ class LocalDeviceManager(private val context: Context) {
             }
 
             when (mode) {
-                0 -> { // Silent — no sound, no vibration
+                0 -> {
                     val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
                     if (vol > 0) lastKnownRingVolume = vol
 
@@ -221,12 +237,8 @@ class LocalDeviceManager(private val context: Context) {
                         audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
                     }
                     audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
-                    Log.d(
-                        TAG, "Ringer → SILENT (actual=${audioManager.ringerMode})"
-                    )
                 }
-
-                1 -> { // Vibrate — no sound, vibration only
+                1 -> {
                     if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
                         val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
                         if (vol > 0) lastKnownRingVolume = vol
@@ -235,21 +247,18 @@ class LocalDeviceManager(private val context: Context) {
                         audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
                     }
                     audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-                    Log.d(TAG, "Ringer → VIBRATE")
                 }
-
-                2 -> { // Sound — restore ring volume
+                2 -> {
                     audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
                     val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
                     val targetVol = if (lastKnownRingVolume > 0) lastKnownRingVolume
                     else (maxVol / 2).coerceAtLeast(1)
                     audioManager.setStreamVolume(AudioManager.STREAM_RING, targetVol, 0)
                     audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetVol, 0)
-                    Log.d(TAG, "Ringer → SOUND (volume=$targetVol)")
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error setting ringer mode", e)
         }
     }
 
@@ -262,31 +271,21 @@ class LocalDeviceManager(private val context: Context) {
             val target = if (active) NotificationManager.INTERRUPTION_FILTER_NONE
             else NotificationManager.INTERRUPTION_FILTER_ALL
             notificationManager.setInterruptionFilter(target)
-            Log.d(
-                TAG,
-                "DND → ${if (active) "ON (FILTER_NONE)" else "OFF (FILTER_ALL)"}"
-            )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error setting DND", e)
         }
     }
 
     fun setCloudCurtain(enabled: Boolean) {
         mainHandler.post {
-            Log.d(TAG, "setCloudCurtain: $enabled, currentVisible=$isCurtainVisible")
+            Log.d(TAG, "setCloudCurtain: $enabled")
             if (enabled) showCloudCurtain() else hideCurtain()
         }
     }
 
     private fun showCloudCurtain() {
-        if (isCurtainVisible) {
-            Log.d(TAG, "Curtain already visible")
-            return
-        }
-        if (!Settings.canDrawOverlays(context)) {
-            Log.e(TAG, "Overlay permission missing, cannot show curtain")
-            return
-        }
+        if (isCurtainVisible) return
+        if (!Settings.canDrawOverlays(context)) return
 
         try {
             val params = WindowManager.LayoutParams(
@@ -304,9 +303,7 @@ class LocalDeviceManager(private val context: Context) {
 
             val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                    if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-                        return true // Consume BACK key
-                    }
+                    if (event.keyCode == KeyEvent.KEYCODE_BACK) return true
                     return super.dispatchKeyEvent(event)
                 }
             }
@@ -320,7 +317,6 @@ class LocalDeviceManager(private val context: Context) {
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
                     View.SYSTEM_UI_FLAG_FULLSCREEN
 
-            // Setup lifecycle owner for ComposeView
             overlayLifecycleOwner = OverlayLifecycleOwner()
             overlayLifecycleOwner?.performRestore(null)
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
@@ -361,16 +357,14 @@ class LocalDeviceManager(private val context: Context) {
                         Spacer(modifier = Modifier.weight(1f))
                         Text(text = stringResource(R.string.locked_extern), color = White.copy(alpha = animatedTextAlpha))
                         Spacer(modifier = Modifier.weight(0.2f))
-
-                    }                }
+                    }
+                }
             }
 
-            layout.addView(
-                composeView, FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-            )
+            layout.addView(composeView, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ))
 
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_START)
             overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
@@ -379,18 +373,13 @@ class LocalDeviceManager(private val context: Context) {
             curtainView = layout
             isCurtainVisible = true
             onCurtainStateChanged?.invoke()
-            Log.d(TAG, "Curtain shown successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error showing curtain", e)
-            e.printStackTrace()
         }
     }
 
     private fun hideCurtain() {
-        if (curtainView == null && !isCurtainVisible) {
-             Log.d(TAG, "Curtain already hidden")
-             return
-        }
+        if (curtainView == null && !isCurtainVisible) return
 
         curtainView?.let { view ->
             try {
@@ -398,10 +387,8 @@ class LocalDeviceManager(private val context: Context) {
                 overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
                 overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
                 windowManager.removeView(view)
-                Log.d(TAG, "Curtain removed")
             } catch (e: Exception) {
                 Log.e(TAG, "Error removing curtain view", e)
-                e.printStackTrace()
             }
         }
         curtainView = null
@@ -414,20 +401,16 @@ class LocalDeviceManager(private val context: Context) {
         try {
             if (devicePolicyManager.isAdminActive(adminComponent)) {
                 devicePolicyManager.lockNow()
-                Log.d(TAG, "Device Locked via DevicePolicyManager")
-            } else {
-                Log.w(TAG, "lockDevice: Admin permission not active")
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error locking device", e)
         }
     }
 
-    // A simple lifecycle owner for ComposeView inside WindowManager
     private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner,
         SavedStateRegistryOwner {
         private val lifecycleRegistry = LifecycleRegistry(this)
-        private val savedStateRegistryController = SavedStateRegistryController.Companion.create(this)
+        private val savedStateRegistryController = SavedStateRegistryController.create(this)
         private val store = ViewModelStore()
 
         override val lifecycle: Lifecycle get() = lifecycleRegistry
