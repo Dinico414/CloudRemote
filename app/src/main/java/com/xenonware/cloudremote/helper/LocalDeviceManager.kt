@@ -23,8 +23,13 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,8 +41,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.White
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
@@ -58,6 +66,8 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlin.math.abs
+import kotlin.math.pow
 
 class LocalDeviceManager(private val context: Context) {
 
@@ -307,7 +317,7 @@ class LocalDeviceManager(private val context: Context) {
                     return super.dispatchKeyEvent(event)
                 }
             }
-            layout.setBackgroundColor(Color.BLACK)
+            layout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             layout.isClickable = true
             layout.isFocusable = true
             layout.isFocusableInTouchMode = true
@@ -328,6 +338,20 @@ class LocalDeviceManager(private val context: Context) {
             val composeView = ComposeView(context).apply {
                 setContent {
                     var isActive by remember { mutableStateOf(true) }
+                    var targetOffsetY by remember { mutableStateOf(0f) }
+                    var isDragging by remember { mutableStateOf(false) }
+                    var screenHeight by remember { mutableStateOf(1f) }
+
+                    val offsetY by animateFloatAsState(
+                        targetValue = targetOffsetY,
+                        label = "offsetY",
+                        animationSpec = if (isDragging) snap() else spring(),
+                        finishedListener = {
+                            if (it <= -screenHeight + 1f && !isDragging && targetOffsetY < 0) {
+                                hideCurtain()
+                            }
+                        }
+                    )
 
                     val animatedTextAlpha by animateFloatAsState(
                         targetValue = if (isActive) 0.5f else 0f,
@@ -341,10 +365,44 @@ class LocalDeviceManager(private val context: Context) {
                             isActive = false
                         }
                     }
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+
+                    val progress = (abs(offsetY) / screenHeight).coerceIn(0f, 1f)
+                    
+                    // Deadzone: stay fully opaque for the first 30% of the swipe
+                    val fadeStart = 0.3f
+                    val adjustedProgress = if (progress < fadeStart) 0f else (progress - fadeStart) / (1f - fadeStart)
+                    
+                    // Non-linear alpha: transparency grows faster (exponentially) as we swipe further
+                    val curtainAlpha = (1f - adjustedProgress.pow(8f)).coerceIn(0f, 1f)
+
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .onSizeChanged { screenHeight = it.height.toFloat().coerceAtLeast(1f) }
+                            .background(Black.copy(alpha = curtainAlpha))
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures(
+                                    onDragStart = { isDragging = true },
+                                    onDragEnd = {
+                                        isDragging = false
+                                        if (progress > 0.4f) {
+                                            targetOffsetY = -screenHeight // Animate away
+                                        } else {
+                                            targetOffsetY = 0f
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        isDragging = false
+                                        targetOffsetY = 0f
+                                    },
+                                    onVerticalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        // Swipe up to reveal
+                                        targetOffsetY = (targetOffsetY + dragAmount).coerceAtMost(0f)
+                                        isActive = true
+                                    }
+                                )
+                            }
                             .pointerInput(Unit) {
                                 detectTapGestures(onPress = {
                                     isActive = true
@@ -352,11 +410,21 @@ class LocalDeviceManager(private val context: Context) {
                                 })
                             }
                     ) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        PixelWatchFace(isActive = isActive)
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(text = stringResource(R.string.locked_extern), color = White.copy(alpha = animatedTextAlpha))
-                        Spacer(modifier = Modifier.weight(0.2f))
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationY = offsetY
+                                    alpha = curtainAlpha
+                                }
+                        ) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            PixelWatchFace(isActive = isActive)
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(text = stringResource(R.string.locked_extern), color = White.copy(alpha = animatedTextAlpha))
+                            Spacer(modifier = Modifier.weight(0.2f))
+                        }
                     }
                 }
             }
