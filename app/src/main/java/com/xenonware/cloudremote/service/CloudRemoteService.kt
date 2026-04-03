@@ -386,12 +386,8 @@ class CloudRemoteService : Service() {
         if (device.mediaTitle != title) updates["mediaTitle"] = title
         if (device.mediaArtist != artist) updates["mediaArtist"] = artist
         
-        // Disable album art completely on bad/metered connection to save battery/data
-        val shouldSkipArt = isNetworkMetered || currentConnectionQuality == ConnectionQuality.BAD
         if (device.mediaAlbumArt != albumArt) {
-            if (!shouldSkipArt || albumArt.isEmpty()) {
-                updates["mediaAlbumArt"] = albumArt
-            }
+            updates["mediaAlbumArt"] = albumArt
         }
         
         if (device.isPlaying != isPlaying) updates["isPlaying"] = isPlaying
