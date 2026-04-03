@@ -135,7 +135,7 @@ class CloudRemoteService : Service() {
     }
 
     private fun setupNetworkCallback() {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         
         // Initial state
         val activeNetwork = connectivityManager.activeNetwork
@@ -174,13 +174,13 @@ class CloudRemoteService : Service() {
     }
 
     private fun getSyncDebounceMs(): Long {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         return when {
             currentConnectionQuality == ConnectionQuality.NONE -> 60_000L
             powerManager.isPowerSaveMode -> 20_000L
             currentConnectionQuality == ConnectionQuality.BAD -> 15_000L
             !powerManager.isInteractive -> 10_000L
-            else -> 3_000L
+            else -> 1_000L
         }
     }
 
@@ -322,7 +322,7 @@ class CloudRemoteService : Service() {
         // Dynamic Heartbeat with aggressive battery saving
         scope.launch {
             while (isActive) {
-                val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+                val powerManager = getSystemService(POWER_SERVICE) as PowerManager
                 val batteryLevel = localDeviceManager.getBatteryLevel()
                 val isLowBattery = batteryLevel < 20 && !localDeviceManager.isCharging()
                 
@@ -420,7 +420,7 @@ class CloudRemoteService : Service() {
         val updates = mutableMapOf<String, Any>()
         
         // Increase battery change threshold to 5% if connection is bad or power save is on
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         val threshold = if (currentConnectionQuality == ConnectionQuality.BAD || powerManager.isPowerSaveMode) 5 else 2
         
         val batteryDiff = Math.abs(cachedDevice.batteryLevel - state.batteryLevel)
@@ -455,7 +455,7 @@ class CloudRemoteService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID, "Cloud Remote Sync Service", NotificationManager.IMPORTANCE_LOW
         )
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 
