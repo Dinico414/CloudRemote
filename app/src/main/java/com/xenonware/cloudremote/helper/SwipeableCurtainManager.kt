@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
@@ -57,6 +58,8 @@ import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -126,7 +129,7 @@ object SwipeableCurtainManager {
                 setContent {
                     XenonTheme(darkTheme = isSystemInDarkTheme()) {
                         val density = LocalDensity.current.density
-                        val screenHeight = context.resources.displayMetrics.heightPixels.toFloat()
+                        val screenHeight = context.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
                         
                         var isContentVisible by remember { mutableStateOf(false) }
                         var contentOffsetY by remember { mutableFloatStateOf(-screenHeight) }
@@ -147,22 +150,28 @@ object SwipeableCurtainManager {
                             animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessLow
-                            )
+                            ),
+                            finishedListener = {
+                                // Only remove the view if it has reached the top and is supposed to be hidden
+                                if (it <= -screenHeight + 1f && !isContentVisible) {
+                                    removeCurtainView(context)
+                                }
+                            }
                         )
                         
                         val targetAlpha = if (isContentVisible) 1f else 0f
                         val animatedBgAlpha by animateFloatAsState(
                             targetValue = targetAlpha,
                             label = "bgAlpha",
-                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-                            finishedListener = {
-                                if (!isContentVisible) {
-                                    removeCurtainView(context)
-                                }
-                            }
+                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
                         )
 
-                        val dragAlphaFactor = (1f - (kotlin.math.abs(contentOffsetY) / screenHeight)).coerceIn(0f, 1f)
+                        // Progress based on ANIMATED offset so alpha follows the motion during exit
+                        val progress = (abs(animatedContentOffsetY) / screenHeight).coerceIn(0f, 1f)
+                        
+                        // Non-linear alpha: transparency grows faster (exponentially) as we swipe further
+                        val dragAlphaFactor = (1f - progress.pow(3f)).coerceIn(0f, 1f)
+                        
                         val finalBgAlpha = animatedBgAlpha * dragAlphaFactor
 
                         var isActive by remember { mutableStateOf(true) }
@@ -204,7 +213,7 @@ object SwipeableCurtainManager {
                                                 }
                                             ) { _, dragAmount ->
                                                 val newContentOffsetY = contentOffsetY + dragAmount
-                                                if (newContentOffsetY < 0) {
+                                                if (newContentOffsetY <= 0) {
                                                     contentOffsetY = newContentOffsetY
                                                 }
                                             }
@@ -214,13 +223,21 @@ object SwipeableCurtainManager {
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
-                                modifier = Modifier.offset { IntOffset(0, animatedContentOffsetY.roundToInt()) },
+                                modifier = Modifier
+                                    .offset { IntOffset(0, animatedContentOffsetY.roundToInt()) }
+                                    .graphicsLayer {
+                                        // Apply non-linear alpha to the whole content
+                                        alpha = dragAlphaFactor
+                                    },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Spacer(modifier = Modifier.weight(1f))
                                 PixelWatchFace(isActive = isActive)
                                 Spacer(modifier = Modifier.weight(1f))
-                                Text(text = "Swipe up to unlock", color = ComposeColor.White.copy(alpha = animatedTextAlpha))
+                                Text(
+                                    text = "Swipe up to unlock",
+                                    color = ComposeColor.White.copy(alpha = animatedTextAlpha)
+                                )
                                 Spacer(modifier = Modifier.weight(0.2f))
                             }
                         }
