@@ -1,18 +1,22 @@
 package com.xenonware.cloudremote.helper
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.net.ConnectivityManager
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Base64
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
+import androidx.core.graphics.scale
 
 class MediaNotificationListener : NotificationListenerService() {
 
@@ -26,7 +30,7 @@ class MediaNotificationListener : NotificationListenerService() {
         const val EXTRA_CUSTOM_ACTION_1_ACTION = "extra_custom_action_1_action"
         const val EXTRA_CUSTOM_ACTION_2_TITLE = "extra_custom_action_2_title"
         const val EXTRA_CUSTOM_ACTION_2_ACTION = "extra_custom_action_2_action"
-        private const val MAX_ALBUM_ART_SIZE = 96 // Further reduced to save battery/bandwidth
+        private const val MAX_ALBUM_ART_SIZE = 192
     }
 
     private var activeMediaController: MediaController? = null
@@ -105,8 +109,7 @@ class MediaNotificationListener : NotificationListenerService() {
         try {
             val controllers = mediaSessionManager.getActiveSessions(componentName)
             handleControllersChanged(controllers)
-        } catch (e: SecurityException) {
-            // Permission might have been revoked
+        } catch (_: SecurityException) {
         }
     }
 
@@ -116,6 +119,8 @@ class MediaNotificationListener : NotificationListenerService() {
         val isPlaying = playbackState?.state == PlaybackState.STATE_PLAYING
 
         val albumArtBitmap = metadata?.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+            ?: metadata?.getBitmap(MediaMetadata.METADATA_KEY_ART)
+            
         val albumArtString = if (albumArtBitmap != null) {
             if (albumArtBitmap == lastBitmapRef) {
                 lastEncodedArt
@@ -164,28 +169,48 @@ class MediaNotificationListener : NotificationListenerService() {
     }
 
     private fun encodeBitmap(bitmap: Bitmap): String {
-        val resizedBitmap = resizeBitmap(bitmap, MAX_ALBUM_ART_SIZE)
+        val resizedBitmap = resizeBitmap(bitmap)
         val outputStream = ByteArrayOutputStream()
-        // Low quality and small size for background sync
-        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 15, outputStream)
+        
+        val format = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Bitmap.CompressFormat.WEBP_LOSSY
+        } else {
+            @Suppress("DEPRECATION")
+            Bitmap.CompressFormat.WEBP
+        }
+        
+        val quality = if (isNetworkBad()) 30 else 90
+        resizedBitmap.compress(format, quality, outputStream)
+
         val byteArray = outputStream.toByteArray()
         return Base64.encodeToString(byteArray, Base64.DEFAULT)
     }
 
-    private fun resizeBitmap(bitmap: Bitmap, maxSize: Int): Bitmap {
+    private fun resizeBitmap(bitmap: Bitmap): Bitmap {
         var width = bitmap.width
         var height = bitmap.height
-        if (width <= maxSize && height <= maxSize) {
+        if (width <= MAX_ALBUM_ART_SIZE && height <= MAX_ALBUM_ART_SIZE) {
             return bitmap
         }
         val ratio = width.toFloat() / height.toFloat()
-        if (ratio > 1) { // Landscape
-            width = maxSize
+        if (ratio > 1) {
+            width = MAX_ALBUM_ART_SIZE
             height = (width / ratio).roundToInt()
-        } else { // Portrait or square
-            height = maxSize
+        } else {
+            height = MAX_ALBUM_ART_SIZE
             width = (height * ratio).roundToInt()
         }
-        return Bitmap.createScaledBitmap(bitmap, width, height, true)
+        return bitmap.scale(width, height)
+    }
+
+    private fun isNetworkBad(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = cm.activeNetwork ?: return true
+        val caps = cm.getNetworkCapabilities(network) ?: return true
+        
+        val isMetered = cm.isActiveNetworkMetered
+        val bandwidth = caps.linkDownstreamBandwidthKbps
+        
+        return isMetered || (bandwidth > 0 && bandwidth < 800)
     }
 }
