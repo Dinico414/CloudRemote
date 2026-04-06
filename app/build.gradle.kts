@@ -15,7 +15,7 @@ configure<ApplicationExtension> {
         defaultConfig {
             applicationId = "com.xenonware.cloudremote"
             minSdk = 29
-            targetSdk = 36
+            targetSdk = 37
             versionCode = 1
             versionName = "1.2.8"
 
@@ -28,6 +28,7 @@ configure<ApplicationExtension> {
             getByName("debug") {
                 applicationIdSuffix = ".debug"
                 versionNameSuffix = "-d"
+                isMinifyEnabled = false
                 proguardFiles(
                     getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
                 )
@@ -95,6 +96,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.work.runtime)
 
     implementation (libs.firebase.auth.ktx)
     implementation (libs.play.services.auth)

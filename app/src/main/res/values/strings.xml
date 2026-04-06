@@ -152,4 +152,9 @@
     <string name="offline_message">You are currently offline</string>
     <string name="bad_connection_message">Poor network connection</string>
 
+    <!-- Battery Notifications -->
+    <string name="low_battery_notification_title">Low Battery Alert</string>
+    <string name="battery_low_message">%1$s battery is at %2$d%%</string>
+    <string name="battery_very_low_message">%1$s battery is critically low: %2$d%%</string>
+
 </resources>

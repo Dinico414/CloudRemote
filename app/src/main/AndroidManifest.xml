@@ -116,7 +116,7 @@
         </receiver>
 
         <receiver
-            android:name=".widget.BatteryWidgetProvider"
+            android:name=".widget.BatteryWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -128,8 +128,9 @@
         </receiver>
 
         <service
-            android:name=".service.WidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS" />
+            android:name="androidx.glance.appwidget.GlanceRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="true" />
     </application>
 
 </manifest>
