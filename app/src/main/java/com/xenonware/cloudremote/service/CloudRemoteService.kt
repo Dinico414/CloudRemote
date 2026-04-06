@@ -24,7 +24,7 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
-import com.xenonware.cloudremote.widget.BatteryWidgetProvider
+import com.xenonware.cloudremote.widget.BatteryWidgetReceiver
 import com.xenonware.cloudremote.MainActivity
 import com.xenonware.cloudremote.helper.MediaNotificationListener
 import com.xenonware.cloudremote.R
@@ -53,9 +53,14 @@ class CloudRemoteService : Service() {
     private lateinit var sharedPreferenceManager: SharedPreferenceManager
     private val auth = FirebaseAuth.getInstance()
 
+    private var isSyncing = false
+
     @Volatile
     private var currentRemoteDevice: Device? = null
     private var localDeviceId: String? = null
+
+    // Track last notified battery level per device to avoid spam
+    private val lastNotifiedBatteryLevels = mutableMapOf<String, Int>()
 
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
@@ -100,7 +105,9 @@ class CloudRemoteService : Service() {
         const val ACTION_STOP = "ACTION_STOP"
         const val EXTRA_DEVICE_ID = "EXTRA_DEVICE_ID"
         const val NOTIFICATION_ID = 101
+        const val BATTERY_NOTIFICATION_ID_OFFSET = 1000
         const val CHANNEL_ID = "CloudRemoteServiceChannel"
+        const val BATTERY_CHANNEL_ID = "CloudRemoteBatteryChannel"
         private const val TAG = "CloudRemoteService"
         private const val COOLDOWN_MS = 2_000L
         private const val HEARTBEAT_INTERVAL_MS = 30_000L
@@ -114,6 +121,7 @@ class CloudRemoteService : Service() {
         localDeviceManager = LocalDeviceManager(this)
         sharedPreferenceManager = SharedPreferenceManager(this)
         createNotificationChannel()
+        createBatteryNotificationChannel()
         setupNetworkCallback()
         
         LocalBroadcastManager.getInstance(this).registerReceiver(
@@ -219,12 +227,18 @@ class CloudRemoteService : Service() {
     private fun isNetworkAvailable(): Boolean = currentConnectionQuality != ConnectionQuality.NONE
 
     private fun startSync() {
+        if (isSyncing) {
+            Log.d(TAG, "Sync already in progress. Skipping startSync.")
+            return
+        }
+        
         if (!sharedPreferenceManager.inputReceiverEnabled) {
             Log.d(TAG, "Input receiver is disabled. Skipping sync.")
             return
         }
 
         val deviceId = localDeviceId ?: return
+        isSyncing = true
 
         // Remote -> Local sync
         scope.launch {
@@ -250,16 +264,22 @@ class CloudRemoteService : Service() {
                             }
 
                             val myDevice = devices.find { it.id == deviceId }
-                            if (myDevice == null) {
-                                currentRemoteDevice = null
-                                return@collect
+                            
+                            // Check other devices for low battery
+                            devices.forEach { device ->
+                                if (device.id != deviceId) {
+                                    val isOnline = (System.currentTimeMillis() - device.lastUpdated) < 3_600_000
+                                    if (isOnline) {
+                                        checkBatteryLevel(device)
+                                    }
+                                }
                             }
 
                             val prev = currentRemoteDevice
                             currentRemoteDevice = myDevice
                             var commandApplied = false
 
-                            if (prev != null) {
+                            if (prev != null && myDevice != null) {
                                 if (prev.mediaVolume != myDevice.mediaVolume) {
                                     localDeviceManager.setVolume(myDevice.mediaVolume)
                                     commandApplied = true
@@ -293,9 +313,9 @@ class CloudRemoteService : Service() {
                                 lastCommandAppliedAt = System.currentTimeMillis()
                             }
 
-                            // Only broadcast widget update if online devices changed significantly
-                            val onlineDevices = devices.filter { (System.currentTimeMillis() - it.lastUpdated) < 60_000 }
-                            broadcastWidgetUpdate(onlineDevices)
+                            // Broadcast ALL devices to the widget (let the widget UI handle online/offline status)
+                            Log.d(TAG, "Broadcasting ${devices.size} devices to widget")
+                            broadcastWidgetUpdate(devices)
                         }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error syncing devices: ${e.message}")
@@ -346,9 +366,9 @@ class CloudRemoteService : Service() {
     }
 
     private fun broadcastWidgetUpdate(devices: List<Device>) {
-        val intent = Intent(this, BatteryWidgetProvider::class.java).apply {
-            action = BatteryWidgetProvider.ACTION_UPDATE_WIDGET
-            putExtra(BatteryWidgetProvider.EXTRA_DEVICES_JSON, Gson().toJson(devices))
+        val intent = Intent(this, BatteryWidgetReceiver::class.java).apply {
+            action = BatteryWidgetReceiver.ACTION_UPDATE_WIDGET
+            putExtra(BatteryWidgetReceiver.EXTRA_DEVICES_JSON, Gson().toJson(devices))
         }
         sendBroadcast(intent)
     }
@@ -459,15 +479,68 @@ class CloudRemoteService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
+    private fun createBatteryNotificationChannel() {
+        val channel = NotificationChannel(
+            BATTERY_CHANNEL_ID, "Battery Alerts", NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Notifications for low battery levels of cloud devices"
+        }
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    private fun checkBatteryLevel(device: Device) {
+        val lastLevel = lastNotifiedBatteryLevels[device.id] ?: 100
+        val currentLevel = device.batteryLevel
+
+        if (currentLevel <= 5 && lastLevel > 5) {
+            showBatteryNotification(device, isCritical = true)
+            lastNotifiedBatteryLevels[device.id] = 5
+        } else if (currentLevel <= 20 && lastLevel > 20) {
+            showBatteryNotification(device, isCritical = false)
+            lastNotifiedBatteryLevels[device.id] = 20
+        } else if (currentLevel > 20 && lastLevel <= 20) {
+            // Reset if battery level goes back up
+            lastNotifiedBatteryLevels[device.id] = 100
+        }
+    }
+
+    private fun showBatteryNotification(device: Device, isCritical: Boolean) {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        val message = if (isCritical) {
+            getString(R.string.battery_very_low_message, device.name, device.batteryLevel)
+        } else {
+            getString(R.string.battery_low_message, device.name, device.batteryLevel)
+        }
+
+        val notification = NotificationCompat.Builder(this, BATTERY_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(getString(R.string.low_battery_notification_title))
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        // Use a unique ID per device to allow multiple notifications
+        val notificationId = BATTERY_NOTIFICATION_ID_OFFSET + device.id.hashCode()
+        notificationManager.notify(notificationId, notification)
+    }
+
     private fun createNotification(): Notification {
         val pendingIntent = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Cloud Remote Active")
-            .setContentText("Syncing device state...")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(pendingIntent)
+            .setSilent(true)
             .setOngoing(true).build()
     }
 
