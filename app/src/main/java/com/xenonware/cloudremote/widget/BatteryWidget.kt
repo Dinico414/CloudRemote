@@ -79,9 +79,11 @@ class BatteryWidget : GlanceAppWidget() {
             }
         }
 
-        val now = System.currentTimeMillis()
-        val devices = parseDevicesJson(devicesJson).filter { (now - it.lastUpdated) < 3_600_000 }
         val localDeviceId = com.xenonware.cloudremote.data.SharedPreferenceManager(context).localDeviceId
+        val now = System.currentTimeMillis()
+        val devices = parseDevicesJson(devicesJson)
+            .filter { (now - it.lastUpdated) < 3_600_000 }
+            .sortedByDescending { it.id == localDeviceId }
 
         Log.d(TAG, "Rendering ${devices.size} devices")
 
