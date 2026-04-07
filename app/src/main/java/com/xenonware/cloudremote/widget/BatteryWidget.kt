@@ -85,7 +85,6 @@ class BatteryWidget : GlanceAppWidget() {
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        Log.d(TAG, "provideGlance START for id: $id")
 
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         var devicesJson = prefs.getString(KEY_DEVICES, null)
@@ -106,8 +105,6 @@ class BatteryWidget : GlanceAppWidget() {
         val devices = parseDevicesJson(devicesJson)
             .filter { (now - it.lastUpdated) < 3_600_000 }
             .sortedByDescending { it.id == localDeviceId }
-
-        Log.d(TAG, "Rendering ${devices.size} devices")
 
         provideContent {
             GlanceTheme {
@@ -394,7 +391,6 @@ class BatteryWidget : GlanceAppWidget() {
     }
 
     companion object {
-        private const val TAG = "BatteryWidget"
         const val PREFS_NAME = "battery_widget_prefs"
         const val KEY_DEVICES = "devices_json"
         const val KEY_LAST_UPDATE = "last_update"
@@ -408,8 +404,7 @@ class BatteryWidget : GlanceAppWidget() {
             return try {
                 val type = object : TypeToken<List<Device>>() {}.type
                 Gson().fromJson(json, type)
-            } catch (e: Exception) {
-                Log.e(TAG, "parseDevicesJson failed", e)
+            } catch (_: Exception) {
                 emptyList()
             }
         }
@@ -419,8 +414,7 @@ class BatteryWidget : GlanceAppWidget() {
             return try {
                 FirebaseFirestore.getInstance().collection("users").document(userId)
                     .collection("devices").get().await().toObjects(Device::class.java)
-            } catch (e: Exception) {
-                Log.e(TAG, "fetchDevicesFromFirestore failed", e)
+            } catch (_: Exception) {
                 null
             }
         }
@@ -430,8 +424,7 @@ class BatteryWidget : GlanceAppWidget() {
                 val type = object : TypeToken<List<Device>>() {}.type
                 val devices: List<Device> = Gson().fromJson(devicesJson, type)
                 devicesToLightJson(devices)
-            } catch (e: Exception) {
-                Log.e(TAG, "updateCache: parse error", e)
+            } catch (_: Exception) {
                 return
             }
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit(commit = true) {
@@ -439,7 +432,6 @@ class BatteryWidget : GlanceAppWidget() {
                     KEY_LAST_UPDATE, System.currentTimeMillis()
                 )
             }
-            Log.d(TAG, "updateCache: wrote ${lightJson.length} chars")
         }
 
         suspend fun refreshFromFirestore(context: Context) {
@@ -450,7 +442,6 @@ class BatteryWidget : GlanceAppWidget() {
                     KEY_LAST_UPDATE, System.currentTimeMillis()
                 )
             }
-            Log.d(TAG, "refreshFromFirestore: cached ${devices.size} devices")
             BatteryWidget().updateAll(context)
         }
     }
@@ -472,7 +463,6 @@ class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = BatteryWidget()
 
     companion object {
-        private const val TAG = "BatteryWidgetReceiver"
         const val ACTION_UPDATE_WIDGET = "com.xenonware.cloudremote.ACTION_UPDATE_WIDGET"
         const val EXTRA_DEVICES_JSON = "EXTRA_DEVICES_JSON"
     }
