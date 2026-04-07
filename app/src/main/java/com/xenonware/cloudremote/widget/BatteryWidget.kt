@@ -164,6 +164,7 @@ class BatteryWidget : GlanceAppWidget() {
                             Box(
                                 modifier = GlanceModifier.fillMaxWidth()
                                     .defaultWeight()
+                                    .cornerRadius(19.dp)
                             ) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                     DeviceItem(
@@ -185,6 +186,7 @@ class BatteryWidget : GlanceAppWidget() {
                             Box(
                                 modifier = GlanceModifier.fillMaxWidth()
                                     .height(38.dp)
+                                    .cornerRadius(19.dp)
                                     .padding(bottom = spacingDp)
                             ) {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
