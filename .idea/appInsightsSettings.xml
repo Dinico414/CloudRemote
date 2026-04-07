@@ -8,8 +8,8 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="com.xenonware.cloudremote.debug" />
-                  <option name="mobileSdkAppId" value="1:8027822132:android:2b2684854e4e031dbe1261" />
+                  <option name="appId" value="com.xenonware.cloudremote" />
+                  <option name="mobileSdkAppId" value="1:8027822132:android:a5a0af49ad8d6b91be1261" />
                   <option name="projectId" value="custom-2d30c" />
                   <option name="projectNumber" value="8027822132" />
                 </ConnectionSetting>
