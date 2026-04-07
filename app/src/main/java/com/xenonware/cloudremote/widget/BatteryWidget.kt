@@ -81,18 +81,19 @@ class BatteryWidget : GlanceAppWidget() {
 
         val now = System.currentTimeMillis()
         val devices = parseDevicesJson(devicesJson).filter { (now - it.lastUpdated) < 3_600_000 }
+        val localDeviceId = com.xenonware.cloudremote.data.SharedPreferenceManager(context).localDeviceId
 
         Log.d(TAG, "Rendering ${devices.size} devices")
 
         provideContent {
             GlanceTheme {
-                WidgetContent(context, devices)
+                WidgetContent(context, devices, localDeviceId)
             }
         }
     }
 
     @Composable
-    private fun WidgetContent(context: Context, devices: List<Device>) {
+    private fun WidgetContent(context: Context, devices: List<Device>, localDeviceId: String) {
         Column(
             modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp)
                 .background(GlanceTheme.colors.widgetBackground).padding(8.dp)
@@ -141,7 +142,7 @@ class BatteryWidget : GlanceAppWidget() {
                                 .height(itemHeightDp.dp)      // Fixed proportional height
                         ) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                DeviceItem(context, device)
+                                DeviceItem(context, device, device.id == localDeviceId)
                             }
                         }
                         if (device != devices.last()) {
@@ -157,7 +158,7 @@ class BatteryWidget : GlanceAppWidget() {
                 ) {
                     items(devices) { device ->
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            DeviceItem(context, device)
+                            DeviceItem(context, device, device.id == localDeviceId)
                         }
                     }
                 }
@@ -167,7 +168,7 @@ class BatteryWidget : GlanceAppWidget() {
 
     @RequiresApi(Build.VERSION_CODES.S)
     @Composable
-    private fun DeviceItem(context: Context, device: Device) {
+    private fun DeviceItem(context: Context, device: Device, isLocalDevice: Boolean) {
         Column(
             modifier = GlanceModifier.fillMaxWidth().fillMaxHeight()
                 .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
@@ -175,6 +176,7 @@ class BatteryWidget : GlanceAppWidget() {
             BatteryIndicator(
                 batteryLevel = device.batteryLevel,
                 isCharging = device.isCharging,
+                isLocalDevice = isLocalDevice,
                 deviceName = device.name
             )
         }
@@ -184,29 +186,38 @@ class BatteryWidget : GlanceAppWidget() {
     @SuppressLint("RestrictedApi")
     @Composable
     private fun BatteryIndicator(
-        batteryLevel: Int, isCharging: Boolean, deviceName: String
+        batteryLevel: Int, isCharging: Boolean, isLocalDevice: Boolean, deviceName: String
     ) {
         val context = LocalContext.current
-        val bgColor: ColorProvider
-        val fgColor: ColorProvider
+
         val primaryDay = Color(context.getColor(android.R.color.system_accent1_800))
         val primaryNight = Color(context.getColor(android.R.color.system_accent1_200))
         val primaryContainerDay = Color(context.getColor(android.R.color.system_accent1_300))
         val primaryContainerNight = Color(context.getColor(android.R.color.system_accent1_700))
         val primarySurfaceDay = Color(context.getColor(android.R.color.system_accent1_100))
         val primarySurfaceNight = Color(context.getColor(android.R.color.system_accent1_900))
+        val tertiaryDay = Color(context.getColor(android.R.color.system_accent3_800))
+        val tertiaryNight = Color(context.getColor(android.R.color.system_accent3_200))
+        val tertiaryContainerDay = Color(context.getColor(android.R.color.system_accent3_300))
+        val tertiaryContainerNight = Color(context.getColor(android.R.color.system_accent3_700))
+        val tertiarySurfaceDay = Color(context.getColor(android.R.color.system_accent3_100))
+        val tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900))
+
+        val bgColor: ColorProvider
+        val fgColor: ColorProvider
         val textColor: ColorProvider
 
         when {
-            isCharging -> {
+            isLocalDevice -> {
                 bgColor = androidx.glance.color.ColorProvider(
                     day = primarySurfaceDay, night = primarySurfaceNight
                 )
                 fgColor = androidx.glance.color.ColorProvider(
                     day = primaryContainerDay, night = primaryContainerNight
                 )
-                textColor =
-                    androidx.glance.color.ColorProvider(day = primaryDay, night = primaryNight)
+                textColor = androidx.glance.color.ColorProvider(
+                    day = primaryDay, night = primaryNight
+                )
             }
 
             batteryLevel <= 20 -> {
@@ -217,13 +228,14 @@ class BatteryWidget : GlanceAppWidget() {
 
             else -> {
                 bgColor = androidx.glance.color.ColorProvider(
-                    day = primarySurfaceDay, night = primarySurfaceNight
+                    day = tertiarySurfaceDay, night = tertiarySurfaceNight
                 )
                 fgColor = androidx.glance.color.ColorProvider(
-                    day = primaryContainerDay, night = primaryContainerNight
+                    day = tertiaryContainerDay, night = tertiaryContainerNight
                 )
-                textColor =
-                    androidx.glance.color.ColorProvider(day = primaryDay, night = primaryNight)
+                textColor = androidx.glance.color.ColorProvider(
+                    day = tertiaryDay, night = tertiaryNight
+                )
             }
         }
 
