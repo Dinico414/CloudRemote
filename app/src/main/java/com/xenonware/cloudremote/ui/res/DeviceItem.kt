@@ -960,7 +960,7 @@ fun DeviceItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))//TODO 100% dark-mode 50% light-mode
                                 .animateContentSize()
                         ) {
                             Row(
@@ -1016,7 +1016,7 @@ fun DeviceItem(
                                         .padding(horizontal = 8.dp)
                                         .padding(bottom = 8.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceDim)
+                                        .background(MaterialTheme.colorScheme.surfaceDim.copy(alpha = 1f))//TODO 50% dark-mode 100% light-mode
                                         .padding(horizontal = 8.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
