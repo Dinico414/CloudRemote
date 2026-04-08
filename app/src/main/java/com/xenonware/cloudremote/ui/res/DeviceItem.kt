@@ -66,14 +66,15 @@ import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Curtains
 import androidx.compose.material.icons.rounded.CurtainsClosed
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.DoDisturbOn
-import androidx.compose.material.icons.rounded.Earbuds
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Gamepad
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Headset
 import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material.icons.rounded.Keyboard
@@ -82,6 +83,8 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
@@ -1046,7 +1049,7 @@ fun DeviceItem(
                                             BTDeviceType.MOUSE -> Icons.Rounded.Mouse
                                             BTDeviceType.KEYBOARD -> Icons.Rounded.Keyboard
                                             BTDeviceType.HEADSET -> Icons.Rounded.Headset
-                                            BTDeviceType.EARBUDS -> Icons.Rounded.Earbuds
+                                            BTDeviceType.EARBUDS -> Icons.Rounded.Headphones
                                             BTDeviceType.WATCH -> Icons.Rounded.Watch
                                             BTDeviceType.PEN -> Icons.Rounded.Edit
                                             BTDeviceType.CONTROLLER -> Icons.Rounded.Gamepad
@@ -1060,6 +1063,10 @@ fun DeviceItem(
                                             BTDeviceType.NETWORKING -> Icons.Rounded.Router
                                             BTDeviceType.HEARING_AID -> Icons.Rounded.Hearing
                                             BTDeviceType.PERIPHERAL -> Icons.Rounded.Devices
+                                            BTDeviceType.GLASSES -> Icons.Rounded.Devices
+                                            BTDeviceType.MICROPHONE -> Icons.Rounded.Mic
+                                            BTDeviceType.HEALTH -> Icons.Rounded.MonitorHeart
+                                            BTDeviceType.CAR -> Icons.Rounded.DirectionsCar
                                             BTDeviceType.OTHER -> Icons.Rounded.Bluetooth
                                         }
 

@@ -274,54 +274,88 @@ class LocalDeviceManager(private val context: Context) {
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun mapBluetoothClassToDeviceType(device: BluetoothDevice, name: String): BTDeviceType {
-        val btClass = device.bluetoothClass
-        if (btClass == null) return BTDeviceType.OTHER
+        val btClass = device.bluetoothClass ?: return BTDeviceType.OTHER
+        val name = device.name ?: ""
+
+        if (name.contains("Pen", ignoreCase = true) || name.contains("Stylus", ignoreCase = true)) {
+            return BTDeviceType.PEN
+        }
 
         return when (btClass.deviceClass) {
+            BluetoothClass.Device.AUDIO_VIDEO_UNCATEGORIZED -> BTDeviceType.SPEAKER
             BluetoothClass.Device.AUDIO_VIDEO_HEADPHONES,
             BluetoothClass.Device.AUDIO_VIDEO_WEARABLE_HEADSET,
             BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE -> {
                 if (name.contains("Hearing Aid", ignoreCase = true)) BTDeviceType.HEARING_AID
-                else if (name.contains("Earbuds", ignoreCase = true) || 
-                         name.contains("Buds", ignoreCase = true) || 
+                else if (name.contains("Earbuds", ignoreCase = true) ||
+                         name.contains("Buds", ignoreCase = true) ||
                          name.contains("Pods", ignoreCase = true)) BTDeviceType.EARBUDS
                 else BTDeviceType.HEADSET
             }
+            BluetoothClass.Device.AUDIO_VIDEO_MICROPHONE -> BTDeviceType.MICROPHONE
+            BluetoothClass.Device.AUDIO_VIDEO_PORTABLE_AUDIO -> BTDeviceType.SPEAKER
             BluetoothClass.Device.AUDIO_VIDEO_LOUDSPEAKER -> BTDeviceType.SPEAKER
             BluetoothClass.Device.AUDIO_VIDEO_HIFI_AUDIO -> BTDeviceType.SPEAKER
             BluetoothClass.Device.AUDIO_VIDEO_VIDEO_CAMERA -> BTDeviceType.IMAGING
             BluetoothClass.Device.AUDIO_VIDEO_VIDEO_DISPLAY_AND_LOUDSPEAKER -> BTDeviceType.TV
+            BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO -> BTDeviceType.CAR
+            BluetoothClass.Device.AUDIO_VIDEO_SET_TOP_BOX -> BTDeviceType.SPEAKER
+            BluetoothClass.Device.AUDIO_VIDEO_VCR -> BTDeviceType.SPEAKER
+            BluetoothClass.Device.AUDIO_VIDEO_CAMCORDER -> BTDeviceType.IMAGING
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_MONITOR -> BTDeviceType.COMPUTER
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_CONFERENCING -> BTDeviceType.IMAGING
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_GAMING_TOY -> BTDeviceType.CONTROLLER
 
+            BluetoothClass.Device.PERIPHERAL_NON_KEYBOARD_NON_POINTING -> BTDeviceType.KEYBOARD
             BluetoothClass.Device.PERIPHERAL_KEYBOARD -> BTDeviceType.KEYBOARD
             BluetoothClass.Device.PERIPHERAL_POINTING -> BTDeviceType.MOUSE
             BluetoothClass.Device.PERIPHERAL_KEYBOARD_POINTING -> BTDeviceType.KEYBOARD
-            0x0518 -> BTDeviceType.PEN // Digitizer Tablet / Pen
-            0x0514 -> BTDeviceType.PEN // Digitizer Pen
+            0x0514 -> BTDeviceType.PEN // PERIPHERAL_DIGITIZER_TABLET
+            0x051C -> BTDeviceType.PEN // PERIPHERAL_DIGITAL_PEN
 
+            BluetoothClass.Device.WEARABLE_UNCATEGORIZED -> BTDeviceType.WATCH
             BluetoothClass.Device.WEARABLE_WRIST_WATCH -> BTDeviceType.WATCH
             BluetoothClass.Device.WEARABLE_PAGER -> BTDeviceType.OTHER
             BluetoothClass.Device.WEARABLE_JACKET -> BTDeviceType.OTHER
             BluetoothClass.Device.WEARABLE_HELMET -> BTDeviceType.OTHER
-            BluetoothClass.Device.WEARABLE_GLASSES -> BTDeviceType.OTHER
+            BluetoothClass.Device.WEARABLE_GLASSES -> BTDeviceType.GLASSES
+
+
+            BluetoothClass.Device.TOY_UNCATEGORIZED -> BTDeviceType.CONTROLLER
+            BluetoothClass.Device.TOY_ROBOT -> BTDeviceType.CONTROLLER
+            BluetoothClass.Device.TOY_VEHICLE -> BTDeviceType.CONTROLLER
+            BluetoothClass.Device.TOY_CONTROLLER -> BTDeviceType.CONTROLLER
+            BluetoothClass.Device.TOY_DOLL_ACTION_FIGURE -> BTDeviceType.CONTROLLER
+            BluetoothClass.Device.TOY_GAME -> BTDeviceType.CONTROLLER
 
             0x0508 -> BTDeviceType.CONTROLLER // Joypad
             0x0504 -> BTDeviceType.CONTROLLER // Gamepad
 
+            BluetoothClass.Device.COMPUTER_UNCATEGORIZED -> BTDeviceType.OTHER
             BluetoothClass.Device.COMPUTER_DESKTOP -> BTDeviceType.COMPUTER
             BluetoothClass.Device.COMPUTER_SERVER -> BTDeviceType.COMPUTER
             BluetoothClass.Device.COMPUTER_LAPTOP -> BTDeviceType.LAPTOP
-            BluetoothClass.Device.COMPUTER_HANDHELD_PC_PDA -> BTDeviceType.LAPTOP
+            BluetoothClass.Device.COMPUTER_HANDHELD_PC_PDA -> BTDeviceType.CONTROLLER
             BluetoothClass.Device.COMPUTER_PALM_SIZE_PC_PDA -> BTDeviceType.LAPTOP
             BluetoothClass.Device.COMPUTER_WEARABLE -> BTDeviceType.WATCH
 
+
+            BluetoothClass.Device.PHONE_UNCATEGORIZED -> BTDeviceType.PHONE
             BluetoothClass.Device.PHONE_CELLULAR -> BTDeviceType.PHONE
             BluetoothClass.Device.PHONE_CORDLESS -> BTDeviceType.PHONE
             BluetoothClass.Device.PHONE_SMART -> BTDeviceType.PHONE
             BluetoothClass.Device.PHONE_MODEM_OR_GATEWAY -> BTDeviceType.NETWORKING
             BluetoothClass.Device.PHONE_ISDN -> BTDeviceType.PHONE
-            
-            // Hearing Aid - Specific Class check
-            0x0900 -> BTDeviceType.HEARING_AID
+
+            BluetoothClass.Device.HEALTH_UNCATEGORIZED -> BTDeviceType.HEARING_AID
+            BluetoothClass.Device.HEALTH_BLOOD_PRESSURE -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_GLUCOSE -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_PULSE_OXIMETER -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_PULSE_RATE -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_THERMOMETER -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_WEIGHING -> BTDeviceType.HEALTH
+            BluetoothClass.Device.HEALTH_DATA_DISPLAY -> BTDeviceType.HEALTH
+
 
             else -> {
                 when (btClass.majorDeviceClass) {
@@ -333,7 +367,7 @@ class LocalDeviceManager(private val context: Context) {
                     BluetoothClass.Device.Major.IMAGING -> BTDeviceType.IMAGING
                     BluetoothClass.Device.Major.WEARABLE -> BTDeviceType.WATCH
                     BluetoothClass.Device.Major.TOY -> BTDeviceType.CONTROLLER
-                    BluetoothClass.Device.Major.HEALTH -> BTDeviceType.OTHER
+                    BluetoothClass.Device.Major.HEALTH -> BTDeviceType.HEALTH
                     BluetoothClass.Device.Major.UNCATEGORIZED -> BTDeviceType.OTHER
                     else -> BTDeviceType.OTHER
                 }
