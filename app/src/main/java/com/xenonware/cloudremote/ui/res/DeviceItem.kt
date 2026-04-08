@@ -158,6 +158,7 @@ import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.ui.theme.LocalGreenMaterialColorScheme
+import com.xenonware.cloudremote.ui.theme.LocalIsDarkTheme
 import com.xenonware.cloudremote.ui.theme.LocalRedMaterialColorScheme
 import kotlinx.coroutines.delay
 
@@ -230,6 +231,7 @@ fun DeviceItem(
     var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
     var lastRememberedVolume by remember { mutableIntStateOf(device.maxMediaVolume / 2) }
     val haptic = LocalHapticFeedback.current
+    val isDark = LocalIsDarkTheme.current
 
     val progressBackgroundColor by animateColorAsState(
         targetValue = if (device.isCharging) {
@@ -960,7 +962,7 @@ fun DeviceItem(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))//TODO 100% dark-mode 50% light-mode
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDark) 1f else 0.5f))
                                 .animateContentSize()
                         ) {
                             Row(
@@ -1016,7 +1018,7 @@ fun DeviceItem(
                                         .padding(horizontal = 8.dp)
                                         .padding(bottom = 8.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceDim.copy(alpha = 1f))//TODO 50% dark-mode 100% light-mode
+                                        .background(MaterialTheme.colorScheme.surfaceDim.copy(alpha = if (isDark) 0.5f else 1f))
                                         .padding(horizontal = 8.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {

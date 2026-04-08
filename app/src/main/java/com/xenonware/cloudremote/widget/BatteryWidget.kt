@@ -1,11 +1,9 @@
 package com.xenonware.cloudremote.widget
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -63,6 +61,87 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+/**
+ * Holds all color variables for the battery widget, allowing a single
+ * palette swap between dynamic Material You colors and a static fallback.
+ */
+data class ColorPalette(
+    // Primary (used for local device)
+    val primaryDay: Color,
+    val primaryNight: Color,
+    val primaryContainerDay: Color,
+    val primaryContainerNight: Color,
+    val primarySurfaceDay: Color,
+    val primarySurfaceNight: Color,
+    // Tertiary (used for remote devices)
+    val tertiaryDay: Color,
+    val tertiaryNight: Color,
+    val tertiaryContainerDay: Color,
+    val tertiaryContainerNight: Color,
+    val tertiarySurfaceDay: Color,
+    val tertiarySurfaceNight: Color,
+    // Low battery
+    val lowDay: Color = Color(0xFF67040d),
+    val lowNight: Color = Color(0xFFffb3ae),
+    val lowContainerDay: Color = Color(0xFFff8983),
+    val lowContainerNight: Color = Color(0xFF871f21),
+    val lowSurfaceDay: Color = Color(0xFFffdad7),
+    val lowSurfaceNight: Color = Color(0xFF410004),
+)
+
+/**
+ * Returns a [ColorPalette] using dynamic Material You system colors on
+ * Android S (12) and above, or a static blue fallback on older devices.
+ */
+private fun getPalette(context: Context): ColorPalette {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        ColorPalette(
+            primaryDay = Color(context.getColor(android.R.color.system_accent1_800)),
+            primaryNight = Color(context.getColor(android.R.color.system_accent1_200)),
+            primaryContainerDay = Color(context.getColor(android.R.color.system_accent1_300)),
+            primaryContainerNight = Color(context.getColor(android.R.color.system_accent1_700)),
+            primarySurfaceDay = Color(context.getColor(android.R.color.system_accent1_100)),
+            primarySurfaceNight = Color(context.getColor(android.R.color.system_accent1_900)),
+            tertiaryDay = Color(context.getColor(android.R.color.system_accent3_800)),
+            tertiaryNight = Color(context.getColor(android.R.color.system_accent3_200)),
+            tertiaryContainerDay = Color(context.getColor(android.R.color.system_accent3_300)),
+            tertiaryContainerNight = Color(context.getColor(android.R.color.system_accent3_700)),
+            tertiarySurfaceDay = Color(context.getColor(android.R.color.system_accent3_100)),
+            tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900)),
+        )
+    } else {
+        // Static blue fallback for pre-Android 12 devices
+        val blue = Color(0xFF2962FF)
+        val blueBright = Color(0xFF82B1FF)
+        val blueContainer = Color(0xFF5C9CFF)
+        val blueContainerDark = Color(0xFF1A56C4)
+        val blueSurface = Color(0xFFD6E4FF)
+        val blueSurfaceDark = Color(0xFF0D2B6B)
+
+        val teal = Color(0xFF00796B)
+        val tealBright = Color(0xFF80CBC4)
+        val tealContainer = Color(0xFF4DB6AC)
+        val tealContainerDark = Color(0xFF00574B)
+        val tealSurface = Color(0xFFB2DFDB)
+        val tealSurfaceDark = Color(0xFF003330)
+
+        ColorPalette(
+            primaryDay = blue,
+            primaryNight = blueBright,
+            primaryContainerDay = blueContainer,
+            primaryContainerNight = blueContainerDark,
+            primarySurfaceDay = blueSurface,
+            primarySurfaceNight = blueSurfaceDark,
+            tertiaryDay = teal,
+            tertiaryNight = tealBright,
+            tertiaryContainerDay = tealContainer,
+            tertiaryContainerNight = tealContainerDark,
+            tertiarySurfaceDay = tealSurface,
+            tertiarySurfaceNight = tealSurfaceDark,
+        )
+    }
+}
 
 class BatteryWidget : GlanceAppWidget() {
 
@@ -148,13 +227,12 @@ class BatteryWidget : GlanceAppWidget() {
                     )
                 }
             } else {
-                val spacingDp = 4.dp
+                val spacingDp = 2.dp
                 val widgetHeight = LocalSize.current.height.value
                 val availableHeight = widgetHeight - 16f
                 val totalSpacing = spacingDp.value * (devices.size - 1)
                 val heightPerItem = (availableHeight - totalSpacing) / devices.size
                 val tallLayout = heightPerItem >= 90f
-                // Only scroll when items would be unreasonably tiny
                 val needsScroll = heightPerItem < 24f
 
                 if (!needsScroll) {
@@ -164,11 +242,9 @@ class BatteryWidget : GlanceAppWidget() {
                                 modifier = GlanceModifier.fillMaxWidth().defaultWeight()
                                     .cornerRadius(16.dp)
                             ) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                    DeviceItem(
-                                        context, device, device.id == localDeviceId, tallLayout
-                                    )
-                                }
+                                DeviceItem(
+                                    context, device, device.id == localDeviceId, tallLayout
+                                )
                             }
                             if (index < devices.lastIndex) {
                                 Spacer(modifier = GlanceModifier.height(spacingDp))
@@ -185,9 +261,7 @@ class BatteryWidget : GlanceAppWidget() {
                                 modifier = GlanceModifier.fillMaxWidth().height(44.dp)
                                     .padding(bottom = spacingDp)
                             ) {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                    DeviceItem(context, device, device.id == localDeviceId, false)
-                                }
+                                DeviceItem(context, device, device.id == localDeviceId, false)
                             }
                         }
                     }
@@ -196,7 +270,6 @@ class BatteryWidget : GlanceAppWidget() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
     @Composable
     private fun DeviceItem(
         context: Context, device: Device, isLocalDevice: Boolean, tallLayout: Boolean,
@@ -215,8 +288,6 @@ class BatteryWidget : GlanceAppWidget() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.S)
-    @SuppressLint("RestrictedApi")
     @Composable
     private fun BatteryIndicator(
         batteryLevel: Int,
@@ -226,25 +297,7 @@ class BatteryWidget : GlanceAppWidget() {
         tallLayout: Boolean,
     ) {
         val context = LocalContext.current
-
-        val primaryDay = Color(context.getColor(android.R.color.system_accent1_800))
-        val primaryNight = Color(context.getColor(android.R.color.system_accent1_200))
-        val primaryContainerDay = Color(context.getColor(android.R.color.system_accent1_300))
-        val primaryContainerNight = Color(context.getColor(android.R.color.system_accent1_700))
-        val primarySurfaceDay = Color(context.getColor(android.R.color.system_accent1_100))
-        val primarySurfaceNight = Color(context.getColor(android.R.color.system_accent1_900))
-        val tertiaryDay = Color(context.getColor(android.R.color.system_accent3_800))
-        val tertiaryNight = Color(context.getColor(android.R.color.system_accent3_200))
-        val tertiaryContainerDay = Color(context.getColor(android.R.color.system_accent3_300))
-        val tertiaryContainerNight = Color(context.getColor(android.R.color.system_accent3_700))
-        val tertiarySurfaceDay = Color(context.getColor(android.R.color.system_accent3_100))
-        val tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900))
-        val lowDay = Color(context.getColor(android.R.color.system_error_800))
-        val lowNight = Color(context.getColor(android.R.color.system_error_200))
-        val lowContainerDay = Color(context.getColor(android.R.color.system_error_300))
-        val lowContainerNight = Color(context.getColor(android.R.color.system_error_700))
-        val lowSurfaceDay = Color(context.getColor(android.R.color.system_error_100))
-        val lowSurfaceNight = Color(context.getColor(android.R.color.system_error_900))
+        val palette = getPalette(context)
 
         val bgColor: ColorProvider
         val fgColor: ColorProvider
@@ -252,36 +305,35 @@ class BatteryWidget : GlanceAppWidget() {
 
         if (batteryLevel <= 20) {
             bgColor = androidx.glance.color.ColorProvider(
-                day = lowSurfaceDay, night = lowSurfaceNight
+                day = palette.lowSurfaceDay, night = palette.lowSurfaceNight
             )
             fgColor = androidx.glance.color.ColorProvider(
-                day = lowContainerDay, night = lowContainerNight
+                day = palette.lowContainerDay, night = palette.lowContainerNight
             )
             textColor = androidx.glance.color.ColorProvider(
-                day = lowDay, night = lowNight
+                day = palette.lowDay, night = palette.lowNight
             )
         } else if (isLocalDevice) {
             bgColor = androidx.glance.color.ColorProvider(
-                day = primarySurfaceDay, night = primarySurfaceNight
+                day = palette.primarySurfaceDay, night = palette.primarySurfaceNight
             )
             fgColor = androidx.glance.color.ColorProvider(
-                day = primaryContainerDay, night = primaryContainerNight
+                day = palette.primaryContainerDay, night = palette.primaryContainerNight
             )
             textColor = androidx.glance.color.ColorProvider(
-                day = primaryDay, night = primaryNight
+                day = palette.primaryDay, night = palette.primaryNight
             )
         } else {
             bgColor = androidx.glance.color.ColorProvider(
-                day = tertiarySurfaceDay, night = tertiarySurfaceNight
+                day = palette.tertiarySurfaceDay, night = palette.tertiarySurfaceNight
             )
             fgColor = androidx.glance.color.ColorProvider(
-                day = tertiaryContainerDay, night = tertiaryContainerNight
+                day = palette.tertiaryContainerDay, night = palette.tertiaryContainerNight
             )
             textColor = androidx.glance.color.ColorProvider(
-                day = tertiaryDay, night = tertiaryNight
+                day = palette.tertiaryDay, night = palette.tertiaryNight
             )
         }
-
 
         val contentColor = if (batteryLevel > 20) textColor else GlanceTheme.colors.onSurface
 
@@ -349,7 +401,7 @@ class BatteryWidget : GlanceAppWidget() {
                             ) {
                                 Image(
                                     provider = ImageProvider(R.drawable.round_battery_alert_24),
-                                    contentDescription = "Charging",
+                                    contentDescription = "Low battery",
                                     modifier = GlanceModifier.size(14.dp),
                                     colorFilter = ColorFilter.tint(textColor)
                                 )
@@ -397,7 +449,7 @@ class BatteryWidget : GlanceAppWidget() {
                             ) {
                                 Image(
                                     provider = ImageProvider(R.drawable.round_battery_alert_24),
-                                    contentDescription = "Charging",
+                                    contentDescription = "Low battery",
                                     modifier = GlanceModifier.size(14.dp),
                                     colorFilter = ColorFilter.tint(textColor)
                                 )
