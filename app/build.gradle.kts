@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.firebase.firestore)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     implementation(libs.haze)
     implementation(libs.androidx.animation.graphics)

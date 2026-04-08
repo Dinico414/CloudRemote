@@ -1,14 +1,18 @@
 package com.xenonware.cloudremote.helper
 
+import android.Manifest
 import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.BatteryManager
@@ -22,6 +26,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import androidx.annotation.RequiresPermission
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
@@ -36,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -61,6 +67,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
+import com.xenonware.cloudremote.data.BTDeviceType
+import com.xenonware.cloudremote.data.ConnectedDevice
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -80,6 +88,9 @@ class LocalDeviceManager(private val context: Context) {
     private val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private val mainHandler = Handler(Looper.getMainLooper())
     private val adminComponent = ComponentName(context, AdminReceiver::class.java)
+
+    private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+    private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager?.adapter
 
     private var curtainView: View? = null
     private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
@@ -105,6 +116,7 @@ class LocalDeviceManager(private val context: Context) {
         val isScreenOn: Boolean = true,
         val isCurtainOn: Boolean = false,
         val isLocked: Boolean = false,
+        val connectedDevices: List<ConnectedDevice> = emptyList()
     )
 
     fun getBatteryLevel(): Int {
@@ -165,7 +177,7 @@ class LocalDeviceManager(private val context: Context) {
     private fun getCurrentState(): DeviceState {
         return try {
             val batteryLevel = if (lastBatteryLevel != -1) lastBatteryLevel else getBatteryLevel()
-            val isCharging = lastIsCharging // Updated by observer or initial call
+            val isCharging = lastIsCharging
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -177,10 +189,12 @@ class LocalDeviceManager(private val context: Context) {
             }
 
             val isDndActive = if (notificationManager.isNotificationPolicyAccessGranted) {
-                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
+                notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
             } else false
 
             val isLocked = keyguardManager.isKeyguardLocked
+
+            val connectedDevices = getConnectedBluetoothDevices()
 
             DeviceState(
                 batteryLevel,
@@ -191,11 +205,133 @@ class LocalDeviceManager(private val context: Context) {
                 isDndActive,
                 powerManager.isInteractive,
                 isCurtainVisible,
-                isLocked
+                isLocked,
+                connectedDevices
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error getting device state", e)
             DeviceState()
+        }
+    }
+
+    private fun getConnectedBluetoothDevices(): List<ConnectedDevice> {
+        val devices = mutableListOf<ConnectedDevice>()
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return devices
+
+        try {
+            val bondedDevices = bluetoothAdapter.bondedDevices
+            for (device in bondedDevices) {
+                try {
+                    if (!isDeviceConnected(device)) continue
+
+                    val name = device.name ?: "Unknown"
+                    val batteryLevel = getBluetoothDeviceBatteryLevel(device)
+                    
+                    devices.add(
+                        ConnectedDevice(
+                            name = name,
+                            type = mapBluetoothClassToDeviceType(device, name),
+                            batteryLevel = batteryLevel
+                        )
+                    )
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "SecurityException for device ${device.address}", e)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing device ${device.address}", e)
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Bluetooth permission missing", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting bluetooth devices", e)
+        }
+        return devices
+    }
+
+    private fun isDeviceConnected(device: BluetoothDevice): Boolean {
+        return try {
+            val method = device.javaClass.getMethod("isConnected")
+            method.invoke(device) as Boolean
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun getBluetoothDeviceBatteryLevel(device: BluetoothDevice): Int {
+        return try {
+            val method = device.javaClass.getMethod("getBatteryLevel")
+            method.invoke(device) as Int
+        } catch (e: Exception) {
+            -1
+        }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun mapBluetoothClassToDeviceType(device: BluetoothDevice, name: String): BTDeviceType {
+        val btClass = device.bluetoothClass
+        if (btClass == null) return BTDeviceType.OTHER
+
+        return when (btClass.deviceClass) {
+            BluetoothClass.Device.AUDIO_VIDEO_HEADPHONES,
+            BluetoothClass.Device.AUDIO_VIDEO_WEARABLE_HEADSET,
+            BluetoothClass.Device.AUDIO_VIDEO_HANDSFREE -> {
+                if (name.contains("Hearing Aid", ignoreCase = true)) BTDeviceType.HEARING_AID
+                else if (name.contains("Earbuds", ignoreCase = true) || 
+                         name.contains("Buds", ignoreCase = true) || 
+                         name.contains("Pods", ignoreCase = true)) BTDeviceType.EARBUDS
+                else BTDeviceType.HEADSET
+            }
+            BluetoothClass.Device.AUDIO_VIDEO_LOUDSPEAKER -> BTDeviceType.SPEAKER
+            BluetoothClass.Device.AUDIO_VIDEO_HIFI_AUDIO -> BTDeviceType.SPEAKER
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_CAMERA -> BTDeviceType.IMAGING
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_DISPLAY_AND_LOUDSPEAKER -> BTDeviceType.TV
+
+            BluetoothClass.Device.PERIPHERAL_KEYBOARD -> BTDeviceType.KEYBOARD
+            BluetoothClass.Device.PERIPHERAL_POINTING -> BTDeviceType.MOUSE
+            BluetoothClass.Device.PERIPHERAL_KEYBOARD_POINTING -> BTDeviceType.KEYBOARD
+            0x0518 -> BTDeviceType.PEN // Digitizer Tablet / Pen
+            0x0514 -> BTDeviceType.PEN // Digitizer Pen
+
+            BluetoothClass.Device.WEARABLE_WRIST_WATCH -> BTDeviceType.WATCH
+            BluetoothClass.Device.WEARABLE_PAGER -> BTDeviceType.OTHER
+            BluetoothClass.Device.WEARABLE_JACKET -> BTDeviceType.OTHER
+            BluetoothClass.Device.WEARABLE_HELMET -> BTDeviceType.OTHER
+            BluetoothClass.Device.WEARABLE_GLASSES -> BTDeviceType.OTHER
+
+            0x0508 -> BTDeviceType.CONTROLLER // Joypad
+            0x0504 -> BTDeviceType.CONTROLLER // Gamepad
+
+            BluetoothClass.Device.COMPUTER_DESKTOP -> BTDeviceType.COMPUTER
+            BluetoothClass.Device.COMPUTER_SERVER -> BTDeviceType.COMPUTER
+            BluetoothClass.Device.COMPUTER_LAPTOP -> BTDeviceType.LAPTOP
+            BluetoothClass.Device.COMPUTER_HANDHELD_PC_PDA -> BTDeviceType.LAPTOP
+            BluetoothClass.Device.COMPUTER_PALM_SIZE_PC_PDA -> BTDeviceType.LAPTOP
+            BluetoothClass.Device.COMPUTER_WEARABLE -> BTDeviceType.WATCH
+
+            BluetoothClass.Device.PHONE_CELLULAR -> BTDeviceType.PHONE
+            BluetoothClass.Device.PHONE_CORDLESS -> BTDeviceType.PHONE
+            BluetoothClass.Device.PHONE_SMART -> BTDeviceType.PHONE
+            BluetoothClass.Device.PHONE_MODEM_OR_GATEWAY -> BTDeviceType.NETWORKING
+            BluetoothClass.Device.PHONE_ISDN -> BTDeviceType.PHONE
+            
+            // Hearing Aid - Specific Class check
+            0x0900 -> BTDeviceType.HEARING_AID
+
+            else -> {
+                when (btClass.majorDeviceClass) {
+                    BluetoothClass.Device.Major.COMPUTER -> BTDeviceType.COMPUTER
+                    BluetoothClass.Device.Major.PHONE -> BTDeviceType.PHONE
+                    BluetoothClass.Device.Major.NETWORKING -> BTDeviceType.NETWORKING
+                    BluetoothClass.Device.Major.AUDIO_VIDEO -> BTDeviceType.HEADSET
+                    BluetoothClass.Device.Major.PERIPHERAL -> BTDeviceType.PERIPHERAL
+                    BluetoothClass.Device.Major.IMAGING -> BTDeviceType.IMAGING
+                    BluetoothClass.Device.Major.WEARABLE -> BTDeviceType.WATCH
+                    BluetoothClass.Device.Major.TOY -> BTDeviceType.CONTROLLER
+                    BluetoothClass.Device.Major.HEALTH -> BTDeviceType.OTHER
+                    BluetoothClass.Device.Major.UNCATEGORIZED -> BTDeviceType.OTHER
+                    else -> BTDeviceType.OTHER
+                }
+            }
         }
     }
     
@@ -338,9 +474,9 @@ class LocalDeviceManager(private val context: Context) {
             val composeView = ComposeView(context).apply {
                 setContent {
                     var isActive by remember { mutableStateOf(true) }
-                    var targetOffsetY by remember { mutableStateOf(0f) }
+                    var targetOffsetY by remember { mutableFloatStateOf(0f) }
                     var isDragging by remember { mutableStateOf(false) }
-                    var screenHeight by remember { mutableStateOf(1f) }
+                    var screenHeight by remember { mutableFloatStateOf(1f) }
 
                     val offsetY by animateFloatAsState(
                         targetValue = targetOffsetY,
@@ -385,10 +521,10 @@ class LocalDeviceManager(private val context: Context) {
                                     onDragStart = { isDragging = true },
                                     onDragEnd = {
                                         isDragging = false
-                                        if (progress > 0.4f) {
-                                            targetOffsetY = -screenHeight // Animate away
+                                        targetOffsetY = if (progress > 0.4f) {
+                                            -screenHeight // Animate away
                                         } else {
-                                            targetOffsetY = 0f
+                                            0f
                                         }
                                     },
                                     onDragCancel = {

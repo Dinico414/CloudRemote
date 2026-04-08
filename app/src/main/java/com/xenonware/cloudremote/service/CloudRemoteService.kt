@@ -457,6 +457,18 @@ class CloudRemoteService : Service() {
         if (cachedDevice.isCurtainOn != state.isCurtainOn) updates["isCurtainOn"] = state.isCurtainOn
         if (cachedDevice.isLocked != state.isLocked) updates["isLocked"] = state.isLocked
 
+        // Compare connected devices list
+        val stateConnectedDevices = state.connectedDevices.map { 
+            mapOf(
+                "name" to it.name,
+                "type" to it.type.name,
+                "batteryLevel" to it.batteryLevel
+            )
+        }
+        if (cachedDevice.connectedDevices != stateConnectedDevices) {
+            updates["connectedDevices"] = stateConnectedDevices
+        }
+
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
             repository.updateDeviceFields(deviceId, updates)
@@ -466,7 +478,8 @@ class CloudRemoteService : Service() {
                 mediaVolume = state.mediaVolume, maxMediaVolume = state.maxMediaVolume,
                 ringerMode = state.ringerMode, isDndActive = state.isDndActive,
                 isScreenOn = state.isScreenOn, isCurtainOn = state.isCurtainOn,
-                isLocked = state.isLocked
+                isLocked = state.isLocked,
+                connectedDevices = stateConnectedDevices
             )
         }
     }

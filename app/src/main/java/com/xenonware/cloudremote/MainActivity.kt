@@ -2,12 +2,14 @@
 
 package com.xenonware.cloudremote
 
+import android.Manifest
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -24,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntSize
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.auth.api.identity.Identity
@@ -221,7 +224,16 @@ class MainActivity : ComponentActivity() {
         val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val componentName = ComponentName(this, AdminReceiver::class.java)
 
+        val bluetoothConnect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+
         return !Settings.canDrawOverlays(this) ||
+                !bluetoothConnect ||
                 !notificationManager.isNotificationPolicyAccessGranted ||
                 !dpm.isAdminActive(componentName) ||
                 enabledListeners == null || !enabledListeners.contains(packageName)
