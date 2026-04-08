@@ -24,14 +24,15 @@ import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
-import com.xenonware.cloudremote.widget.BatteryWidgetReceiver
 import com.xenonware.cloudremote.MainActivity
-import com.xenonware.cloudremote.helper.MediaNotificationListener
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
-import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import com.xenonware.cloudremote.helper.LocalDeviceManager
+import com.xenonware.cloudremote.helper.MediaNotificationListener
+import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
+import com.xenonware.cloudremote.widget.BatteryWidgetReceiver
+import com.xenonware.cloudremote.widget.ConnectedDevicesWidgetReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -457,6 +458,7 @@ class CloudRemoteService : Service() {
         if (cachedDevice.isCurtainOn != state.isCurtainOn) updates["isCurtainOn"] = state.isCurtainOn
         if (cachedDevice.isLocked != state.isLocked) updates["isLocked"] = state.isLocked
 
+
         // Compare connected devices list
         val stateConnectedDevices = state.connectedDevices.map { 
             mapOf(
@@ -482,6 +484,10 @@ class CloudRemoteService : Service() {
                 connectedDevices = stateConnectedDevices
             )
         }
+        val widgetIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply {
+            action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
+        }
+        sendBroadcast(widgetIntent)
     }
 
     private fun createNotificationChannel() {

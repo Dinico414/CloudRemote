@@ -162,4 +162,6 @@
     <string name="battery_very_low_message">%1$s battery is critically low: %2$d%%</string>
 
     <string name="connected_devices">Connected Devices</string>
+
+    <string name="connected_devices_widget_description">Shows battery levels of your phone and connected Bluetooth devices</string>
 </resources>

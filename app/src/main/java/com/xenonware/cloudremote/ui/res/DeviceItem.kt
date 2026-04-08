@@ -956,7 +956,11 @@ fun DeviceItem(
                         )
                     }
 
-                    if (device.connectedDevices.isNotEmpty()) {
+                    val devicesWithBattery = device.connectedDevices.filter {
+                        val b = (it["batteryLevel"] as? Number)?.toInt() ?: -1
+                        b >= 0
+                    }
+                    if (devicesWithBattery.isNotEmpty()) {
                         var isConnectedDevicesExpanded by remember { mutableStateOf(false) }
                         Column(
                             modifier = Modifier
@@ -996,8 +1000,9 @@ fun DeviceItem(
                                     label = "rotation"
                                 )
                                 FilledTonalIconButton(
-                                    onClick = { isConnectedDevicesExpanded = !isConnectedDevicesExpanded },
-                                    colors = IconButtonDefaults.iconButtonColors(
+                                    onClick = {
+                                        isConnectedDevicesExpanded = !isConnectedDevicesExpanded
+                                    }, colors = IconButtonDefaults.iconButtonColors(
                                         containerColor = Color.Transparent,
                                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -1022,7 +1027,11 @@ fun DeviceItem(
                                         .padding(horizontal = 8.dp, vertical = 8.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    device.connectedDevices.forEach { devMap ->
+                                    device.connectedDevices.filter { devMap ->
+                                        val battery =
+                                            (devMap["batteryLevel"] as? Number)?.toInt() ?: -1
+                                        battery >= 0
+                                    }.forEach { devMap ->
                                         val name = devMap["name"] as? String ?: "Unknown"
                                         val typeStr = devMap["type"] as? String ?: "OTHER"
                                         val battery =
@@ -1073,32 +1082,14 @@ fun DeviceItem(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
-                                            if (battery != -1) {
-                                                BatteryIndicator(
-                                                    batteryLevel = battery,
-                                                    isCharging = false,
-                                                    modifier = Modifier
-                                                        .width(100.dp)
-                                                        .scale(0.8f),
-                                                    bgColorOverwrite = MaterialTheme.colorScheme.surfaceBright
-                                                )
-                                            } else {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .width(100.dp)
-                                                        .height(32.dp)
-                                                        .scale(0.8f)
-                                                        .clip(RoundedCornerShape(16.dp))
-                                                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = "---",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                                    )
-                                                }
-                                            }
+                                            BatteryIndicator(
+                                                batteryLevel = battery,
+                                                isCharging = false,
+                                                modifier = Modifier
+                                                    .width(100.dp)
+                                                    .scale(0.8f),
+                                                bgColorOverwrite = MaterialTheme.colorScheme.surfaceBright
+                                            )
                                         }
                                     }
                                 }
