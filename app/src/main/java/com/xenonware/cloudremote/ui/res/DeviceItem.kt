@@ -14,9 +14,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -59,37 +59,54 @@ import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddCircleOutline
 import androidx.compose.material.icons.rounded.AllInclusive
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Curtains
 import androidx.compose.material.icons.rounded.CurtainsClosed
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.DoDisturbOn
-import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.Earbuds
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Forward30
+import androidx.compose.material.icons.rounded.Gamepad
+import androidx.compose.material.icons.rounded.Headset
+import androidx.compose.material.icons.rounded.Hearing
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Podcasts
+import androidx.compose.material.icons.rounded.Print
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOn
 import androidx.compose.material.icons.rounded.RepeatOneOn
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Replay30
+import androidx.compose.material.icons.rounded.Router
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material.icons.rounded.Watch
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -116,6 +133,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -137,6 +155,7 @@ import com.xenon.mylibrary.res.XenonDialog
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.R
+import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.ui.theme.LocalGreenMaterialColorScheme
 import com.xenonware.cloudremote.ui.theme.LocalRedMaterialColorScheme
@@ -527,12 +546,10 @@ fun DeviceItem(
 
                     isOnline -> {
                         val rotation by animateFloatAsState(
-                            targetValue = if (isCollapsed) 0f else 180f,
-                            animationSpec = spring(
+                            targetValue = if (isCollapsed) 0f else 180f, animationSpec = spring(
                                 dampingRatio = Spring.DampingRatioMediumBouncy,
                                 stiffness = Spring.StiffnessLow
-                            ),
-                            label = "rotation"
+                            ), label = "rotation"
                         )
                         FilledTonalIconButton(onClick = {
                             isCollapsed = !isCollapsed
@@ -798,13 +815,9 @@ fun DeviceItem(
                                                 device.copy(
                                                     pendingAction = "lock"
                                                 )
-                                            ) else
-                                                Toast.makeText(
-                                                    context,
-                                                    errorMsg,
-                                                    Toast.LENGTH_SHORT
-                                                )
-                                                    .show()
+                                            ) else Toast.makeText(
+                                                context, errorMsg, Toast.LENGTH_SHORT
+                                            ).show()
 
                                         })
                                     )
@@ -825,7 +838,11 @@ fun DeviceItem(
                                 )
                             }
                         }
-                        BatteryIndicator(device.batteryLevel, device.isCharging)
+                        BatteryIndicator(
+                            device.batteryLevel,
+                            device.isCharging,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                     }
 
@@ -935,6 +952,156 @@ fun DeviceItem(
                             enabled = true,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    if (device.connectedDevices.isNotEmpty()) {
+                        var isConnectedDevicesExpanded by remember { mutableStateOf(false) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .animateContentSize()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Bluetooth,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.connected_devices),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = QuicksandTitleVariable
+                                    )
+                                }
+                                val rotation by animateFloatAsState(
+                                    targetValue = if (!isConnectedDevicesExpanded) 0f else 180f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "rotation"
+                                )
+                                FilledTonalIconButton(
+                                    onClick = { isConnectedDevicesExpanded = !isConnectedDevicesExpanded },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = Color.Transparent,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ExpandMore,
+                                        contentDescription = if (isConnectedDevicesExpanded) "Expand" else "Collapse",
+                                        modifier = Modifier.graphicsLayer(rotationZ = rotation),
+                                    )
+                                }
+
+                            }
+
+                            if (isConnectedDevicesExpanded) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp)
+                                        .padding(bottom = 8.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceDim)
+                                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    device.connectedDevices.forEach { devMap ->
+                                        val name = devMap["name"] as? String ?: "Unknown"
+                                        val typeStr = devMap["type"] as? String ?: "OTHER"
+                                        val battery =
+                                            (devMap["batteryLevel"] as? Number)?.toInt() ?: -1
+
+                                        val type = try {
+                                            BTDeviceType.valueOf(typeStr)
+                                        } catch (_: Exception) {
+                                            BTDeviceType.OTHER
+                                        }
+                                        val icon = when (type) {
+                                            BTDeviceType.MOUSE -> Icons.Rounded.Mouse
+                                            BTDeviceType.KEYBOARD -> Icons.Rounded.Keyboard
+                                            BTDeviceType.HEADSET -> Icons.Rounded.Headset
+                                            BTDeviceType.EARBUDS -> Icons.Rounded.Earbuds
+                                            BTDeviceType.WATCH -> Icons.Rounded.Watch
+                                            BTDeviceType.PEN -> Icons.Rounded.Edit
+                                            BTDeviceType.CONTROLLER -> Icons.Rounded.Gamepad
+                                            BTDeviceType.PHONE -> Icons.Rounded.PhoneAndroid
+                                            BTDeviceType.COMPUTER -> Icons.Rounded.Computer
+                                            BTDeviceType.LAPTOP -> Icons.Rounded.Laptop
+                                            BTDeviceType.TV -> Icons.Rounded.Tv
+                                            BTDeviceType.SPEAKER -> Icons.Rounded.Speaker
+                                            BTDeviceType.IMAGING -> Icons.Rounded.Videocam
+                                            BTDeviceType.PRINTER -> Icons.Rounded.Print
+                                            BTDeviceType.NETWORKING -> Icons.Rounded.Router
+                                            BTDeviceType.HEARING_AID -> Icons.Rounded.Hearing
+                                            BTDeviceType.PERIPHERAL -> Icons.Rounded.Devices
+                                            BTDeviceType.OTHER -> Icons.Rounded.Bluetooth
+                                        }
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                text = name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            if (battery != -1) {
+                                                BatteryIndicator(
+                                                    batteryLevel = battery,
+                                                    isCharging = false,
+                                                    modifier = Modifier
+                                                        .width(100.dp)
+                                                        .scale(0.8f),
+                                                    bgColorOverwrite = MaterialTheme.colorScheme.surfaceBright
+                                                )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(100.dp)
+                                                        .height(32.dp)
+                                                        .scale(0.8f)
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "---",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if (!isLocalDevice) {
@@ -1062,6 +1229,7 @@ fun BatteryIndicator(
     batteryLevel: Int,
     isCharging: Boolean,
     modifier: Modifier = Modifier,
+    bgColorOverwrite: Color? = null,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "colorBlink")
     val batteryWarningColor by infiniteTransition.animateColor(
@@ -1160,9 +1328,8 @@ fun BatteryIndicator(
     Box(
         modifier = modifier
             .height(40.dp)
-            .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(progressBackgroundColor)
+            .background(bgColorOverwrite ?: progressBackgroundColor)
     ) {
         //IndicatorBox
         BoxWithConstraints(
@@ -1178,7 +1345,7 @@ fun BatteryIndicator(
             val indicatorWidth = minWidth + (maxWidth - minWidth) * fraction
 
             Box(
-                modifier = modifier
+                modifier = Modifier
                     .height(32.dp)
                     .width(indicatorWidth)
                     .clip(RoundedCornerShape(16.dp))
@@ -1188,7 +1355,7 @@ fun BatteryIndicator(
 
         //TextPositionBox
         Box(
-            modifier
+            modifier = Modifier
                 .align(Alignment.CenterStart)
                 .height(40.dp)
                 .width(40.dp)
@@ -1197,7 +1364,7 @@ fun BatteryIndicator(
         ) {
             Text(
                 text = "$batteryLevel",
-                modifier.align(Alignment.Center),
+                modifier = Modifier.align(Alignment.Center),
                 color = progressTextColor,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,

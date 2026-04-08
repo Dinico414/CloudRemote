@@ -124,6 +124,10 @@
     <string name="device_admin_description">Cloud Remote needs this permission to lock the screen remotely.</string>
     <string name="grant_permission">Grant Permission</string>
 
+    <!-- Bluetooth Permissions -->
+    <string name="bluetooth_access">Bluetooth Access</string>
+    <string name="bluetooth_access_description">Cloud Remote needs this permission to display the battery status of your connected Bluetooth devices.</string>
+
     <!-- App Specific Strings -->
     <string name="share_device">Share Device</string>
     <string name="remove_device">Remove Device</string>
@@ -157,4 +161,5 @@
     <string name="battery_low_message">%1$s battery is at %2$d%%</string>
     <string name="battery_very_low_message">%1$s battery is critically low: %2$d%%</string>
 
+    <string name="connected_devices">Connected Devices</string>
 </resources>

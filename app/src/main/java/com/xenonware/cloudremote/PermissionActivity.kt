@@ -1,15 +1,20 @@
 package com.xenonware.cloudremote
 
+import android.Manifest
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +53,7 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -65,17 +71,34 @@ class PermissionActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requiredPermissions = listOf(
-            Permission(
+        val context = this
+        requiredPermissions = buildList {
+            add(Permission(
                 name = getString(R.string.display_over_other_apps),
                 description = getString(R.string.display_over_other_apps_description),
-                isGranted = { Settings.canDrawOverlays(this) },
+                isGranted = { Settings.canDrawOverlays(context) },
                 request = {
                     val intent = Intent(
                         Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()
                     )
                     startActivity(intent)
-                }), Permission(
+                }))
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                add(Permission(
+                    name = getString(R.string.bluetooth_access),
+                    description = getString(R.string.bluetooth_access_description),
+                    isGranted = {
+                        ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.BLUETOOTH_CONNECT
+                        ) == PackageManager.PERMISSION_GRANTED
+                    },
+                    request = {
+                        requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 101)
+                    }))
+            }
+
+            add(Permission(
                 name = getString(R.string.do_not_disturb_access),
                 description = getString(R.string.do_not_disturb_access_description),
                 isGranted = {
@@ -86,7 +109,9 @@ class PermissionActivity : ComponentActivity() {
                 request = {
                     val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
                     startActivity(intent)
-                }), Permission(
+                }))
+
+            add(Permission(
                 name = getString(R.string.notification_access),
                 description = getString(R.string.notification_access_description),
                 isGranted = {
@@ -97,16 +122,18 @@ class PermissionActivity : ComponentActivity() {
                 request = {
                     val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                     startActivity(intent)
-                }), Permission(
+                }))
+
+            add(Permission(
                 name = getString(R.string.device_admin),
                 description = getString(R.string.device_admin_description),
                 isGranted = {
                     val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-                    val componentName = ComponentName(this, AdminReceiver::class.java)
+                    val componentName = ComponentName(context, AdminReceiver::class.java)
                     dpm.isAdminActive(componentName)
                 },
                 request = {
-                    val componentName = ComponentName(this, AdminReceiver::class.java)
+                    val componentName = ComponentName(context, AdminReceiver::class.java)
                     val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
                         putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                         putExtra(
@@ -115,8 +142,8 @@ class PermissionActivity : ComponentActivity() {
                         )
                     }
                     startActivity(intent)
-                })
-        )
+                }))
+        }
 
         enableEdgeToEdge()
         sharedPreferenceManager = SharedPreferenceManager(this)

@@ -40,5 +40,6 @@ data class Device(
     val mediaCustomAction1Action: String = "",
     val mediaCustomAction2Action: String = "",
 
-    val pendingAction: String = ""
+    val pendingAction: String = "",
+    val connectedDevices: List<Map<String, Any>> = emptyList()
 )
