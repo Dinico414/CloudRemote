@@ -157,6 +157,9 @@ class LocalDeviceManager(private val context: Context) {
             }
         }
         val filter = IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -173,6 +176,8 @@ class LocalDeviceManager(private val context: Context) {
             onCurtainStateChanged = null
         }
     }
+
+    fun getCurrentStateSnapshot(): DeviceState = getCurrentState()
 
     private fun getCurrentState(): DeviceState {
         return try {
@@ -224,9 +229,10 @@ class LocalDeviceManager(private val context: Context) {
                 try {
                     if (!isDeviceConnected(device)) continue
 
-                    val name = device.name ?: "Unknown"
                     val batteryLevel = getBluetoothDeviceBatteryLevel(device)
-                    
+                    if (batteryLevel < 0) continue  // ← only keep devices with battery info
+
+                    val name = device.name ?: "Unknown"
                     devices.add(
                         ConnectedDevice(
                             name = name,
