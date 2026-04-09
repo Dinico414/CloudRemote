@@ -243,20 +243,41 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         val contentColor = if (item.battery > 20) textColor else GlanceTheme.colors.onSurface
 
         // Icon resource for BT device type
-        val typeIconRes = when (item.type) {
-            BTDeviceType.HEADSET, BTDeviceType.EARBUDS -> R.drawable.round_headphones_24
-            BTDeviceType.WATCH -> R.drawable.round_watch_24
-            BTDeviceType.KEYBOARD -> R.drawable.round_keyboard_24
-            BTDeviceType.MOUSE -> R.drawable.round_mouse_24
-            BTDeviceType.SPEAKER -> R.drawable.round_speaker_24
-            BTDeviceType.CONTROLLER -> R.drawable.round_gamepad_24
-            BTDeviceType.PEN -> R.drawable.round_edit_24
-            BTDeviceType.HEARING_AID -> R.drawable.round_hearing_24
-            BTDeviceType.PHONE -> R.drawable.round_phone_android_24
-            BTDeviceType.COMPUTER, BTDeviceType.LAPTOP -> R.drawable.round_computer_24
-            BTDeviceType.TV -> R.drawable.round_tv_24
-            null -> null // local device, no icon needed
-            else -> R.drawable.round_bluetooth_24
+// Inside ConnectedDevicesWidget -> DeviceBatteryBar
+        val typeIconRes = when {
+            // 1. Check Local Device Identity/Name first
+            item.isLocal -> {
+                val name = item.name
+                when {
+                    name.contains("Surface Duo", ignoreCase = true) -> R.drawable.rounded_dual_screen_24
+                    name.contains("Flip", ignoreCase = true) -> R.drawable.rounded_devices_flip_24
+                    name.contains("Fold", ignoreCase = true) -> R.drawable.rounded_devices_fold_24
+                    name.contains("Tablet", ignoreCase = true) -> R.drawable.rounded_tablet_24
+                    name.contains("TV", ignoreCase = true) -> R.drawable.rounded_tv_gen_24
+                    // Specific phones as phone_android
+                    name.contains("LG Wing", ignoreCase = true) ||
+                            name.contains("iKKO Mind One", ignoreCase = true) ||
+                            name.contains("Clicks Communicator", ignoreCase = true) ||
+                            name.contains("Keyboard Phone", ignoreCase = true) -> R.drawable.round_phone_android_24
+                    else -> R.drawable.round_phone_android_24
+                }
+            }
+            // 2. Bluetooth Device Type Mapping
+            item.type != null -> {
+                when (item.type) {
+                    BTDeviceType.PHONE -> R.drawable.round_phone_android_24
+                    BTDeviceType.TV -> R.drawable.rounded_tv_gen_24
+                    BTDeviceType.WATCH -> R.drawable.round_watch_24
+                    BTDeviceType.COMPUTER, BTDeviceType.LAPTOP -> R.drawable.rounded_monitor_24
+                    BTDeviceType.HEADSET, BTDeviceType.EARBUDS -> R.drawable.round_headphones_24
+                    BTDeviceType.KEYBOARD -> R.drawable.round_keyboard_24
+                    BTDeviceType.MOUSE -> R.drawable.round_mouse_24
+                    BTDeviceType.SPEAKER -> R.drawable.round_speaker_24
+                    BTDeviceType.CONTROLLER -> R.drawable.round_gamepad_24
+                    else -> R.drawable.rounded_monitor_24 // "Monitor is for everything else"
+                }
+            }
+            else -> R.drawable.rounded_monitor_24
         }
 
         Box(
