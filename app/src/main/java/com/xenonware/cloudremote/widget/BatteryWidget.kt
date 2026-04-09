@@ -316,7 +316,7 @@ class BatteryWidget : GlanceAppWidget() {
                     ) {
                         Image(
                             provider = ImageProvider(typeIconRes), contentDescription = null,
-                            modifier = GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(contentColor)
+                            modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
                         )
                         Spacer(modifier = GlanceModifier.width(6.dp))
                         Text(
@@ -370,7 +370,7 @@ class BatteryWidget : GlanceAppWidget() {
                 ) {
                     Image(
                         provider = ImageProvider(typeIconRes), contentDescription = null,
-                        modifier = GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(contentColor)
+                        modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
                     )
                     Spacer(modifier = GlanceModifier.width(6.dp))
 

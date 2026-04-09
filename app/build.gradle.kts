@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.cardview)
+    implementation(libs.androidx.constraintlayout)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     implementation(libs.haze)
     implementation(libs.androidx.animation.graphics)

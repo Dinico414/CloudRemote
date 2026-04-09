@@ -260,13 +260,11 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.Vertical.Top
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (typeIconRes != null) {
-                            Image(
-                                provider = ImageProvider(typeIconRes), contentDescription = null,
-                                modifier = GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(contentColor)
-                            )
-                            Spacer(modifier = GlanceModifier.width(6.dp))
-                        }
+                        Image(
+                            provider = ImageProvider(typeIconRes), contentDescription = null,
+                            modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
+                        )
+                        Spacer(modifier = GlanceModifier.width(6.dp))
                         Text(
                             text = item.name, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor), maxLines = 1
                         )
@@ -306,13 +304,11 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
                 Row(
                     modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (typeIconRes != null) {
-                        Image(
-                            provider = ImageProvider(typeIconRes), contentDescription = null,
-                            modifier = GlanceModifier.size(16.dp), colorFilter = ColorFilter.tint(contentColor)
-                        )
-                        Spacer(modifier = GlanceModifier.width(6.dp))
-                    }
+                    Image(
+                        provider = ImageProvider(typeIconRes), contentDescription = null,
+                        modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
+                    )
+                    Spacer(modifier = GlanceModifier.width(6.dp))
                     Text(
                         text = item.name, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor),
                         maxLines = 1, modifier = GlanceModifier.defaultWeight()
