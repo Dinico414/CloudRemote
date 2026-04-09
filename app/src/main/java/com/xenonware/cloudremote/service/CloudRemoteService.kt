@@ -35,6 +35,7 @@ import com.xenonware.cloudremote.widget.BatteryWidgetReceiver
 import com.xenonware.cloudremote.widget.ConnectedDevicesWidgetReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class CloudRemoteService : Service() {
 
@@ -116,6 +118,7 @@ class CloudRemoteService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    @OptIn(FlowPreview::class)
     override fun onCreate() {
         super.onCreate()
         repository = GoogleCloudRepository()
@@ -124,7 +127,7 @@ class CloudRemoteService : Service() {
         createNotificationChannel()
         createBatteryNotificationChannel()
         setupNetworkCallback()
-        
+
         LocalBroadcastManager.getInstance(this).registerReceiver(
             mediaUpdateReceiver,
             IntentFilter(MediaNotificationListener.ACTION_MEDIA_UPDATE)
@@ -145,7 +148,7 @@ class CloudRemoteService : Service() {
 
     private fun setupNetworkCallback() {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        
+
         // Initial state
         val activeNetwork = connectivityManager.activeNetwork
         val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
@@ -155,13 +158,13 @@ class CloudRemoteService : Service() {
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
-            
+
         connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                 updateNetworkState(networkCapabilities)
                 isNetworkMetered = !networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
             }
-            
+
             override fun onLost(network: Network) {
                 currentConnectionQuality = ConnectionQuality.NONE
             }
@@ -173,7 +176,7 @@ class CloudRemoteService : Service() {
             currentConnectionQuality = ConnectionQuality.NONE
             return
         }
-        
+
         val bandwidth = caps.linkDownstreamBandwidthKbps
         currentConnectionQuality = if (bandwidth in 1..800) {
             ConnectionQuality.BAD
@@ -204,7 +207,7 @@ class CloudRemoteService : Service() {
             localDeviceId = id
             startSync()
         }
-        
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -214,7 +217,7 @@ class CloudRemoteService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground", e)
         }
-        
+
         return START_STICKY
     }
 
@@ -227,12 +230,13 @@ class CloudRemoteService : Service() {
 
     private fun isNetworkAvailable(): Boolean = currentConnectionQuality != ConnectionQuality.NONE
 
+    @OptIn(FlowPreview::class)
     private fun startSync() {
         if (isSyncing) {
             Log.d(TAG, "Sync already in progress. Skipping startSync.")
             return
         }
-        
+
         if (!sharedPreferenceManager.inputReceiverEnabled) {
             Log.d(TAG, "Input receiver is disabled. Skipping sync.")
             return
@@ -258,14 +262,14 @@ class CloudRemoteService : Service() {
                 try {
                     repository.getDevicesFlow()
                         .collect { devices ->
-                            retryDelay = 2000L 
-                            
+                            retryDelay = 2000L
+
                             if (!isNetworkAvailable()) {
                                 throw Exception("Network lost during collection")
                             }
 
                             val myDevice = devices.find { it.id == deviceId }
-                            
+
                             // Check other devices for low battery
                             devices.forEach { device ->
                                 if (device.id != deviceId) {
@@ -346,7 +350,7 @@ class CloudRemoteService : Service() {
                 val powerManager = getSystemService(POWER_SERVICE) as PowerManager
                 val batteryLevel = localDeviceManager.getBatteryLevel()
                 val isLowBattery = batteryLevel < 20 && !localDeviceManager.isCharging()
-                
+
                 val interval = when {
                     currentConnectionQuality == ConnectionQuality.NONE -> 900_000L // 15 min
                     currentConnectionQuality == ConnectionQuality.BAD -> 600_000L // 10 min
@@ -355,9 +359,9 @@ class CloudRemoteService : Service() {
                     !powerManager.isInteractive -> 300_000L // 5 min
                     else -> HEARTBEAT_INTERVAL_MS // 30s
                 }
-                
+
                 delay(interval)
-                
+
                 if (auth.currentUser != null && currentRemoteDevice != null && isNetworkAvailable()) {
                     val fields = mapOf("lastUpdated" to System.currentTimeMillis())
                     repository.updateDeviceFields(deviceId, fields)
@@ -368,8 +372,8 @@ class CloudRemoteService : Service() {
 
     private fun broadcastWidgetUpdate(devices: List<Device>) {
         val intent = Intent(this, BatteryWidgetReceiver::class.java).apply {
-            action = BatteryWidgetReceiver.ACTION_UPDATE_WIDGET
-            putExtra(BatteryWidgetReceiver.EXTRA_DEVICES_JSON, Gson().toJson(devices))
+            action = "com.xenonware.cloudremote.ACTION_UPDATE_WIDGET"
+            putExtra("EXTRA_DEVICES_JSON", Gson().toJson(devices))
         }
         sendBroadcast(intent)
     }
@@ -406,11 +410,11 @@ class CloudRemoteService : Service() {
         val updates = mutableMapOf<String, Any>()
         if (device.mediaTitle != title) updates["mediaTitle"] = title
         if (device.mediaArtist != artist) updates["mediaArtist"] = artist
-        
+
         if (device.mediaAlbumArt != albumArt) {
             updates["mediaAlbumArt"] = albumArt
         }
-        
+
         if (device.isPlaying != isPlaying) updates["isPlaying"] = isPlaying
         if (device.mediaCustomAction1Title != customAction1Title) updates["mediaCustomAction1Title"] = customAction1Title
         if (device.mediaCustomAction1Action != customAction1Action) updates["mediaCustomAction1Action"] = customAction1Action
@@ -420,9 +424,9 @@ class CloudRemoteService : Service() {
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
             repository.updateDeviceFields(deviceId, updates)
-            
+
             currentRemoteDevice = device.copy(
-                mediaTitle = title, mediaArtist = artist, 
+                mediaTitle = title, mediaArtist = artist,
                 mediaAlbumArt = if (updates.containsKey("mediaAlbumArt")) albumArt else device.mediaAlbumArt,
                 isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title,
                 mediaCustomAction1Action = customAction1Action,
@@ -439,12 +443,12 @@ class CloudRemoteService : Service() {
         if (msSinceCommand < COOLDOWN_MS) return
 
         val updates = mutableMapOf<String, Any>()
-        
+
         // Increase battery change threshold to 5% if connection is bad or power save is on
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         val threshold = if (currentConnectionQuality == ConnectionQuality.BAD || powerManager.isPowerSaveMode) 5 else 2
-        
-        val batteryDiff = Math.abs(cachedDevice.batteryLevel - state.batteryLevel)
+
+        val batteryDiff = abs(cachedDevice.batteryLevel - state.batteryLevel)
         if (batteryDiff >= threshold || cachedDevice.isCharging != state.isCharging) {
             updates["batteryLevel"] = state.batteryLevel
             updates["isCharging"] = state.isCharging
@@ -460,7 +464,7 @@ class CloudRemoteService : Service() {
 
 
         // Compare connected devices list
-        val stateConnectedDevices = state.connectedDevices.map { 
+        val stateConnectedDevices = state.connectedDevices.map {
             mapOf(
                 "name" to it.name,
                 "type" to it.type.name,
