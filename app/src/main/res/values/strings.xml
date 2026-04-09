@@ -164,4 +164,5 @@
     <string name="connected_devices">Connected Devices</string>
 
     <string name="connected_devices_widget_description">Shows battery levels of your phone and connected Bluetooth devices</string>
+    <string name="devices_battery_widget_description">Shows battery levels of your phone and cloud devices</string>
 </resources>
