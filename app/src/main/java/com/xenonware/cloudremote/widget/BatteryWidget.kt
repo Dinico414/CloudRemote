@@ -283,6 +283,7 @@ class BatteryWidget : GlanceAppWidget() {
                 isCharging = device.isCharging,
                 isLocalDevice = isLocalDevice,
                 deviceName = device.name,
+                deviceIconType = device.icon,
                 tallLayout = tallLayout
             )
         }
@@ -294,6 +295,7 @@ class BatteryWidget : GlanceAppWidget() {
         isCharging: Boolean,
         isLocalDevice: Boolean,
         deviceName: String,
+        deviceIconType: String,
         tallLayout: Boolean,
     ) {
         val context = LocalContext.current
@@ -337,6 +339,19 @@ class BatteryWidget : GlanceAppWidget() {
 
         val contentColor = if (batteryLevel > 20) textColor else GlanceTheme.colors.onSurface
 
+        val typeIconRes = when {
+            deviceName.contains("Surface Duo", ignoreCase = true) || deviceIconType == "Surface Duo" -> R.drawable.rounded_dual_screen_24
+            deviceIconType.contains("Flip", ignoreCase = true) -> R.drawable.rounded_devices_flip_24
+            deviceIconType.contains("Fold", ignoreCase = true) -> R.drawable.rounded_devices_fold_24
+            deviceIconType.contains("Tablet", ignoreCase = true) -> R.drawable.rounded_tablet_24
+            deviceName.contains("TV", ignoreCase = true) -> R.drawable.rounded_tv_gen_24
+            deviceIconType.contains("Phone", ignoreCase = true) ||
+                    deviceIconType == "LG Wing" ||
+                    deviceIconType == "iKKO Mind One" ||
+                    deviceIconType == "Clicks Communicator" ||
+                    deviceIconType == "Keyboard Phone" -> R.drawable.round_phone_android_24
+            else -> R.drawable.rounded_monitor_24
+        }
         Box(
             modifier = GlanceModifier.fillMaxWidth().fillMaxHeight().cornerRadius(16.dp)
                 .background(bgColor)
@@ -359,11 +374,24 @@ class BatteryWidget : GlanceAppWidget() {
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.Vertical.Top
                 ) {
-                    Text(
-                        text = deviceName, style = TextStyle(
-                            fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor
-                        ), maxLines = 1
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            provider = ImageProvider(typeIconRes),
+                            contentDescription = null,
+                            modifier = GlanceModifier.size(16.dp),
+                            colorFilter = ColorFilter.tint(contentColor)
+                        )
+
+                        Spacer(modifier = GlanceModifier.width(6.dp))
+
+                        Text(
+                            text = deviceName, style = TextStyle(
+                                fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor
+                            ), maxLines = 1
+                        )
+                    }
 
                     Spacer(modifier = GlanceModifier.defaultWeight())
 
@@ -414,12 +442,21 @@ class BatteryWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxSize().padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Image(
+                        provider = ImageProvider(typeIconRes),
+                        contentDescription = null,
+                        modifier = GlanceModifier.size(16.dp),
+                        colorFilter = ColorFilter.tint(contentColor)
+                    )
+                    Spacer(modifier = GlanceModifier.width(6.dp))
+
                     Text(
                         text = deviceName, style = TextStyle(
                             fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor
                         ), maxLines = 1, modifier = GlanceModifier.defaultWeight()
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
+
                         Text(
                             text = "$batteryLevel%", style = TextStyle(
                                 fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor
