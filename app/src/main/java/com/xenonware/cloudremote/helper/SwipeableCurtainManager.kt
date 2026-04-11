@@ -51,6 +51,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.xenonware.cloudremote.service.CurtainTileService
+import com.xenonware.cloudremote.service.CurtainTrampolineActivity
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import kotlinx.coroutines.coroutineScope
@@ -81,8 +82,7 @@ object SwipeableCurtainManager {
             return
         }
 
-        val appContext = context.applicationContext
-        val windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         try {
             val params = WindowManager.LayoutParams(
@@ -94,6 +94,7 @@ object SwipeableCurtainManager {
                         WindowManager.LayoutParams.FLAG_FULLSCREEN or
                         WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
                         WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                        WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
                         WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT
             )
@@ -101,7 +102,7 @@ object SwipeableCurtainManager {
             params.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
-            val layout = object : FrameLayout(appContext) {
+            val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
                     if (event.keyCode == KeyEvent.KEYCODE_BACK) {
                         return true // Consume BACK key
@@ -126,11 +127,11 @@ object SwipeableCurtainManager {
             layout.setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
             layout.setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
 
-            val composeView = ComposeView(appContext).apply {
+            val composeView = ComposeView(context).apply {
                 setContent {
                     XenonTheme(darkTheme = isSystemInDarkTheme()) {
                         val density = LocalDensity.current.density
-                        val screenHeight = appContext.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
+                        val screenHeight = context.resources.displayMetrics.heightPixels.toFloat().coerceAtLeast(1f)
                         
                         var isContentVisible by remember { mutableStateOf(false) }
                         var contentOffsetY by remember { mutableFloatStateOf(-screenHeight) }
@@ -303,6 +304,7 @@ object SwipeableCurtainManager {
         
         CurtainTileService.isCurtainActive = false
         CurtainTileService.requestTileUpdate(context)
+        CurtainTrampolineActivity.finishInstance()
     }
 
     private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner,
