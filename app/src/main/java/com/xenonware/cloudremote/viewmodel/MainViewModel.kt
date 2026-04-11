@@ -1,7 +1,9 @@
 package com.xenonware.cloudremote.viewmodel
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
+import android.media.session.MediaSessionManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -14,6 +16,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.helper.LocalDeviceManager
+import com.xenonware.cloudremote.helper.MediaNotificationListener
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -171,10 +174,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateDevice(device: Device) {
+        if (device.id == localDeviceId) {
+            // Optimistic update for local device: apply changes locally immediately
+            val currentLocalState = localDeviceState.value
+            
+            if (device.mediaVolume != currentLocalState.mediaVolume) {
+                localDeviceManager.setVolume(device.mediaVolume)
+            }
+            if (device.ringerMode != currentLocalState.ringerMode) {
+                localDeviceManager.setRingerMode(device.ringerMode)
+            }
+            if (device.isDndActive != currentLocalState.isDndActive) {
+                localDeviceManager.setDnd(device.isDndActive)
+            }
+            if (device.isCurtainOn != currentLocalState.isCurtainOn) {
+                localDeviceManager.setCloudCurtain(device.isCurtainOn)
+            }
+            if (device.mediaAction.isNotBlank()) {
+                handleLocalMediaAction(device.mediaAction)
+                // Clear media action before sending to cloud to avoid re-triggering
+                repository.updateDevice(device.copy(mediaAction = ""))
+                return
+            }
+            if (device.pendingAction == "lock") {
+                localDeviceManager.lockDevice()
+                // Clear pending action before sending to cloud to avoid re-locking
+                repository.updateDevice(device.copy(pendingAction = ""))
+                return
+            }
+        }
         repository.updateDevice(device)
     }
 
     fun removeDevice(device: Device) {
         repository.deleteDevice(device.id)
+    }
+
+    private fun handleLocalMediaAction(action: String) {
+        val componentName = ComponentName(getApplication(), MediaNotificationListener::class.java)
+        val mediaSessionManager = getApplication<Application>().getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        val controllers = try {
+            mediaSessionManager.getActiveSessions(componentName)
+        } catch (e: SecurityException) {
+            emptyList()
+        }
+        val mediaController = controllers.firstOrNull()
+
+        when (action) {
+            "play" -> mediaController?.transportControls?.play()
+            "pause" -> mediaController?.transportControls?.pause()
+            "next" -> mediaController?.transportControls?.skipToNext()
+            "previous" -> mediaController?.transportControls?.skipToPrevious()
+            "custom1" -> {
+                val currentDevice = _devices.value.find { it.id == localDeviceId }
+                currentDevice?.mediaCustomAction1Action?.let {
+                    if (it.isNotBlank()) mediaController?.transportControls?.sendCustomAction(it, null)
+                }
+            }
+            "custom2" -> {
+                val currentDevice = _devices.value.find { it.id == localDeviceId }
+                currentDevice?.mediaCustomAction2Action?.let {
+                    if (it.isNotBlank()) mediaController?.transportControls?.sendCustomAction(it, null)
+                }
+            }
+        }
     }
 }

@@ -68,6 +68,8 @@ class CloudRemoteService : Service() {
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
 
+    private val lastLocalChangeTime = mutableMapOf<String, Long>()
+
     private enum class ConnectionQuality { GOOD, BAD, NONE }
     @Volatile
     private var currentConnectionQuality = ConnectionQuality.GOOD
@@ -113,6 +115,7 @@ class CloudRemoteService : Service() {
         const val BATTERY_CHANNEL_ID = "CloudRemoteBatteryChannel"
         private const val TAG = "CloudRemoteService"
         private const val COOLDOWN_MS = 2_000L
+        private const val LOCAL_CHANGE_COOLDOWN_MS = 5_000L
         private const val HEARTBEAT_INTERVAL_MS = 30_000L
     }
 
@@ -285,19 +288,21 @@ class CloudRemoteService : Service() {
                             var commandApplied = false
 
                             if (prev != null && myDevice != null) {
-                                if (prev.mediaVolume != myDevice.mediaVolume) {
+                                val now = System.currentTimeMillis()
+                                
+                                if (prev.mediaVolume != myDevice.mediaVolume && !isLocalChangeRecent("mediaVolume", now)) {
                                     localDeviceManager.setVolume(myDevice.mediaVolume)
                                     commandApplied = true
                                 }
-                                if (prev.ringerMode != myDevice.ringerMode) {
+                                if (prev.ringerMode != myDevice.ringerMode && !isLocalChangeRecent("ringerMode", now)) {
                                     localDeviceManager.setRingerMode(myDevice.ringerMode)
                                     commandApplied = true
                                 }
-                                if (prev.isDndActive != myDevice.isDndActive) {
+                                if (prev.isDndActive != myDevice.isDndActive && !isLocalChangeRecent("isDndActive", now)) {
                                     localDeviceManager.setDnd(myDevice.isDndActive)
                                     commandApplied = true
                                 }
-                                if (prev.isCurtainOn != myDevice.isCurtainOn) {
+                                if (prev.isCurtainOn != myDevice.isCurtainOn && !isLocalChangeRecent("isCurtainOn", now)) {
                                     localDeviceManager.setCloudCurtain(myDevice.isCurtainOn)
                                     commandApplied = true
                                 }
@@ -441,6 +446,13 @@ class CloudRemoteService : Service() {
 
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
+            
+            // Mark these fields as recently changed locally
+            val now = System.currentTimeMillis()
+            updates.keys.forEach { key ->
+                lastLocalChangeTime[key] = now
+            }
+            
             repository.updateDeviceFields(deviceId, updates)
 
             currentRemoteDevice = device.copy(
@@ -495,6 +507,13 @@ class CloudRemoteService : Service() {
 
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
+            
+            // Mark these fields as recently changed locally
+            val now = System.currentTimeMillis()
+            updates.keys.forEach { key ->
+                lastLocalChangeTime[key] = now
+            }
+            
             repository.updateDeviceFields(deviceId, updates)
 
             currentRemoteDevice = cachedDevice.copy(
@@ -510,6 +529,11 @@ class CloudRemoteService : Service() {
             action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
         }
         sendBroadcast(widgetIntent)
+    }
+
+    private fun isLocalChangeRecent(field: String, now: Long): Boolean {
+        val lastChange = lastLocalChangeTime[field] ?: return false
+        return (now - lastChange) < LOCAL_CHANGE_COOLDOWN_MS
     }
 
     private fun createNotificationChannel() {
