@@ -102,15 +102,14 @@ private fun getPalette(context: Context): ColorPalette {
             tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900)),
         )
     } else {
-        val blue = Color(0xFF2962FF)
-        val blueBright = Color(0xFF82B1FF)
+
         ColorPalette(
-            primaryDay = blue, primaryNight = blueBright,
-            primaryContainerDay = Color(0xFF5C9CFF), primaryContainerNight = Color(0xFF1A56C4),
-            primarySurfaceDay = Color(0xFFD6E4FF), primarySurfaceNight = Color(0xFF0D2B6B),
-            tertiaryDay = Color(0xFF00796B), tertiaryNight = Color(0xFF80CBC4),
-            tertiaryContainerDay = Color(0xFF4DB6AC), tertiaryContainerNight = Color(0xFF00574B),
-            tertiarySurfaceDay = Color(0xFFB2DFDB), tertiarySurfaceNight = Color(0xFF003330),
+            primaryDay = Color(0xffaac7ff), primaryNight = Color(0xff0a305f),
+            primaryContainerDay = Color(0xFF284777), primaryContainerNight = Color(0xFF8eace3),
+            primarySurfaceDay = Color(0xFF001b3e), primarySurfaceNight = Color(0xFFd6e3ff),
+            tertiaryDay = Color(0xFFddbce0), tertiaryNight = Color(0xFF3f2844),
+            tertiaryContainerDay = Color(0xFF573e5c), tertiaryContainerNight = Color(0xFFc0a1c4),
+            tertiarySurfaceDay = Color(0xFF28132e), tertiarySurfaceNight = Color(0xFFfad8fd),
         )
     }
 }

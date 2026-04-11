@@ -47,6 +47,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Color.Companion.Black
 import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.graphicsLayer
@@ -96,9 +98,8 @@ class LocalDeviceManager(private val context: Context) {
     private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
     private var isCurtainVisible = false
     private var lastKnownRingVolume = -1
+    private var cachedConnectedDevices: List<ConnectedDevice> = emptyList()
     private var onCurtainStateChanged: (() -> Unit)? = null
-
-    // Cached values to avoid redundant system calls
     private var lastBatteryLevel = -1
     private var lastIsCharging = false
 
@@ -147,25 +148,38 @@ class LocalDeviceManager(private val context: Context) {
     }
 
     fun observeDeviceState(): Flow<DeviceState> = callbackFlow {
+        // Initial fetch of Bluetooth devices
+        cachedConnectedDevices = getConnectedBluetoothDevices()
+        
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
-                if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+                val action = intent?.action
+                
+                if (action == Intent.ACTION_BATTERY_CHANGED) {
                     parseBatteryLevel(intent)
                     parseIsCharging(intent)
                 }
-                trySend(getCurrentState())
-
-                // Bluetooth state often takes a few seconds to update after the ACL broadcast.
-                // We schedule follow-up checks to ensure the connected devices list is accurate.
-                val action = intent?.action
+                
+                // Only refresh Bluetooth devices on actual Bluetooth events
                 if (action == BluetoothDevice.ACTION_ACL_CONNECTED ||
                     action == BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED ||
                     action == BluetoothDevice.ACTION_ACL_DISCONNECTED
                 ) {
-                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 2000)
-                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 5000)
-                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 15000)
+                    cachedConnectedDevices = getConnectedBluetoothDevices()
+                    
+                    // Bluetooth state often takes a few seconds to update after the ACL broadcast.
+                    // We schedule follow-up checks to ensure the connected devices list is accurate.
+                    mainHandler.postDelayed({ 
+                        cachedConnectedDevices = getConnectedBluetoothDevices()
+                        trySend(getCurrentState()) 
+                    }, 2000)
+                    mainHandler.postDelayed({ 
+                        cachedConnectedDevices = getConnectedBluetoothDevices()
+                        trySend(getCurrentState()) 
+                    }, 5000)
                 }
+                
+                trySend(getCurrentState())
             }
         }
         val filter = IntentFilter().apply {
@@ -211,8 +225,6 @@ class LocalDeviceManager(private val context: Context) {
 
             val isLocked = keyguardManager.isKeyguardLocked
 
-            val connectedDevices = getConnectedBluetoothDevices()
-
             DeviceState(
                 batteryLevel,
                 isCharging,
@@ -223,7 +235,7 @@ class LocalDeviceManager(private val context: Context) {
                 powerManager.isInteractive,
                 isCurtainVisible,
                 isLocked,
-                connectedDevices
+                cachedConnectedDevices
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error getting device state", e)
@@ -429,19 +441,13 @@ class LocalDeviceManager(private val context: Context) {
                 0 -> {
                     val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
                     if (vol > 0) lastKnownRingVolume = vol
-
-                    if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
-                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                    }
+                    
                     audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
                 }
                 1 -> {
                     if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
                         val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
                         if (vol > 0) lastKnownRingVolume = vol
-                    }
-                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_SILENT) {
-                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
                     }
                     audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
                 }
@@ -465,7 +471,7 @@ class LocalDeviceManager(private val context: Context) {
                 Log.w(TAG, "setDnd: permission not granted")
                 return
             }
-            val target = if (active) NotificationManager.INTERRUPTION_FILTER_NONE
+            val target = if (active) NotificationManager.INTERRUPTION_FILTER_PRIORITY
             else NotificationManager.INTERRUPTION_FILTER_ALL
             notificationManager.setInterruptionFilter(target)
         } catch (e: Exception) {
@@ -566,7 +572,9 @@ class LocalDeviceManager(private val context: Context) {
                         modifier = Modifier
                             .fillMaxSize()
                             .onSizeChanged { screenHeight = it.height.toFloat().coerceAtLeast(1f) }
-                            .background(Black.copy(alpha = curtainAlpha))
+                            .drawBehind {
+                                drawRect(color = Black, alpha = curtainAlpha)
+                            }
                             .pointerInput(Unit) {
                                 detectVerticalDragGestures(
                                     onDragStart = { isDragging = true },
