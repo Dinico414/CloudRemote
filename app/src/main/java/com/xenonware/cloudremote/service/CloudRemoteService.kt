@@ -189,9 +189,9 @@ class CloudRemoteService : Service() {
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         return when {
             currentConnectionQuality == ConnectionQuality.NONE -> 60_000L
-            powerManager.isPowerSaveMode -> 20_000L
-            currentConnectionQuality == ConnectionQuality.BAD -> 15_000L
-            !powerManager.isInteractive -> 10_000L
+            powerManager.isPowerSaveMode -> 5_000L
+            currentConnectionQuality == ConnectionQuality.BAD -> 10_000L
+            !powerManager.isInteractive -> 5_000L
             else -> 1_000L
         }
     }
@@ -334,7 +334,25 @@ class CloudRemoteService : Service() {
         // Local -> Remote sync with dynamic debouncing
         scope.launch {
             localDeviceManager.observeDeviceState()
-                .debounce { getSyncDebounceMs() }
+                .collectLatest { state ->
+                    // Trigger immediate widget updates for local responsiveness (no debounce for widgets)
+                    val batteryIntent = Intent(this@CloudRemoteService, BatteryWidgetReceiver::class.java).apply {
+                        action = BatteryWidgetReceiver.ACTION_REFRESH_LOCAL
+                        setPackage(packageName)
+                    }
+                    sendBroadcast(batteryIntent)
+
+                    val connectedIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply {
+                        action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
+                        setPackage(packageName)
+                    }
+                    sendBroadcast(connectedIntent)
+                }
+        }
+
+        scope.launch {
+            localDeviceManager.observeDeviceState()
+                .debounce(1000L)
                 .collectLatest { state ->
                     currentRemoteDevice?.let {
                         if (auth.currentUser != null) {
@@ -352,11 +370,11 @@ class CloudRemoteService : Service() {
                 val isLowBattery = batteryLevel < 20 && !localDeviceManager.isCharging()
 
                 val interval = when {
-                    currentConnectionQuality == ConnectionQuality.NONE -> 900_000L // 15 min
-                    currentConnectionQuality == ConnectionQuality.BAD -> 600_000L // 10 min
-                    powerManager.isPowerSaveMode -> 600_000L // 10 min
-                    isLowBattery -> 420_000L // 7 min
-                    !powerManager.isInteractive -> 300_000L // 5 min
+                    currentConnectionQuality == ConnectionQuality.NONE -> 600_000L // 10 min
+                    currentConnectionQuality == ConnectionQuality.BAD -> 300_000L // 5 min
+                    powerManager.isPowerSaveMode -> 300_000L // 5 min
+                    isLowBattery -> 300_000L // 5 min
+                    !powerManager.isInteractive -> 120_000L // 2 min
                     else -> HEARTBEAT_INTERVAL_MS // 30s
                 }
 

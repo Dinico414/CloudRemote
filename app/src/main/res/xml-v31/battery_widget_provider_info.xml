@@ -5,10 +5,10 @@
     android:targetCellWidth="2"
     android:targetCellHeight="1"
     android:updatePeriodMillis="0"
-    android:minResizeWidth="56dp"
+    android:minResizeWidth="110dp"
     android:minResizeHeight="40dp"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/devices_battery_widget_description"
-    />
-    <!--    android:previewLayout="@layout/preview_battery_widget_layout"-->
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/preview_battery_widget" />

@@ -5,7 +5,6 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
@@ -15,7 +14,6 @@
     <uses-permission android:name="android.permission.REORDER_TASKS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         tools:ignore="ProtectedPermissions" />
 
@@ -31,12 +29,14 @@
         android:label="@string/app_name"
         android:localeConfig="@xml/locale_config"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Xenon"
         tools:ignore="UnusedAttribute">
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.Xenon">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -87,6 +87,7 @@
             android:name=".service.CurtainTileService"
             android:icon="@drawable/ic_launcher_foreground"
             android:label="Curtain"
+            android:showWhenLocked="true"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
@@ -125,22 +126,13 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.xenonware.cloudremote.ACTION_UPDATE_WIDGET" />
+                <action android:name="android.intent.action.SCREEN_ON" />
+                <action android:name="android.intent.action.USER_PRESENT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/battery_widget_provider_info" />
         </receiver>
-
-<!--        <receiver-->
-<!--            android:name=".widget.WatchWidgetReceiver"-->
-<!--            android:exported="true">-->
-<!--            <intent-filter>-->
-<!--                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />-->
-<!--            </intent-filter>-->
-<!--            <meta-data-->
-<!--                android:name="android.appwidget.provider"-->
-<!--                android:resource="@xml/watch_widget_provider_info" />-->
-<!--        </receiver>-->
 
         <receiver
             android:name=".widget.ConnectedDevicesWidgetReceiver"
@@ -148,6 +140,8 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.xenonware.cloudremote.ACTION_UPDATE_CONNECTED_WIDGET" />
+                <action android:name="android.intent.action.SCREEN_ON" />
+                <action android:name="android.intent.action.USER_PRESENT" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
@@ -158,6 +152,12 @@
             android:name="androidx.glance.appwidget.GlanceRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="true" />
+
+        <activity
+            android:name=".service.CurtainTrampolineActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>

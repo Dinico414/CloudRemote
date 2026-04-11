@@ -26,19 +26,23 @@ class CurtainTileService : TileService() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onClick() {
         super.onClick()
-        val handler = Handler(Looper.getMainLooper())
         
-        if (isCurtainActive) {
-            handler.post {
-                SwipeableCurtainManager.hideCurtain(applicationContext)
-            }
+        val intent = android.content.Intent(this, CurtainTrampolineActivity::class.java).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startActivityAndCollapse(
+                android.app.PendingIntent.getActivity(
+                    this, 0, intent,
+                    android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
         } else {
-            handler.post {
-                SwipeableCurtainManager.showCurtain(applicationContext)
-            }
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
         }
     }
 

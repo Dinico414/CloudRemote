@@ -58,6 +58,7 @@ import com.google.gson.reflect.TypeToken
 import com.xenonware.cloudremote.MainActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.helper.LocalDeviceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -142,7 +143,21 @@ class BatteryWidget : GlanceAppWidget() {
 
         val localDeviceId = com.xenonware.cloudremote.data.SharedPreferenceManager(context).localDeviceId
         val now = System.currentTimeMillis()
-        val devices = parseDevicesJson(devicesJson).filter { (now - it.lastUpdated) < 3_600_000 }
+        val localDeviceManager = LocalDeviceManager(context)
+        
+        val devices = parseDevicesJson(devicesJson)
+            .filter { (now - it.lastUpdated) < 3_600_000 || it.id == localDeviceId }
+            .map { device ->
+                if (device.id == localDeviceId) {
+                    device.copy(
+                        batteryLevel = localDeviceManager.getBatteryLevel(),
+                        isCharging = localDeviceManager.isCharging(),
+                        lastUpdated = now
+                    )
+                } else {
+                    device
+                }
+            }
             .sortedByDescending { it.id == localDeviceId }
 
         provideContent {
@@ -193,7 +208,7 @@ class BatteryWidget : GlanceAppWidget() {
                 val availableHeight = widgetHeight - 16f
                 val totalSpacing = spacingDp.value * (devices.size - 1)
                 val heightPerItem = (availableHeight - totalSpacing) / devices.size
-                val tallLayout = heightPerItem >= 90f
+                val tallLayout = heightPerItem >= 95f
                 val needsScroll = heightPerItem < 24f
 
                 if (!needsScroll) {
@@ -488,6 +503,7 @@ class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
 
     companion object {
         const val ACTION_UPDATE_WIDGET = "com.xenonware.cloudremote.ACTION_UPDATE_WIDGET"
+        const val ACTION_REFRESH_LOCAL = "com.xenonware.cloudremote.ACTION_REFRESH_LOCAL"
         const val EXTRA_DEVICES_JSON = "EXTRA_DEVICES_JSON"
     }
 
@@ -500,17 +516,26 @@ class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
         super.onReceive(context, intent)
         when (intent.action) {
             ACTION_UPDATE_WIDGET -> {
-                val rawJson = intent.getStringExtra(EXTRA_DEVICES_JSON) ?: return
+                val rawJson = intent.getStringExtra("EXTRA_DEVICES_JSON") ?: return
                 BatteryWidget.updateCache(context, rawJson)
-                CoroutineScope(Dispatchers.IO).launch {
-                    val manager = GlanceAppWidgetManager(context)
-                    manager.getGlanceIds(BatteryWidget::class.java).forEach { id ->
-                        BatteryWidget().update(context, id)
-                    }
-                }
+                updateAll(context)
             }
-            "android.appwidget.action.APPWIDGET_UPDATE" -> {
+            ACTION_REFRESH_LOCAL -> {
+                updateAll(context)
+            }
+            "android.appwidget.action.APPWIDGET_UPDATE",
+            Intent.ACTION_SCREEN_ON,
+            Intent.ACTION_USER_PRESENT -> {
                 CoroutineScope(Dispatchers.IO).launch { BatteryWidget.refreshFromFirestore(context) }
+            }
+        }
+    }
+
+    private fun updateAll(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val manager = GlanceAppWidgetManager(context)
+            manager.getGlanceIds(BatteryWidget::class.java).forEach { id ->
+                BatteryWidget().update(context, id)
             }
         }
     }
