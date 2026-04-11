@@ -51,6 +51,8 @@ import com.xenonware.cloudremote.MainActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.ConnectedDevice
+import com.xenonware.cloudremote.data.Device
+import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.helper.LocalDeviceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,16 +82,29 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
 
         val connectedDevices = try {
             val state = localDeviceManager.getCurrentStateSnapshot()
-            state.connectedDevices.filter { it.batteryLevel >= 0 }
+            state.connectedDevices
         } catch (_: Exception) {
             data?.connectedDevices ?: emptyList()
         }
+
+        // Also fetch cloud devices from the battery widget's cache to stay in sync
+        val batteryPrefs = context.getSharedPreferences(BatteryWidget.PREFS_NAME, Context.MODE_PRIVATE)
+        val cloudDevicesJson = batteryPrefs.getString(BatteryWidget.KEY_DEVICES, null)
+        val cloudDevices = if (cloudDevicesJson != null) {
+            BatteryWidget.parseDevicesJson(cloudDevicesJson)
+        } else {
+            emptyList()
+        }
+
+        val localDeviceId = SharedPreferenceManager(context).localDeviceId
+        val filteredCloudDevices = cloudDevices.filter { it.id != localDeviceId }
 
         val widgetData = WidgetData(
             localName = deviceName,
             localBattery = batteryLevel,
             localCharging = isCharging,
-            connectedDevices = connectedDevices
+            connectedDevices = connectedDevices,
+            cloudDevices = filteredCloudDevices
         )
 
         prefs.edit(commit = true) {
@@ -107,15 +122,30 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         val localName: String = "",
         val localBattery: Int = 0,
         val localCharging: Boolean = false,
-        val connectedDevices: List<ConnectedDevice> = emptyList()
+        val connectedDevices: List<ConnectedDevice> = emptyList(),
+        val cloudDevices: List<Device> = emptyList()
+    )
+
+    data class BatteryItem(
+        val name: String,
+        val battery: Int,
+        val isCharging: Boolean,
+        val isLocal: Boolean,
+        val type: BTDeviceType?,
+        val isCloud: Boolean = false,
+        val icon: String? = null
     )
 
     @Composable
     private fun WidgetContent(context: Context, data: WidgetData) {
         val allItems = buildList {
-            add(BatteryItem(data.localName, data.localBattery, data.localCharging, isLocal = true, type = null))
+            if (data.localBattery != -1) {
+                add(BatteryItem(data.localName, data.localBattery, data.localCharging, isLocal = true, type = null))
+            }
             data.connectedDevices.forEach {
-                add(BatteryItem(it.name, it.batteryLevel, isCharging = false, isLocal = false, type = it.type))
+                if (it.batteryLevel != -1) {
+                    add(BatteryItem(it.name, it.batteryLevel, isCharging = false, isLocal = false, type = it.type))
+                }
             }
         }
 
@@ -126,64 +156,47 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         ) {
             Spacer(modifier = GlanceModifier.width(1.dp).height(0.dp))
 
-            if (allItems.size == 1 && data.connectedDevices.isEmpty()) {
-                Box(modifier = GlanceModifier.fillMaxSize()) {
-                    Column(modifier = GlanceModifier.fillMaxSize()) {
+            val spacingDp = 2.dp
+            val widgetHeight = LocalSize.current.height.value
+            val availableHeight = widgetHeight - 16f
+            val totalSpacing = spacingDp.value * (allItems.size - 1)
+            val heightPerItem = (availableHeight - totalSpacing) / allItems.size
+            val tallLayout = heightPerItem >= 95f
+            val needsScroll = heightPerItem < 24f
+
+            if (!needsScroll) {
+                Column(modifier = GlanceModifier.fillMaxSize()) {
+                    allItems.forEachIndexed { index, item ->
                         Box(
-                            modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(16.dp)
+                            modifier = GlanceModifier.fillMaxWidth().defaultWeight()
+                                .cornerRadius(16.dp)
                                 .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
                         ) {
-                            DeviceBatteryBar(context, allItems[0], tallLayout = true)
+                            DeviceBatteryBar(context, item, tallLayout)
+                        }
+                        if (index < allItems.lastIndex) {
+                            Spacer(modifier = GlanceModifier.height(spacingDp))
                         }
                     }
                 }
             } else {
-                val spacingDp = 2.dp
-                val widgetHeight = LocalSize.current.height.value
-                val availableHeight = widgetHeight - 16f
-                val totalSpacing = spacingDp.value * (allItems.size - 1)
-                val heightPerItem = (availableHeight - totalSpacing) / allItems.size
-                val tallLayout = heightPerItem >= 90f
-                val needsScroll = heightPerItem < 24f
-
-                if (!needsScroll) {
-                    Column(modifier = GlanceModifier.fillMaxSize()) {
-                        allItems.forEachIndexed { index, item ->
-                            Box(
-                                modifier = GlanceModifier.fillMaxWidth().defaultWeight()
-                                    .cornerRadius(16.dp)
-                                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
-                            ) {
-                                DeviceBatteryBar(context, item, tallLayout)
-                            }
-                            if (index < allItems.lastIndex) {
-                                Spacer(modifier = GlanceModifier.height(spacingDp))
-                            }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = GlanceModifier.fillMaxSize().cornerRadius(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        items(allItems) { item ->
-                            Box(
-                                modifier = GlanceModifier.fillMaxWidth().height(44.dp)
-                                    .padding(bottom = spacingDp)
-                                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
-                            ) {
-                                DeviceBatteryBar(context, item, false)
-                            }
+                LazyColumn(
+                    modifier = GlanceModifier.fillMaxSize().cornerRadius(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items(allItems) { item ->
+                        Box(
+                            modifier = GlanceModifier.fillMaxWidth().height(44.dp)
+                                .padding(bottom = spacingDp)
+                                .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
+                        ) {
+                            DeviceBatteryBar(context, item, false)
                         }
                     }
                 }
             }
         }
     }
-
-    data class BatteryItem(
-        val name: String, val battery: Int, val isCharging: Boolean, val isLocal: Boolean, val type: BTDeviceType?
-    )
 
     @Composable
     private fun DeviceBatteryBar(context: Context, item: BatteryItem, tallLayout: Boolean) {
@@ -398,9 +411,9 @@ class ConnectedDevicesWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_UPDATE || intent.action == "android.appwidget.action.APPWIDGET_UPDATE") {
-            CoroutineScope(Dispatchers.IO).launch {
+            val manager = GlanceAppWidgetManager(context)
+            CoroutineScope(Dispatchers.Main).launch {
                 try {
-                    val manager = GlanceAppWidgetManager(context)
                     manager.getGlanceIds(ConnectedDevicesWidget::class.java).forEach { id ->
                         ConnectedDevicesWidget().update(context, id)
                     }

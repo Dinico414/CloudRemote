@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="preview_widget_bg">@android:color/system_neutral1_100</color>
+    <color name="preview_primary_surface">@android:color/system_accent1_100</color>
+    <color name="preview_primary_container">@android:color/system_accent1_300</color>
+    <color name="preview_primary_on">@android:color/system_accent1_800</color>
+    <color name="preview_tertiary_surface">@android:color/system_accent3_100</color>
+    <color name="preview_tertiary_container">@android:color/system_accent3_300</color>
+    <color name="preview_tertiary_on">@android:color/system_accent3_800</color>
+    <color name="preview_low_surface">#FFFFDAD7</color>
+    <color name="preview_low_container">#FFFF8983</color>
+    <color name="preview_low_on">#FF67040D</color>
+    <color name="preview_on_surface">@android:color/system_neutral1_900</color>
+</resources>

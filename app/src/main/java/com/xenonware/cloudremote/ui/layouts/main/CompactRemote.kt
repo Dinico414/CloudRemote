@@ -344,6 +344,8 @@ fun CompactRemote(
                                 modifier = Modifier.align(Alignment.Center).padding(horizontal = 16.dp).padding(bottom = scaffoldPadding.calculateBottomPadding())
                             )
                         } else {
+                            val localDeviceState by viewModel.localDeviceState.collectAsStateWithLifecycle()
+
                             var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
                             LaunchedEffect(Unit) {
@@ -356,7 +358,7 @@ fun CompactRemote(
                             val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
                                 .filter { it.name.contains(searchQuery, ignoreCase = true) }
                             val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
-                                (currentTime - it.lastUpdated) < 180_000 // 3 minute threshold
+                                (currentTime - it.lastUpdated) < 900_000 // 15 minute threshold (matches max heartbeat)
                             }
 
                             LazyColumn(
@@ -371,11 +373,22 @@ fun CompactRemote(
                             ) {
                                 item {
                                     val isSharing = localDevice != null
-                                    val deviceToDisplay = localDevice ?: Device(
+                                    val deviceToDisplay = (localDevice ?: Device(
                                         id = viewModel.localDeviceId,
                                         name = localDeviceName.ifBlank {
                                             currentUser?.displayName ?: "This Device"
-                                        })
+                                        })).copy(
+                                        batteryLevel = localDeviceState.batteryLevel,
+                                        isCharging = localDeviceState.isCharging,
+                                        mediaVolume = localDeviceState.mediaVolume,
+                                        maxMediaVolume = localDeviceState.maxMediaVolume,
+                                        ringerMode = localDeviceState.ringerMode,
+                                        isDndActive = localDeviceState.isDndActive,
+                                        isScreenOn = localDeviceState.isScreenOn,
+                                        isCurtainOn = localDeviceState.isCurtainOn,
+                                        isLocked = localDeviceState.isLocked,
+                                        connectedDevices = localDeviceState.connectedDevices.map { it.toMap() }
+                                    )
 
                                     DeviceItem(
                                         device = deviceToDisplay,

@@ -17,10 +17,12 @@ import com.xenonware.cloudremote.helper.LocalDeviceManager
 import com.xenonware.cloudremote.presentation.sign_in.GoogleCloudRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -43,6 +45,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _networkState = MutableStateFlow(NetworkState.ONLINE)
     val networkState: StateFlow<NetworkState> = _networkState
+
+    val localDeviceState: StateFlow<LocalDeviceManager.DeviceState> = localDeviceManager.observeDeviceState()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = localDeviceManager.getCurrentStateSnapshot()
+        )
 
     var localDeviceId: String = ""
 

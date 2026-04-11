@@ -154,6 +154,18 @@ class LocalDeviceManager(private val context: Context) {
                     parseIsCharging(intent)
                 }
                 trySend(getCurrentState())
+
+                // Bluetooth state often takes a few seconds to update after the ACL broadcast.
+                // We schedule follow-up checks to ensure the connected devices list is accurate.
+                val action = intent?.action
+                if (action == BluetoothDevice.ACTION_ACL_CONNECTED ||
+                    action == BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED ||
+                    action == BluetoothDevice.ACTION_ACL_DISCONNECTED
+                ) {
+                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 2000)
+                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 5000)
+                    mainHandler.postDelayed({ trySend(getCurrentState()) }, 15000)
+                }
             }
         }
         val filter = IntentFilter().apply {
@@ -181,8 +193,8 @@ class LocalDeviceManager(private val context: Context) {
 
     private fun getCurrentState(): DeviceState {
         return try {
-            val batteryLevel = if (lastBatteryLevel != -1) lastBatteryLevel else getBatteryLevel()
-            val isCharging = lastIsCharging
+            val batteryLevel = getBatteryLevel()
+            val isCharging = isCharging()
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -230,7 +242,6 @@ class LocalDeviceManager(private val context: Context) {
                     if (!isDeviceConnected(device)) continue
 
                     val batteryLevel = getBluetoothDeviceBatteryLevel(device)
-                    if (batteryLevel < 0) continue  // ← only keep devices with battery info
 
                     val name = device.name ?: "Unknown"
                     devices.add(

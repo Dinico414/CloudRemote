@@ -12,4 +12,10 @@ data class ConnectedDevice(
     val name: String = "",
     val type: BTDeviceType = BTDeviceType.OTHER,
     val batteryLevel: Int = -1
-)
+) {
+    fun toMap(): Map<String, Any> = mapOf(
+        "name" to name,
+        "type" to type.name,
+        "batteryLevel" to batteryLevel
+    )
+}
