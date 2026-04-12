@@ -245,9 +245,9 @@ class LocalDeviceManager(private val context: Context) {
 
     private fun getConnectedBluetoothDevices(): List<ConnectedDevice> {
         val devices = mutableListOf<ConnectedDevice>()
-        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return devices
-
         try {
+            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return devices
+
             val bondedDevices = bluetoothAdapter.bondedDevices
             for (device in bondedDevices) {
                 try {
@@ -270,7 +270,7 @@ class LocalDeviceManager(private val context: Context) {
                 }
             }
         } catch (e: SecurityException) {
-            Log.e(TAG, "Bluetooth permission missing", e)
+            Log.e(TAG, "Bluetooth permission missing or disabled", e)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting bluetooth devices", e)
         }
