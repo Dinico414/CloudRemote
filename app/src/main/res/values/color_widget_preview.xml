@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="preview_widget_bg">#FFFBFE</color>
-    <color name="preview_primary_surface">#ffaac7ff</color>
-    <color name="preview_primary_container">#FF284777</color>
-    <color name="preview_primary_on">#FF001b3e</color>
-    <color name="preview_tertiary_surface">#ffddbce0</color>
-    <color name="preview_tertiary_container">#FF573e5c</color>
-    <color name="preview_tertiary_on">#FF28132e</color>
+    <color name="preview_widget_bg">#fffefbff</color>
+    <color name="preview_primary_surface">#ffd9e2ff</color>
+    <color name="preview_primary_container">#ff98aadc</color>
+    <color name="preview_primary_on">#ff1b2f59</color>
+    <color name="preview_tertiary_surface">#ffefdbff</color>
+    <color name="preview_tertiary_container">#ffb9a2d0</color>
+    <color name="preview_tertiary_on">#ff3a284e</color>
     <color name="preview_low_surface">#ffffb4ab</color>
     <color name="preview_low_container">#ff93000a</color>
     <color name="preview_low_on">#ff410002</color>
-    <color name="preview_on_surface">#191c20</color>
+    <color name="preview_on_surface">#ff1a1b20</color>
 </resources>
