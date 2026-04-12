@@ -125,6 +125,10 @@
     <string name="device_admin_description">Diese Berechtigung wird benötigt, um den Bildschirm gesteuert zu sperren.</string>
     <string name="grant_permission">Berechtigung erteilen</string>
 
+    <!-- Bluetooth Permissions -->
+    <string name="bluetooth_access">Bluetooth-Zugriff</string>
+    <string name="bluetooth_access_description">Cloud Remote benötigt diese Berechtigung, um den Akkustand Ihrer verbundenen Bluetooth-Geräte anzuzeigen.</string>
+
     <!-- App Specific Strings -->
     <string name="share_device">Gerät teilen</string>
     <string name="remove_device">Gerät entfernen</string>
