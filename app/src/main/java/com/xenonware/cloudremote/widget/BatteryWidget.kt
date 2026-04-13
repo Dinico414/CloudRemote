@@ -182,7 +182,7 @@ class BatteryWidget : GlanceAppWidget() {
         localDeviceId: String,
     ) {
         val containerModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            GlanceModifier.fillMaxSize().cornerRadius(24.dp)
+            GlanceModifier.fillMaxSize().cornerRadius(4.dp)
                 .background(GlanceTheme.colors.widgetBackground).padding(8.dp)
         } else {
             GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.bg_widget_container))
@@ -385,17 +385,12 @@ class BatteryWidget : GlanceAppWidget() {
                         ).background(fgColor)
                     ) {}
                 } else {
-                    Box(
-                        modifier = GlanceModifier.fillMaxSize().padding(4.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        LinearProgressIndicator(
-                            progress = batteryLevel.coerceIn(0, 100) / 100f,
-                            modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
-                            color = fgColor,
-                            backgroundColor = bgColor
-                        )
-                    }
+                    LinearProgressIndicator(
+                        progress = batteryLevel.coerceIn(0, 100) / 100f,
+                        modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
+                        color = fgColor,
+                        backgroundColor = bgColor
+                    )
                 }
             }
 
