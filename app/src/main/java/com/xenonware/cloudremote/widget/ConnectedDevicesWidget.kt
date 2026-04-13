@@ -172,7 +172,7 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         val isLegacy = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
 
         val containerModifier = if (!isLegacy) {
-            GlanceModifier.fillMaxSize().cornerRadius(24.dp)
+            GlanceModifier.fillMaxSize().cornerRadius(4.dp)
                 .background(GlanceTheme.colors.widgetBackground).padding(8.dp)
         } else {
             GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.bg_widget_container))
