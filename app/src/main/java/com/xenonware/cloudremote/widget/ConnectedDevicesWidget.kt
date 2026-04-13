@@ -374,15 +374,19 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
                 tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900)),
             )
         } else {
-            val blue = Color(0xFF2962FF)
-            val blueBright = Color(0xFF82B1FF)
             ColorPalette(
-                primaryDay = blue, primaryNight = blueBright,
-                primaryContainerDay = Color(0xFF5C9CFF), primaryContainerNight = Color(0xFF1A56C4),
-                primarySurfaceDay = Color(0xFFD6E4FF), primarySurfaceNight = Color(0xFF0D2B6B),
-                tertiaryDay = Color(0xFF00796B), tertiaryNight = Color(0xFF80CBC4),
-                tertiaryContainerDay = Color(0xFF4DB6AC), tertiaryContainerNight = Color(0xFF00574B),
-                tertiarySurfaceDay = Color(0xFFB2DFDB), tertiarySurfaceNight = Color(0xFF003330),
+                primaryDay = Color(0xff1b2f59),
+                primaryNight = Color(0xffb3c6f9),
+                primaryContainerDay = Color(0xff98aadc),
+                primaryContainerNight = Color(0xff32456f),
+                primarySurfaceDay = Color(0xffd9e2ff),
+                primarySurfaceNight = Color(0xff021943),
+                tertiaryDay = Color(0xff3a284e),
+                tertiaryNight = Color(0xffd5bdec),
+                tertiaryContainerDay = Color(0xffb9a2d0),
+                tertiaryContainerNight = Color(0xff513f66),
+                tertiarySurfaceDay = Color(0xffefdbff),
+                tertiarySurfaceNight = Color(0xff241338),
             )
         }
     }
