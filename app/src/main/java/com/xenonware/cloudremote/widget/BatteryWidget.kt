@@ -102,14 +102,19 @@ private fun getPalette(context: Context): ColorPalette {
             tertiarySurfaceNight = Color(context.getColor(android.R.color.system_accent3_900)),
         )
     } else {
-
         ColorPalette(
-            primaryDay = Color(0xffaac7ff), primaryNight = Color(0xff0a305f),
-            primaryContainerDay = Color(0xFF284777), primaryContainerNight = Color(0xFF8eace3),
-            primarySurfaceDay = Color(0xFF001b3e), primarySurfaceNight = Color(0xFFd6e3ff),
-            tertiaryDay = Color(0xFFddbce0), tertiaryNight = Color(0xFF3f2844),
-            tertiaryContainerDay = Color(0xFF573e5c), tertiaryContainerNight = Color(0xFFc0a1c4),
-            tertiarySurfaceDay = Color(0xFF28132e), tertiarySurfaceNight = Color(0xFFfad8fd),
+            primaryDay = Color(0xFF0F2F60),
+            primaryNight = Color(0xFFADC7FF),
+            primaryContainerDay = Color(0xFF91ABE3),
+            primaryContainerNight = Color(0xFF2A4678),
+            primarySurfaceDay = Color(0xFFADC7FF),
+            primarySurfaceNight = Color(0xFF001A41),
+            tertiaryDay = Color(0xFF003921),
+            tertiaryNight = Color(0xFF92D5AC),
+            tertiaryContainerDay = Color(0xFF77B991),
+            tertiaryContainerNight = Color(0xFF065232),
+            tertiarySurfaceDay = Color(0xFFADF2C6),
+            tertiarySurfaceNight = Color(0xFF002111),
         )
     }
 }
@@ -140,24 +145,24 @@ class BatteryWidget : GlanceAppWidget() {
             }
         }
 
-        val localDeviceId = com.xenonware.cloudremote.data.SharedPreferenceManager(context).localDeviceId
+        val localDeviceId =
+            com.xenonware.cloudremote.data.SharedPreferenceManager(context).localDeviceId
         val now = System.currentTimeMillis()
         val localDeviceManager = LocalDeviceManager(context)
-        
-        val devices = parseDevicesJson(devicesJson)
-            .filter { (now - it.lastUpdated) < 3_600_000 || it.id == localDeviceId }
-            .map { device ->
-                if (device.id == localDeviceId) {
-                    device.copy(
-                        batteryLevel = localDeviceManager.getBatteryLevel(),
-                        isCharging = localDeviceManager.isCharging(),
-                        lastUpdated = now
-                    )
-                } else {
-                    device
-                }
-            }
-            .sortedByDescending { it.id == localDeviceId }
+
+        val devices =
+            parseDevicesJson(devicesJson).filter { (now - it.lastUpdated) < 3_600_000 || it.id == localDeviceId }
+                .map { device ->
+                    if (device.id == localDeviceId) {
+                        device.copy(
+                            batteryLevel = localDeviceManager.getBatteryLevel(),
+                            isCharging = localDeviceManager.isCharging(),
+                            lastUpdated = now
+                        )
+                    } else {
+                        device
+                    }
+                }.sortedByDescending { it.id == localDeviceId }
 
         provideContent {
             GlanceTheme {
@@ -168,10 +173,15 @@ class BatteryWidget : GlanceAppWidget() {
 
     @Composable
     private fun WidgetContent(context: Context, devices: List<Device>, localDeviceId: String) {
-        Column(
-            modifier = GlanceModifier.fillMaxSize().cornerRadius(24.dp)
+        val containerModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            GlanceModifier.fillMaxSize().cornerRadius(24.dp)
                 .background(GlanceTheme.colors.widgetBackground).padding(8.dp)
-        ) {
+        } else {
+            GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.bg_widget_container))
+                .padding(8.dp)
+        }
+
+        Column(modifier = containerModifier) {
             if (devices.isEmpty()) {
                 Row(
                     modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 6.dp),
@@ -290,33 +300,87 @@ class BatteryWidget : GlanceAppWidget() {
             textColor = ColorProvider(day = palette.tertiaryDay, night = palette.tertiaryNight)
         }
 
-        val contentColor = if (batteryLevel > 20) textColor else GlanceTheme.colors.onSurface
-
         val typeIconRes = when {
-            deviceName.contains("Surface Duo", ignoreCase = true) || deviceIconType == "Surface Duo" -> R.drawable.rounded_dual_screen_24
+            deviceName.contains(
+                "Surface Duo",
+                ignoreCase = true
+            ) || deviceIconType == "Surface Duo" -> R.drawable.rounded_dual_screen_24
+
             deviceIconType.contains("Flip", ignoreCase = true) -> R.drawable.rounded_devices_flip_24
             deviceIconType.contains("Fold", ignoreCase = true) -> R.drawable.rounded_devices_fold_24
             deviceIconType.contains("Tablet", ignoreCase = true) -> R.drawable.rounded_tablet_24
             deviceName.contains("TV", ignoreCase = true) -> R.drawable.rounded_tv_gen_24
-            deviceIconType.contains("Phone", ignoreCase = true) ||
-                    deviceIconType == "LG Wing" || deviceIconType == "iKKO Mind One" ||
-                    deviceIconType == "Clicks Communicator" || deviceIconType == "Keyboard Phone" -> R.drawable.round_phone_android_24
+            deviceIconType.contains(
+                "Phone",
+                ignoreCase = true
+            ) || deviceIconType == "LG Wing" || deviceIconType == "iKKO Mind One" || deviceIconType == "Clicks Communicator" || deviceIconType == "Keyboard Phone" -> R.drawable.round_phone_android_24
+
             else -> R.drawable.rounded_monitor_24
         }
-        Box(
-            modifier = GlanceModifier.fillMaxWidth().fillMaxHeight().cornerRadius(16.dp)
-                .background(bgColor)
-        ) {
-            Box(
-                modifier = GlanceModifier.fillMaxSize().padding(4.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                LinearProgressIndicator(
-                    progress = batteryLevel.coerceIn(0, 100) / 100f,
-                    modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
-                    color = fgColor,
-                    backgroundColor = bgColor
-                )
+
+        val isLegacy = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+
+        val alertBadgeModifier = if (!isLegacy) {
+            GlanceModifier.size(20.dp).background(fgColor).cornerRadius(20.dp)
+        } else {
+            GlanceModifier.size(20.dp).background(ImageProvider(R.drawable.bg_battery_alert_badge))
+        }
+
+        val chargingBadgeModifier = if (!isLegacy) {
+            GlanceModifier.size(20.dp).background(textColor).cornerRadius(14.dp)
+        } else {
+            val chargingDrawable = when {
+                batteryLevel <= 20 -> R.drawable.bg_charging_badge_low
+                isLocalDevice -> R.drawable.bg_charging_badge_primary
+                else -> R.drawable.bg_charging_badge_tertiary
+            }
+            GlanceModifier.size(20.dp).background(ImageProvider(chargingDrawable))
+        }
+
+        // Battery item background: bgColor with 16dp radius.
+        val batteryBgModifier = if (!isLegacy) {
+            GlanceModifier.fillMaxWidth().fillMaxHeight().cornerRadius(16.dp).background(bgColor)
+        } else {
+            val bgDrawable = when {
+                batteryLevel <= 20 -> R.drawable.bg_battery_low
+                isLocalDevice -> R.drawable.bg_battery_primary
+                else -> R.drawable.bg_battery_tertiary
+            }
+            GlanceModifier.fillMaxWidth().fillMaxHeight().background(ImageProvider(bgDrawable))
+        }
+
+        Box(modifier = batteryBgModifier) {
+            if (!isLegacy) {
+                Box(
+                    modifier = GlanceModifier.fillMaxSize().padding(4.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+
+                    LinearProgressIndicator(
+                        progress = batteryLevel.coerceIn(0, 100) / 100f,
+                        modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
+                        color = fgColor,
+                        backgroundColor = bgColor
+                    )
+                }
+            } else {
+                Box(
+                    modifier = GlanceModifier.fillMaxSize().padding(4.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    val availableWidth =
+                        LocalSize.current.width - 8.dp  // subtract 4dp padding each side
+                    val fillWidth = (availableWidth * (batteryLevel.coerceIn(
+                        0,
+                        100
+                    ) / 100f)).coerceAtLeast(0.dp)
+                    if (fillWidth > 0.dp) {
+                        Box(
+                            modifier = GlanceModifier.fillMaxHeight().width(fillWidth)
+                                .cornerRadius(12.dp).background(fgColor)
+                        ) {}
+                    }
+                }
             }
 
             if (tallLayout) {
@@ -325,17 +389,17 @@ class BatteryWidget : GlanceAppWidget() {
                         .padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.Vertical.Top
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
-                            provider = ImageProvider(typeIconRes), contentDescription = null,
-                            modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
+                            provider = ImageProvider(typeIconRes),
+                            contentDescription = null,
+                            modifier = GlanceModifier.size(24.dp),
+                            colorFilter = ColorFilter.tint(textColor)
                         )
                         Spacer(modifier = GlanceModifier.width(6.dp))
                         Text(
                             text = deviceName, style = TextStyle(
-                                fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor
+                                fontSize = 14.sp, fontWeight = FontWeight.Bold, color = textColor
                             ), maxLines = 1
                         )
                     }
@@ -344,34 +408,38 @@ class BatteryWidget : GlanceAppWidget() {
 
                     Row(
                         modifier = GlanceModifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.End, verticalAlignment = Alignment.CenterVertically
+                        horizontalAlignment = Alignment.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "$batteryLevel%", style = TextStyle(
-                                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor
+                                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = textColor
                             )
                         )
                         if (isCharging) {
                             Spacer(modifier = GlanceModifier.width(8.dp))
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = GlanceModifier.size(20.dp).background(textColor).cornerRadius(14.dp)
+                                modifier = chargingBadgeModifier
                             ) {
                                 Image(
-                                    provider = ImageProvider(R.drawable.round_bolt_24), contentDescription = "Charging",
-                                    modifier = GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(fgColor)
+                                    provider = ImageProvider(R.drawable.round_bolt_24),
+                                    contentDescription = "Charging",
+                                    modifier = GlanceModifier.size(14.dp),
+                                    colorFilter = ColorFilter.tint(fgColor)
                                 )
                             }
                         }
                         if (!isCharging && batteryLevel <= 20) {
                             Spacer(modifier = GlanceModifier.width(8.dp))
                             Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = GlanceModifier.size(20.dp).background(fgColor).cornerRadius(14.dp)
+                                contentAlignment = Alignment.Center, modifier = alertBadgeModifier
                             ) {
                                 Image(
-                                    provider = ImageProvider(R.drawable.round_battery_alert_24), contentDescription = "Low battery",
-                                    modifier = GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(textColor)
+                                    provider = ImageProvider(R.drawable.round_battery_alert_24),
+                                    contentDescription = "Low battery",
+                                    modifier = GlanceModifier.size(14.dp),
+                                    colorFilter = ColorFilter.tint(textColor)
                                 )
                             }
                         }
@@ -383,44 +451,47 @@ class BatteryWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        provider = ImageProvider(typeIconRes), contentDescription = null,
-                        modifier = GlanceModifier.size(24.dp), colorFilter = ColorFilter.tint(contentColor)
+                        provider = ImageProvider(typeIconRes),
+                        contentDescription = null,
+                        modifier = GlanceModifier.size(24.dp),
+                        colorFilter = ColorFilter.tint(textColor)
                     )
                     Spacer(modifier = GlanceModifier.width(6.dp))
-
                     Text(
                         text = deviceName, style = TextStyle(
-                            fontSize = 14.sp, fontWeight = FontWeight.Bold, color = contentColor
+                            fontSize = 14.sp, fontWeight = FontWeight.Bold, color = textColor
                         ), maxLines = 1, modifier = GlanceModifier.defaultWeight()
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-
                         Text(
                             text = "$batteryLevel%", style = TextStyle(
-                                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = contentColor
+                                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = textColor
                             )
                         )
                         if (isCharging) {
                             Spacer(modifier = GlanceModifier.width(8.dp))
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = GlanceModifier.size(20.dp).background(textColor).cornerRadius(14.dp)
+                                modifier = chargingBadgeModifier
                             ) {
                                 Image(
-                                    provider = ImageProvider(R.drawable.round_bolt_24), contentDescription = "Charging",
-                                    modifier = GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(fgColor)
+                                    provider = ImageProvider(R.drawable.round_bolt_24),
+                                    contentDescription = "Charging",
+                                    modifier = GlanceModifier.size(14.dp),
+                                    colorFilter = ColorFilter.tint(fgColor)
                                 )
                             }
                         }
                         if (!isCharging && batteryLevel <= 20) {
                             Spacer(modifier = GlanceModifier.width(8.dp))
                             Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = GlanceModifier.size(20.dp).background(fgColor).cornerRadius(14.dp)
+                                contentAlignment = Alignment.Center, modifier = alertBadgeModifier
                             ) {
                                 Image(
-                                    provider = ImageProvider(R.drawable.round_battery_alert_24), contentDescription = "Low battery",
-                                    modifier = GlanceModifier.size(14.dp), colorFilter = ColorFilter.tint(textColor)
+                                    provider = ImageProvider(R.drawable.round_battery_alert_24),
+                                    contentDescription = "Low battery",
+                                    modifier = GlanceModifier.size(14.dp),
+                                    colorFilter = ColorFilter.tint(textColor)
                                 )
                             }
                         }
@@ -492,8 +563,16 @@ class BatteryWidget : GlanceAppWidget() {
 }
 
 class RefreshAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        try { BatteryWidget.refreshFromFirestore(context) } catch (e: Exception) { Log.e("BatteryWidget", "RefreshAction FAILED", e) }
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        try {
+            BatteryWidget.refreshFromFirestore(context)
+        } catch (e: Exception) {
+            Log.e("BatteryWidget", "RefreshAction FAILED", e)
+        }
     }
 }
 
@@ -503,7 +582,6 @@ class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
     companion object {
         const val ACTION_UPDATE_WIDGET = "com.xenonware.cloudremote.ACTION_UPDATE_WIDGET"
         const val ACTION_REFRESH_LOCAL = "com.xenonware.cloudremote.ACTION_REFRESH_LOCAL"
-        const val EXTRA_DEVICES_JSON = "EXTRA_DEVICES_JSON"
     }
 
     override fun onEnabled(context: Context) {
@@ -519,12 +597,15 @@ class BatteryWidgetReceiver : GlanceAppWidgetReceiver() {
                 BatteryWidget.updateCache(context, rawJson)
                 updateAll(context)
             }
+
             ACTION_REFRESH_LOCAL -> {
                 updateAll(context)
             }
+
             "android.appwidget.action.APPWIDGET_UPDATE",
             Intent.ACTION_SCREEN_ON,
-            Intent.ACTION_USER_PRESENT -> {
+            Intent.ACTION_USER_PRESENT,
+                -> {
                 CoroutineScope(Dispatchers.IO).launch { BatteryWidget.refreshFromFirestore(context) }
             }
         }
