@@ -2,8 +2,9 @@ package com.xenonware.cloudremote.ui.layouts.main
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
-import android.content.Intent
+import android.os.Build
 import android.service.quicksettings.TileService
+import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -72,7 +73,6 @@ import com.xenon.mylibrary.res.SpannedModeFAB
 import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
-import com.xenonware.cloudremote.ui.theme.LocalExtendedMaterialColorScheme
 import com.xenon.mylibrary.values.ExtraLargePadding
 import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
@@ -87,6 +87,7 @@ import com.xenonware.cloudremote.presentation.sign_in.SignInViewModel
 import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.ui.res.DeviceItem
 import com.xenonware.cloudremote.ui.res.LoginScreen
+import com.xenonware.cloudremote.ui.theme.LocalExtendedMaterialColorScheme
 import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.viewmodel.MainViewModel
 import dev.chrisbanes.haze.hazeSource
@@ -109,20 +110,29 @@ fun CompactRemote(
         // ============================================================================
         // 1. Device, Screen & Layout Configuration
         // ============================================================================
+
+        //Temporär
+        val modelUpper = remember { Build.MODEL.uppercase() }
+        val isMindOne = modelUpper.contains("MINDONE")
+        
         val deviceConfig = LocalDeviceConfig.current
         var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
+        LaunchedEffect(modelUpper) {
+            Toast.makeText(context, modelUpper, Toast.LENGTH_SHORT).show()
+        }
         val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
         val density = LocalDensity.current
         val configuration = LocalConfiguration.current
+        val isCompact = LocalDeviceConfig.current.isCommunicator || LocalDeviceConfig.current.isMindOne || isMindOne
         val appHeight = configuration.screenHeightDp.dp
         val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
         val isAppBarExpandable = when (layoutType) {
             LayoutType.COVER -> false
             LayoutType.SMALL -> false
-            LayoutType.COMPACT -> !isLandscape && appHeight >= 460.dp
+            LayoutType.COMPACT -> !isLandscape && !isCompact && appHeight >= 460.dp
             LayoutType.MEDIUM -> true
             LayoutType.EXPANDED -> true
         }
