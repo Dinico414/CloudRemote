@@ -116,8 +116,7 @@ fun CompactRemote(
 
         //Temporär
         val modelUpper = remember { Build.MODEL.uppercase() }
-        val isMindOne = modelUpper.contains("MINDONE")
-        
+
         val deviceConfig = LocalDeviceConfig.current
         var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
@@ -131,7 +130,7 @@ fun CompactRemote(
 
         val density = LocalDensity.current
         val configuration = LocalConfiguration.current
-        val isCompact = LocalDeviceConfig.current.isCommunicator || LocalDeviceConfig.current.isMindOne || isMindOne
+        val isCompact = LocalDeviceConfig.current.isCommunicator || LocalDeviceConfig.current.isMindOne
         val appHeight = configuration.screenHeightDp.dp
         val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
