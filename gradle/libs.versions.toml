@@ -39,10 +39,6 @@ xenonCommons = "2.4.7"
 xenonUi = "3.5"
 cardview = "1.0.0"
 constraintlayout = "2.2.1"
-kotlinStdlib = "2.3.20"
-kotlinTest = "2.3.20"
-runner = "1.5.2"
-core = "1.5.0"
 
 [libraries]
 
@@ -92,16 +88,9 @@ firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work-runtime" }
 androidx-cardview = { group = "androidx.cardview", name = "cardview", version.ref = "cardview" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
-kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlinStdlib" }
-kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
-androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
-androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }
-kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-android-kotlin-multiplatform-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-android-lint = { id = "com.android.lint", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
+

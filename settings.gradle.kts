@@ -24,5 +24,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Cloud Remote"
-include(":androidApp")
-include(":shared")
+include(":app")
