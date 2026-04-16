@@ -1,3 +1,5 @@
+@file:Suppress("KotlinConstantConditions")
+
 package com.xenonware.cloudremote.ui.layouts.main
 
 import android.annotation.SuppressLint
@@ -78,6 +80,7 @@ import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
+import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
@@ -118,8 +121,11 @@ fun CompactRemote(
         val deviceConfig = LocalDeviceConfig.current
         var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
-        LaunchedEffect(modelUpper) {
-            Toast.makeText(context, modelUpper, Toast.LENGTH_SHORT).show()
+        @Suppress("SimplifyBooleanWithConstants")
+        if (BuildConfig.BUILD_TYPE == "debug") {
+            LaunchedEffect(modelUpper) {
+                Toast.makeText(context, modelUpper, Toast.LENGTH_SHORT).show()
+            }
         }
         val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
@@ -351,7 +357,10 @@ fun CompactRemote(
                         if (currentUser == null) {
                             LoginScreen(
                                 onSignInClick = onSignInClick,
-                                modifier = Modifier.align(Alignment.Center).padding(horizontal = 16.dp).padding(bottom = scaffoldPadding.calculateBottomPadding())
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 16.dp)
+                                    .padding(bottom = scaffoldPadding.calculateBottomPadding())
                             )
                         } else {
                             val localDeviceState by viewModel.localDeviceState.collectAsStateWithLifecycle()
