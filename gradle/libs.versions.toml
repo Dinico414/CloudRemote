@@ -34,7 +34,7 @@ datastore = "1.2.1"
 work-runtime = "2.11.2"
 
 
-xenonCommons = "2.4.7"
+xenonCommons = "2.4.8"
 #noinspection UnusedVersionCatalogEntry
 xenonUi = "3.5"
 cardview = "1.0.0"
