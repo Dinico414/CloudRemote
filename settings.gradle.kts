@@ -23,5 +23,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Cloud Remote"
-include(":app")
+rootProject.name = "CloudRemote"
+include(":composeApp")
