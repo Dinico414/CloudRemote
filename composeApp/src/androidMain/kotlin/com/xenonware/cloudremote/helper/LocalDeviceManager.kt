@@ -93,14 +93,11 @@ class LocalDeviceManager(private val context: Context) {
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     private val bluetoothAdapter: BluetoothAdapter? = bluetoothManager?.adapter
 
-    private var curtainView: View? = null
-    private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
-    private var isCurtainVisible = false
-    private var lastKnownRingVolume = -1
     private var cachedConnectedDevices: List<ConnectedDevice> = emptyList()
-    private var onCurtainStateChanged: (() -> Unit)? = null
     private var lastBatteryLevel = -1
     private var lastIsCharging = false
+
+    private var lastKnownRingVolume = -1
 
     companion object {
         private const val TAG = "LocalDeviceManager"
@@ -150,35 +147,48 @@ class LocalDeviceManager(private val context: Context) {
         // Initial fetch of Bluetooth devices
         cachedConnectedDevices = getConnectedBluetoothDevices()
         
+        var lastEmittedState: DeviceState? = null
+
+        fun sendIfChanged() {
+            val newState = getCurrentState()
+            if (newState != lastEmittedState) {
+                lastEmittedState = newState
+                trySend(newState)
+            }
+        }
+
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent?) {
                 val action = intent?.action
                 
                 if (action == Intent.ACTION_BATTERY_CHANGED) {
+                    val oldLevel = lastBatteryLevel
+                    val oldCharging = lastIsCharging
                     parseBatteryLevel(intent)
                     parseIsCharging(intent)
-                }
-                
-                // Only refresh Bluetooth devices on actual Bluetooth events
-                if (action == BluetoothDevice.ACTION_ACL_CONNECTED ||
+                    if (oldLevel != lastBatteryLevel || oldCharging != lastIsCharging) {
+                        sendIfChanged()
+                    }
+                } else if (action == BluetoothDevice.ACTION_ACL_CONNECTED ||
                     action == BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED ||
                     action == BluetoothDevice.ACTION_ACL_DISCONNECTED
                 ) {
                     cachedConnectedDevices = getConnectedBluetoothDevices()
+                    sendIfChanged()
                     
                     // Bluetooth state often takes a few seconds to update after the ACL broadcast.
-                    // We schedule follow-up checks to ensure the connected devices list is accurate.
                     mainHandler.postDelayed({ 
                         cachedConnectedDevices = getConnectedBluetoothDevices()
-                        trySend(getCurrentState()) 
+                        sendIfChanged()
                     }, 2000)
                     mainHandler.postDelayed({ 
                         cachedConnectedDevices = getConnectedBluetoothDevices()
-                        trySend(getCurrentState()) 
+                        sendIfChanged()
                     }, 5000)
+                } else {
+                    // Volume, screen, ringer, DND etc.
+                    sendIfChanged()
                 }
-                
-                trySend(getCurrentState())
             }
         }
         val filter = IntentFilter().apply {
@@ -194,11 +204,11 @@ class LocalDeviceManager(private val context: Context) {
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         }
         context.registerReceiver(receiver, filter)
-        onCurtainStateChanged = { trySend(getCurrentState()) }
+        SwipeableCurtainManager.onCurtainStateChanged = { trySend(getCurrentState()) }
         trySend(getCurrentState())
         awaitClose {
             context.unregisterReceiver(receiver)
-            onCurtainStateChanged = null
+            SwipeableCurtainManager.onCurtainStateChanged = null
         }
     }
 
@@ -232,7 +242,7 @@ class LocalDeviceManager(private val context: Context) {
                 ringerMode,
                 isDndActive,
                 powerManager.isInteractive,
-                isCurtainVisible,
+                SwipeableCurtainManager.isCurtainVisible,
                 isLocked,
                 cachedConnectedDevices
             )
@@ -481,182 +491,12 @@ class LocalDeviceManager(private val context: Context) {
     fun setCloudCurtain(enabled: Boolean) {
         mainHandler.post {
             Log.d(TAG, "setCloudCurtain: $enabled")
-            if (enabled) showCloudCurtain() else hideCurtain()
-        }
-    }
-
-    private fun showCloudCurtain() {
-        if (isCurtainVisible) return
-        if (!Settings.canDrawOverlays(context)) return
-
-        try {
-            val params = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                PixelFormat.TRANSLUCENT
-            )
-
-            params.layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-
-            val layout = object : FrameLayout(context) {
-                override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                    if (event.keyCode == KeyEvent.KEYCODE_BACK) return true
-                    return super.dispatchKeyEvent(event)
-                }
-            }
-            layout.setBackgroundColor(Color.TRANSPARENT)
-            layout.isClickable = true
-            layout.isFocusable = true
-            layout.isFocusableInTouchMode = true
-            
-            @Suppress("DEPRECATION")
-            layout.systemUiVisibility = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN
-
-            overlayLifecycleOwner = OverlayLifecycleOwner()
-            overlayLifecycleOwner?.performRestore(null)
-            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-
-            layout.setViewTreeLifecycleOwner(overlayLifecycleOwner)
-            layout.setViewTreeSavedStateRegistryOwner(overlayLifecycleOwner)
-            layout.setViewTreeViewModelStoreOwner(overlayLifecycleOwner)
-
-            val composeView = ComposeView(context).apply {
-                setContent {
-                    var isActive by remember { mutableStateOf(true) }
-                    var targetOffsetY by remember { mutableFloatStateOf(0f) }
-                    var isDragging by remember { mutableStateOf(false) }
-                    var screenHeight by remember { mutableFloatStateOf(1f) }
-
-                    val offsetY by animateFloatAsState(
-                        targetValue = targetOffsetY,
-                        label = "offsetY",
-                        animationSpec = if (isDragging) snap() else spring(),
-                        finishedListener = {
-                            if (it <= -screenHeight + 1f && !isDragging && targetOffsetY < 0) {
-                                hideCurtain()
-                            }
-                        }
-                    )
-
-                    val animatedTextAlpha by animateFloatAsState(
-                        targetValue = if (isActive) 0.5f else 0f,
-                        label = "textAlpha",
-                        animationSpec = tween(durationMillis = 500)
-                    )
-
-                    LaunchedEffect(isActive) {
-                        if (isActive) {
-                            delay(10000)
-                            isActive = false
-                        }
-                    }
-
-                    val progress = (abs(offsetY) / screenHeight).coerceIn(0f, 1f)
-                    
-                    // Deadzone: stay fully opaque for the first 30% of the swipe
-                    val fadeStart = 0.3f
-                    val adjustedProgress = if (progress < fadeStart) 0f else (progress - fadeStart) / (1f - fadeStart)
-                    
-                    // Non-linear alpha: transparency grows faster (exponentially) as we swipe further
-                    val curtainAlpha = (1f - adjustedProgress.pow(8f)).coerceIn(0f, 1f)
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .onSizeChanged { screenHeight = it.height.toFloat().coerceAtLeast(1f) }
-                            .drawBehind {
-                                drawRect(color = Black, alpha = curtainAlpha)
-                            }
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures(
-                                    onDragStart = { isDragging = true },
-                                    onDragEnd = {
-                                        isDragging = false
-                                        targetOffsetY = if (progress > 0.4f) {
-                                            -screenHeight // Animate away
-                                        } else {
-                                            0f
-                                        }
-                                    },
-                                    onDragCancel = {
-                                        isDragging = false
-                                        targetOffsetY = 0f
-                                    },
-                                    onVerticalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        // Swipe up to reveal
-                                        targetOffsetY = (targetOffsetY + dragAmount).coerceAtMost(0f)
-                                        isActive = true
-                                    }
-                                )
-                            }
-                            .pointerInput(Unit) {
-                                detectTapGestures(onPress = {
-                                    isActive = true
-                                    tryAwaitRelease()
-                                })
-                            }
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    translationY = offsetY
-                                    alpha = curtainAlpha
-                                }
-                        ) {
-                            Spacer(modifier = Modifier.weight(1f))
-                            PixelWatchFace(isActive = isActive)
-                            Spacer(modifier = Modifier.weight(1f))
-                            Text(text = stringResource(R.string.locked_extern), color = White.copy(alpha = animatedTextAlpha))
-                            Spacer(modifier = Modifier.weight(0.2f))
-                        }
-                    }
-                }
-            }
-
-            layout.addView(composeView, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            ))
-
-            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_START)
-            overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-            windowManager.addView(layout, params)
-
-            curtainView = layout
-            isCurtainVisible = true
-            onCurtainStateChanged?.invoke()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing curtain", e)
-        }
-    }
-
-    private fun hideCurtain() {
-        if (curtainView == null && !isCurtainVisible) return
-
-        curtainView?.let { view ->
-            try {
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-                overlayLifecycleOwner?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-                windowManager.removeView(view)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error removing curtain view", e)
+            if (enabled) {
+                SwipeableCurtainManager.showCurtain(context, isCloud = true)
+            } else {
+                SwipeableCurtainManager.hideCurtain(context)
             }
         }
-        curtainView = null
-        overlayLifecycleOwner = null
-        isCurtainVisible = false
-        onCurtainStateChanged?.invoke()
     }
 
     fun lockDevice() {

@@ -15,3 +15,5 @@
 local.properties
 composeApp/google-services.json
 /.idea
+/.kotlin
+.idea/appInsightsSettings.xml

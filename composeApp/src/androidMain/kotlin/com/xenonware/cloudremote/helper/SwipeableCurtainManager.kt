@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -38,7 +39,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import com.xenonware.cloudremote.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -72,10 +76,13 @@ object SwipeableCurtainManager {
         private set
 
     private var triggerHide: (() -> Unit)? = null
+    private var isCloudCurtain = false
+    var onCurtainStateChanged: (() -> Unit)? = null
 
     @Suppress("DEPRECATION")
-    fun showCurtain(context: Context) {
+    fun showCurtain(context: Context, isCloud: Boolean = false) {
         if (isCurtainVisible) return
+        isCloudCurtain = isCloud
 
         if (!Settings.canDrawOverlays(context)) {
             Log.e(TAG, "Overlay permission missing, cannot show curtain")
@@ -99,8 +106,10 @@ object SwipeableCurtainManager {
                 PixelFormat.TRANSLUCENT
             )
 
-            params.layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                params.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
 
             val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -207,7 +216,8 @@ object SwipeableCurtainManager {
                                             detectVerticalDragGestures(
                                                 onDragStart = { isActive = true },
                                                 onDragEnd = {
-                                                    if (contentOffsetY < -200 * density) {
+                                                    // Only allow swipe to dismiss if NOT a cloud-initiated curtain
+                                                    if (!isCloudCurtain && contentOffsetY < -200 * density) {
                                                         hideCurtain(context)
                                                     } else {
                                                         contentOffsetY = 0f
@@ -215,8 +225,17 @@ object SwipeableCurtainManager {
                                                 }
                                             ) { _, dragAmount ->
                                                 val newContentOffsetY = contentOffsetY + dragAmount
-                                                if (newContentOffsetY <= 0) {
-                                                    contentOffsetY = newContentOffsetY
+                                                // If cloud curtain, don't allow swiping up past 0 (limit the upward drag)
+                                                if (isCloudCurtain) {
+                                                    if (newContentOffsetY <= 0 && newContentOffsetY > -50 * density) {
+                                                        contentOffsetY = newContentOffsetY
+                                                    } else if (newContentOffsetY > 0) {
+                                                        contentOffsetY = 0f
+                                                    }
+                                                } else {
+                                                    if (newContentOffsetY <= 0) {
+                                                        contentOffsetY = newContentOffsetY
+                                                    }
                                                 }
                                             }
                                         }
@@ -237,7 +256,7 @@ object SwipeableCurtainManager {
                                 PixelWatchFace(isActive = isActive)
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
-                                    text = "Swipe up to unlock",
+                                    text = if (isCloudCurtain) stringResource(R.string.locked_extern) else "Swipe up to unlock",
                                     color = ComposeColor.White.copy(alpha = animatedTextAlpha)
                                 )
                                 Spacer(modifier = Modifier.weight(0.2f))
@@ -260,6 +279,7 @@ object SwipeableCurtainManager {
 
             curtainView = layout
             isCurtainVisible = true
+            onCurtainStateChanged?.invoke()
             
             CurtainTileService.isCurtainActive = true
             CurtainTileService.requestTileUpdate(context)
@@ -301,6 +321,7 @@ object SwipeableCurtainManager {
         overlayLifecycleOwner = null
         triggerHide = null
         isCurtainVisible = false
+        onCurtainStateChanged?.invoke()
         
         CurtainTileService.isCurtainActive = false
         CurtainTileService.requestTileUpdate(context)
