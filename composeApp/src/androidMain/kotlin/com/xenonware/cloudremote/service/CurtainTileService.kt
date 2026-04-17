@@ -1,6 +1,7 @@
 package com.xenonware.cloudremote.service
 
 import android.annotation.SuppressLint
+import android.app.KeyguardManager
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
@@ -8,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.xenonware.cloudremote.helper.SwipeableCurtainManager
 
 class CurtainTileService : TileService() {
 
@@ -26,21 +28,18 @@ class CurtainTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        
-        val intent = Intent(this, CurtainTrampolineActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startActivityAndCollapse(
-                PendingIntent.getActivity(
-                    this, 0, intent,
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-                )
-            )
+
+        if (SwipeableCurtainManager.isCurtainVisible) {
+            SwipeableCurtainManager.hideCurtain(this)
         } else {
+            SwipeableCurtainManager.showCurtain(applicationContext)
+        }
+
+        // Collapse the quick settings shade (deprecated and restricted in Android 12+)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             @Suppress("DEPRECATION")
-            startActivityAndCollapse(intent)
+            val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+            sendBroadcast(closeIntent)
         }
     }
 
