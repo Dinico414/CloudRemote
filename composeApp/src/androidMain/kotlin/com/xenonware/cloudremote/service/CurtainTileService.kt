@@ -1,0 +1,76 @@
+package com.xenonware.cloudremote.service
+
+import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.service.quicksettings.Tile
+import android.service.quicksettings.TileService
+
+class CurtainTileService : TileService() {
+
+    override fun onStartListening() {
+        super.onStartListening()
+        instance = this
+        updateTileState()
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        if (instance == this) {
+            instance = null
+        }
+    }
+
+    override fun onClick() {
+        super.onClick()
+        
+        val intent = Intent(this, CurtainTrampolineActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startActivityAndCollapse(
+                PendingIntent.getActivity(
+                    this, 0, intent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(intent)
+        }
+    }
+
+    fun updateTileState() {
+        val tile = qsTile ?: return
+        if (isCurtainActive) {
+            tile.state = Tile.STATE_ACTIVE
+            tile.label = "Curtain On"
+        } else {
+            tile.state = Tile.STATE_INACTIVE
+            tile.label = "Curtain Off"
+        }
+        tile.updateTile()
+    }
+
+    companion object {
+        var isCurtainActive = false
+        @SuppressLint("StaticFieldLeak")
+        var instance: CurtainTileService? = null
+
+        fun requestTileUpdate(context: Context) {
+            try {
+                instance?.updateTileState()
+                requestListeningState(
+                    context,
+                    ComponentName(context, CurtainTileService::class.java)
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+}
