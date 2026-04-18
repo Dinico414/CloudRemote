@@ -1,7 +1,6 @@
 package com.xenonware.cloudremote.service
 
 import android.annotation.SuppressLint
-import android.app.KeyguardManager
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
@@ -26,20 +25,43 @@ class CurtainTileService : TileService() {
         }
     }
 
+    @SuppressLint("StartActivityAndCollapseDeprecated")
     override fun onClick() {
         super.onClick()
 
-        if (SwipeableCurtainManager.isCurtainVisible) {
-            SwipeableCurtainManager.hideCurtain(this)
+        if (isLocked) {
+            if (SwipeableCurtainManager.isCurtainVisible) {
+                SwipeableCurtainManager.hideCurtain(this)
+            } else {
+                val intent = Intent(this, CurtainTrampolineActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    val pendingIntent = PendingIntent.getActivity(
+                        this,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE
+                    )
+                    startActivityAndCollapse(pendingIntent)
+                } else {
+                    @Suppress("DEPRECATION")
+                    startActivityAndCollapse(intent)
+                }
+            }
         } else {
-            SwipeableCurtainManager.showCurtain(applicationContext)
-        }
+            if (SwipeableCurtainManager.isCurtainVisible) {
+                SwipeableCurtainManager.hideCurtain(this)
+            } else {
+                SwipeableCurtainManager.showCurtain(applicationContext)
+            }
 
-        // Collapse the quick settings shade (deprecated and restricted in Android 12+)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            @Suppress("DEPRECATION")
-            val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-            sendBroadcast(closeIntent)
+            // Collapse the quick settings shade (deprecated and restricted in Android 12+)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                @Suppress("DEPRECATION")
+                val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                sendBroadcast(closeIntent)
+            }
         }
     }
 

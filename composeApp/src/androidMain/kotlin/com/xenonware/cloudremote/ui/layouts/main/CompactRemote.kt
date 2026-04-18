@@ -114,7 +114,6 @@ fun CompactRemote(
         // 1. Device, Screen & Layout Configuration
         // ============================================================================
 
-        //Temporär
         val modelUpper = remember { Build.MODEL.uppercase() }
 
         val deviceConfig = LocalDeviceConfig.current
@@ -376,7 +375,7 @@ fun CompactRemote(
                             val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
                                 .filter { it.name.contains(searchQuery, ignoreCase = true) }
                             val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
-                                (currentTime - it.lastUpdated) < 900_000 
+                                (currentTime - it.lastUpdated) < 900_000
                             }
 
                             LazyColumn(
