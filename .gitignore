@@ -17,3 +17,10 @@ composeApp/google-services.json
 /.idea
 /.kotlin
 .idea/appInsightsSettings.xml
+bad-words.txt
+/..bfg-report
+bfg.jar
+bad-words.txt
+.idea/artifacts/composeApp_jvm.xml
+.idea/misc.xml
+bad-words.txt
