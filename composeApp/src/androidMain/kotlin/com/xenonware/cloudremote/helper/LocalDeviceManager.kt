@@ -13,70 +13,30 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
-import android.graphics.PixelFormat
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
-import android.provider.Settings
 import android.util.Log
-import android.view.KeyEvent
-import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
 import androidx.annotation.RequiresPermission
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color.Companion.Black
-import androidx.compose.ui.graphics.Color.Companion.White
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.ConnectedDevice
-import com.xenonware.cloudremote.ui.res.PixelWatchFace
+import com.xenonware.cloudremote.helper.SwipeableCurtainManager.isCurtainVisible
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlin.math.abs
-import kotlin.math.pow
 
 class LocalDeviceManager(private val context: Context) {
 
@@ -214,10 +174,13 @@ class LocalDeviceManager(private val context: Context) {
 
     fun getCurrentStateSnapshot(): DeviceState = getCurrentState()
 
+// Replace the corresponding methods in LocalDeviceManager.kt
+
     private fun getCurrentState(): DeviceState {
         return try {
-            val batteryLevel = getBatteryLevel()
-            val isCharging = isCharging()
+            // Use cached battery values to avoid spamming registerReceiver
+            val batteryLevel = if (lastBatteryLevel != -1) lastBatteryLevel else getBatteryLevel()
+            val isCharging = lastIsCharging
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -228,8 +191,9 @@ class LocalDeviceManager(private val context: Context) {
                 else -> 2
             }
 
+            // EXACT OLD BEHAVIOR: Only active if filter is exactly NONE
             val isDndActive = if (notificationManager.isNotificationPolicyAccessGranted) {
-                notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
             } else false
 
             val isLocked = keyguardManager.isKeyguardLocked
@@ -242,13 +206,71 @@ class LocalDeviceManager(private val context: Context) {
                 ringerMode,
                 isDndActive,
                 powerManager.isInteractive,
-                SwipeableCurtainManager.isCurtainVisible,
-                isLocked,
-                cachedConnectedDevices
+                isCurtainVisible,
+                isLocked
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error getting device state", e)
             DeviceState()
+        }
+    }
+
+    fun setRingerMode(mode: Int) {
+        try {
+            val hasPerm = notificationManager.isNotificationPolicyAccessGranted
+            if (!hasPerm) {
+                Log.w(TAG, "setRingerMode: DND permission not granted")
+                return
+            }
+
+            when (mode) {
+                0 -> { // Silent
+                    val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+                    if (vol > 0) lastKnownRingVolume = vol
+
+                    // FORCE BEHAVIOR: Jump to Normal first
+                    if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                    }
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
+                }
+                1 -> { // Vibrate
+                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                        val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+                        if (vol > 0) lastKnownRingVolume = vol
+                    }
+                    // FORCE BEHAVIOR: Jump to Normal first
+                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_SILENT) {
+                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                    }
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                }
+                2 -> { // Normal
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+                    val targetVol = if (lastKnownRingVolume > 0) lastKnownRingVolume
+                    else (maxVol / 2).coerceAtLeast(1)
+                    audioManager.setStreamVolume(AudioManager.STREAM_RING, targetVol, 0)
+                    audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetVol, 0)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting ringer mode", e)
+        }
+    }
+
+    fun setDnd(active: Boolean) {
+        try {
+            if (!notificationManager.isNotificationPolicyAccessGranted) {
+                Log.w(TAG, "setDnd: permission not granted")
+                return
+            }
+            // EXACT OLD BEHAVIOR: Use FILTER_NONE for ON
+            val target = if (active) NotificationManager.INTERRUPTION_FILTER_NONE
+            else NotificationManager.INTERRUPTION_FILTER_ALL
+            notificationManager.setInterruptionFilter(target)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting DND", e)
         }
     }
 
@@ -437,56 +459,9 @@ class LocalDeviceManager(private val context: Context) {
         }
     }
 
-    fun setRingerMode(mode: Int) {
-        try {
-            val hasPerm = notificationManager.isNotificationPolicyAccessGranted
+// Inside LocalDeviceManager.kt
 
-            if (!hasPerm) {
-                Log.w(TAG, "setRingerMode: DND permission not granted")
-                return
-            }
 
-            when (mode) {
-                0 -> {
-                    val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
-                    if (vol > 0) lastKnownRingVolume = vol
-                    
-                    audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
-                }
-                1 -> {
-                    if (audioManager.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-                        val vol = audioManager.getStreamVolume(AudioManager.STREAM_RING)
-                        if (vol > 0) lastKnownRingVolume = vol
-                    }
-                    audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-                }
-                2 -> {
-                    audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                    val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-                    val targetVol = if (lastKnownRingVolume > 0) lastKnownRingVolume
-                    else (maxVol / 2).coerceAtLeast(1)
-                    audioManager.setStreamVolume(AudioManager.STREAM_RING, targetVol, 0)
-                    audioManager.setStreamVolume(AudioManager.STREAM_NOTIFICATION, targetVol, 0)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting ringer mode", e)
-        }
-    }
-
-    fun setDnd(active: Boolean) {
-        try {
-            if (!notificationManager.isNotificationPolicyAccessGranted) {
-                Log.w(TAG, "setDnd: permission not granted")
-                return
-            }
-            val target = if (active) NotificationManager.INTERRUPTION_FILTER_PRIORITY
-            else NotificationManager.INTERRUPTION_FILTER_ALL
-            notificationManager.setInterruptionFilter(target)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error setting DND", e)
-        }
-    }
 
     fun setCloudCurtain(enabled: Boolean) {
         mainHandler.post {

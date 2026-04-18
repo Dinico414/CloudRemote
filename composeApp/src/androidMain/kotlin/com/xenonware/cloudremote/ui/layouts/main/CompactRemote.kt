@@ -391,6 +391,9 @@ fun CompactRemote(
                             ) {
                                 item {
                                     val isSharing = localDevice != null
+                                    // FIX: We only copy Battery, Charging, and Screen/Lock state from hardware.
+                                    // We DO NOT copy mediaVolume or ringerMode because those are "Intended States"
+                                    // and should come from the 'localDevice' (Cloud) object.
                                     val deviceToDisplay = (localDevice ?: Device(
                                         id = viewModel.localDeviceId,
                                         name = localDeviceName.ifBlank {
@@ -398,14 +401,12 @@ fun CompactRemote(
                                         })).copy(
                                         batteryLevel = localDeviceState.batteryLevel,
                                         isCharging = localDeviceState.isCharging,
-                                        mediaVolume = localDeviceState.mediaVolume,
-                                        maxMediaVolume = localDeviceState.maxMediaVolume,
-                                        ringerMode = localDeviceState.ringerMode,
-                                        isDndActive = localDeviceState.isDndActive,
                                         isScreenOn = localDeviceState.isScreenOn,
                                         isCurtainOn = localDeviceState.isCurtainOn,
                                         isLocked = localDeviceState.isLocked,
                                         connectedDevices = localDeviceState.connectedDevices.map { it.toMap() }
+                                        // REMOVED: mediaVolume = localDeviceState.mediaVolume
+                                        // REMOVED: ringerMode = localDeviceState.ringerMode
                                     )
 
                                     DeviceItem(
@@ -417,9 +418,7 @@ fun CompactRemote(
                                             viewModel.updateDevice(updatedDevice)
                                         },
                                         onToggleShare = { name, icon ->
-                                            viewModel.toggleCurrentDevice(
-                                                name, icon
-                                            )
+                                            viewModel.toggleCurrentDevice(name, icon)
                                         },
                                         onRemoveDevice = { removedDevice ->
                                             viewModel.removeDevice(removedDevice)

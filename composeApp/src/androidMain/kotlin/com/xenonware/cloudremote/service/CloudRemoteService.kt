@@ -62,13 +62,14 @@ class CloudRemoteService : Service() {
     private var currentRemoteDevice: Device? = null
     private var localDeviceId: String? = null
 
-    // Track last notified battery level per device to avoid spam
     private val lastNotifiedBatteryLevels = mutableMapOf<String, Int>()
-
     @Volatile
     private var lastCommandAppliedAt: Long = 0L
-
     private val lastLocalChangeTime = mutableMapOf<String, Long>()
+
+    // NEW: Lock to prevent DND-induced silence from syncing to cloud
+    @Volatile
+    private var dndTransitionLockUntil = 0L
 
     private enum class ConnectionQuality { GOOD, BAD, NONE }
     @Volatile
@@ -84,8 +85,7 @@ class CloudRemoteService : Service() {
     private val mediaUpdateFlow = MutableSharedFlow<MediaUpdate>(extraBufferCapacity = 1)
 
     private val userPresentReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-        }
+        override fun onReceive(context: Context?, intent: Intent?) {}
     }
 
     private val mediaUpdateReceiver = object : BroadcastReceiver() {
@@ -137,7 +137,6 @@ class CloudRemoteService : Service() {
         )
         registerReceiver(userPresentReceiver, IntentFilter(Intent.ACTION_USER_PRESENT))
 
-        // Debounced media updates with dynamic delay
         scope.launch {
             mediaUpdateFlow.debounce { getSyncDebounceMs() }.collectLatest { update ->
                 updateMediaState(
@@ -151,23 +150,17 @@ class CloudRemoteService : Service() {
 
     private fun setupNetworkCallback() {
         val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        // Initial state
         val activeNetwork = connectivityManager.activeNetwork
         val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
         updateNetworkState(caps)
         isNetworkMetered = connectivityManager.isActiveNetworkMetered
 
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-
+        val request = NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build()
         connectivityManager.registerNetworkCallback(request, object : ConnectivityManager.NetworkCallback() {
             override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
                 updateNetworkState(networkCapabilities)
                 isNetworkMetered = !networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
             }
-
             override fun onLost(network: Network) {
                 currentConnectionQuality = ConnectionQuality.NONE
             }
@@ -179,22 +172,17 @@ class CloudRemoteService : Service() {
             currentConnectionQuality = ConnectionQuality.NONE
             return
         }
-
         val bandwidth = caps.linkDownstreamBandwidthKbps
-        currentConnectionQuality = if (bandwidth in 1..800) {
-            ConnectionQuality.BAD
-        } else {
-            ConnectionQuality.GOOD
-        }
+        currentConnectionQuality = if (bandwidth in 1..800) ConnectionQuality.BAD else ConnectionQuality.GOOD
     }
 
     private fun getSyncDebounceMs(): Long {
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         return when {
             currentConnectionQuality == ConnectionQuality.NONE -> 60_000L
-            powerManager.isPowerSaveMode -> 5_000L
-            currentConnectionQuality == ConnectionQuality.BAD -> 10_000L
-            !powerManager.isInteractive -> 5_000L
+            powerManager.isPowerSaveMode -> 20_000L
+            currentConnectionQuality == ConnectionQuality.BAD -> 15_000L
+            !powerManager.isInteractive -> 10_000L
             else -> 1_000L
         }
     }
@@ -210,23 +198,18 @@ class CloudRemoteService : Service() {
             localDeviceId = id
             startSync()
         }
-
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(NOTIFICATION_ID, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(NOTIFICATION_ID, createNotification())
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start foreground", e)
-        }
-
+        } catch (e: Exception) { Log.e(TAG, "Failed to start foreground", e) }
         return START_STICKY
     }
 
     override fun onTimeout(startId: Int, fgsType: Int) {
         super.onTimeout(startId, fgsType)
-        Log.w(TAG, "Foreground service timed out for fgsType: $fgsType")
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -235,159 +218,120 @@ class CloudRemoteService : Service() {
 
     @OptIn(FlowPreview::class)
     private fun startSync() {
-        if (isSyncing) {
-            Log.d(TAG, "Sync already in progress. Skipping startSync.")
-            return
-        }
-
-        if (!sharedPreferenceManager.inputReceiverEnabled) {
-            Log.d(TAG, "Input receiver is disabled. Skipping sync.")
-            return
-        }
-
+        if (isSyncing) return
+        if (!sharedPreferenceManager.inputReceiverEnabled) return
         val deviceId = localDeviceId ?: return
         isSyncing = true
 
-        // Remote -> Local sync
         scope.launch {
             var retryDelay = 2000L
             while (isActive) {
-                if (auth.currentUser == null) {
-                    delay(5000)
-                    continue
-                }
-
-                if (!isNetworkAvailable()) {
-                    delay(15000)
-                    continue
-                }
+                if (auth.currentUser == null) { delay(5000); continue }
+                if (!isNetworkAvailable()) { delay(15000); continue }
 
                 try {
-                    repository.getDevicesFlow()
-                        .collect { devices ->
-                            retryDelay = 2000L
+                    repository.getDevicesFlow().collect { devices ->
+                        retryDelay = 2000L
+                        if (!isNetworkAvailable()) throw Exception("Network lost")
 
-                            if (!isNetworkAvailable()) {
-                                throw Exception("Network lost during collection")
+                        val myDevice = devices.find { it.id == deviceId }
+                        devices.forEach { device ->
+                            if (device.id != deviceId && (System.currentTimeMillis() - device.lastUpdated) < 3_600_000) {
+                                checkBatteryLevel(device)
                             }
-
-                            val myDevice = devices.find { it.id == deviceId }
-
-                            // Check other devices for low battery
-                            devices.forEach { device ->
-                                if (device.id != deviceId) {
-                                    val isOnline = (System.currentTimeMillis() - device.lastUpdated) < 3_600_000
-                                    if (isOnline) {
-                                        checkBatteryLevel(device)
-                                    }
-                                }
-                            }
-
-                            val prev = currentRemoteDevice
-                            currentRemoteDevice = myDevice
-                            var commandApplied = false
-
-                            if (prev != null && myDevice != null) {
-                                val now = System.currentTimeMillis()
-                                
-                                if (prev.mediaVolume != myDevice.mediaVolume && !isLocalChangeRecent("mediaVolume", now)) {
-                                    localDeviceManager.setVolume(myDevice.mediaVolume)
-                                    commandApplied = true
-                                }
-                                if (prev.ringerMode != myDevice.ringerMode && !isLocalChangeRecent("ringerMode", now)) {
-                                    localDeviceManager.setRingerMode(myDevice.ringerMode)
-                                    commandApplied = true
-                                }
-                                if (prev.isDndActive != myDevice.isDndActive && !isLocalChangeRecent("isDndActive", now)) {
-                                    localDeviceManager.setDnd(myDevice.isDndActive)
-                                    commandApplied = true
-                                }
-                                if (prev.isCurtainOn != myDevice.isCurtainOn && !isLocalChangeRecent("isCurtainOn", now)) {
-                                    localDeviceManager.setCloudCurtain(myDevice.isCurtainOn)
-                                    commandApplied = true
-                                }
-                                if (prev.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
-                                    handleMediaAction(myDevice.mediaAction)
-                                    repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
-                                    commandApplied = true
-                                }
-                                if (myDevice.pendingAction == "lock") {
-                                    localDeviceManager.lockDevice()
-                                    val updates = mapOf("pendingAction" to "", "isLocked" to true)
-                                    repository.updateDeviceFields(deviceId, updates)
-                                    commandApplied = true
-                                }
-                            }
-
-                            if (commandApplied) {
-                                lastCommandAppliedAt = System.currentTimeMillis()
-                            }
-
-                            // Broadcast ALL devices to the widget (let the widget UI handle online/offline status)
-                            Log.d(TAG, "Broadcasting ${devices.size} devices to widget")
-                            broadcastWidgetUpdate(devices)
                         }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error syncing devices: ${e.message}")
-                }
 
+                        val prev = currentRemoteDevice
+                        currentRemoteDevice = myDevice
+                        var commandApplied = false
+
+                        if (prev != null && myDevice != null) {
+                            val now = System.currentTimeMillis()
+
+                            if (prev.mediaVolume != myDevice.mediaVolume && !isLocalChangeRecent("mediaVolume", now)) {
+                                localDeviceManager.setVolume(myDevice.mediaVolume)
+                                commandApplied = true
+                            }
+                            if (prev.ringerMode != myDevice.ringerMode) {
+                                localDeviceManager.setRingerMode(myDevice.ringerMode)
+                                commandApplied = true
+                            }
+                            if (prev.isDndActive != myDevice.isDndActive) {
+                                localDeviceManager.setDnd(myDevice.isDndActive)
+                                commandApplied = true
+
+                                // Start the guard timer: ignore local audio changes for 2s
+                                dndTransitionLockUntil = System.currentTimeMillis() + 2000L
+
+                                if (!myDevice.isDndActive) {
+                                    localDeviceManager.setRingerMode(myDevice.ringerMode)
+                                    localDeviceManager.setVolume(myDevice.mediaVolume)
+                                }
+                            }
+                            if (prev.isCurtainOn != myDevice.isCurtainOn && !isLocalChangeRecent("isCurtainOn", now)) {
+                                localDeviceManager.setCloudCurtain(myDevice.isCurtainOn)
+                                commandApplied = true
+                            }
+                            if (prev.mediaAction != myDevice.mediaAction && myDevice.mediaAction.isNotBlank()) {
+                                handleMediaAction(myDevice.mediaAction)
+                                repository.updateDeviceFields(deviceId, mapOf("mediaAction" to ""))
+                                commandApplied = true
+                            }
+                            if (myDevice.pendingAction == "lock") {
+                                localDeviceManager.lockDevice()
+                                repository.updateDeviceFields(deviceId, mapOf("pendingAction" to "", "isLocked" to true))
+                                commandApplied = true
+                            }
+                        }
+
+                        if (commandApplied) lastCommandAppliedAt = System.currentTimeMillis()
+                        broadcastWidgetUpdate(devices)
+                    }
+                } catch (e: Exception) { Log.e(TAG, "Error syncing: ${e.message}") }
                 delay(retryDelay)
-                retryDelay = (retryDelay * 2).coerceAtMost(120_000L) // Increase max retry delay to 2 min
+                retryDelay = (retryDelay * 2).coerceAtMost(120_000L)
             }
         }
 
-        // Local -> Remote sync with dynamic debouncing
         scope.launch {
-            localDeviceManager.observeDeviceState()
-                .collectLatest { state ->
-                    // Trigger immediate widget updates for local responsiveness (no debounce for widgets)
-                    val batteryIntent = Intent(this@CloudRemoteService, BatteryWidgetReceiver::class.java).apply {
-                        action = BatteryWidgetReceiver.ACTION_REFRESH_LOCAL
-                        setPackage(packageName)
-                    }
-                    sendBroadcast(batteryIntent)
-
-                    val connectedIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply {
-                        action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
-                        setPackage(packageName)
-                    }
-                    sendBroadcast(connectedIntent)
+            localDeviceManager.observeDeviceState().collectLatest { state ->
+                val batteryIntent = Intent(this@CloudRemoteService, BatteryWidgetReceiver::class.java).apply {
+                    action = BatteryWidgetReceiver.ACTION_REFRESH_LOCAL
+                    setPackage(packageName)
                 }
+                sendBroadcast(batteryIntent)
+                val connectedIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply {
+                    action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
+                    setPackage(packageName)
+                }
+                sendBroadcast(connectedIntent)
+            }
         }
 
         scope.launch {
             localDeviceManager.observeDeviceState()
-                .debounce(1000L)
+                .debounce { getSyncDebounceMs() }
                 .collectLatest { state ->
-                    currentRemoteDevice?.let {
-                        if (auth.currentUser != null) {
-                            syncLocalStateToCloud(it, state)
-                        }
-                    }
+                    currentRemoteDevice?.let { if (auth.currentUser != null) syncLocalStateToCloud(it, state) }
                 }
         }
 
-        // Dynamic Heartbeat with aggressive battery saving
         scope.launch {
             while (isActive) {
                 val powerManager = getSystemService(POWER_SERVICE) as PowerManager
                 val batteryLevel = localDeviceManager.getBatteryLevel()
                 val isLowBattery = batteryLevel < 20 && !localDeviceManager.isCharging()
-
                 val interval = when {
-                    currentConnectionQuality == ConnectionQuality.NONE -> 600_000L // 10 min
-                    currentConnectionQuality == ConnectionQuality.BAD -> 300_000L // 5 min
-                    powerManager.isPowerSaveMode -> 300_000L // 5 min
-                    isLowBattery -> 300_000L // 5 min
-                    !powerManager.isInteractive -> 120_000L // 2 min
-                    else -> HEARTBEAT_INTERVAL_MS // 30s
+                    currentConnectionQuality == ConnectionQuality.NONE -> 600_000L
+                    currentConnectionQuality == ConnectionQuality.BAD -> 300_000L
+                    powerManager.isPowerSaveMode -> 300_000L
+                    isLowBattery -> 300_000L
+                    !powerManager.isInteractive -> 120_000L
+                    else -> HEARTBEAT_INTERVAL_MS
                 }
-
                 delay(interval)
-
                 if (auth.currentUser != null && currentRemoteDevice != null && isNetworkAvailable()) {
-                    val fields = mapOf("lastUpdated" to System.currentTimeMillis())
-                    repository.updateDeviceFields(deviceId, fields)
+                    repository.updateDeviceFields(deviceId, mapOf("lastUpdated" to System.currentTimeMillis()))
                 }
             }
         }
@@ -403,66 +347,36 @@ class CloudRemoteService : Service() {
 
     private fun handleMediaAction(action: String) {
         val componentName = ComponentName(this, MediaNotificationListener::class.java)
-        val mediaController =
-            (getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager)
-                .getActiveSessions(componentName).firstOrNull()
-
+        val mediaController = (getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager).getActiveSessions(componentName).firstOrNull()
         when (action) {
             "play" -> mediaController?.transportControls?.play()
             "pause" -> mediaController?.transportControls?.pause()
             "next" -> mediaController?.transportControls?.skipToNext()
             "previous" -> mediaController?.transportControls?.skipToPrevious()
-            "custom1" -> currentRemoteDevice?.mediaCustomAction1Action?.let {
-                mediaController?.transportControls?.sendCustomAction(it, null)
-            }
-            "custom2" -> currentRemoteDevice?.mediaCustomAction2Action?.let {
-                mediaController?.transportControls?.sendCustomAction(it, null)
-            }
+            "custom1" -> currentRemoteDevice?.mediaCustomAction1Action?.let { mediaController?.transportControls?.sendCustomAction(it, null) }
+            "custom2" -> currentRemoteDevice?.mediaCustomAction2Action?.let { mediaController?.transportControls?.sendCustomAction(it, null) }
         }
     }
 
-    private fun updateMediaState(
-        title: String, artist: String, albumArt: String, isPlaying: Boolean,
-        customAction1Title: String, customAction1Action: String,
-        customAction2Title: String, customAction2Action: String
-    ) {
+    private fun updateMediaState(title: String, artist: String, albumArt: String, isPlaying: Boolean, customAction1Title: String, customAction1Action: String, customAction2Title: String, customAction2Action: String) {
         val device = currentRemoteDevice ?: return
         val deviceId = localDeviceId ?: return
         if (auth.currentUser == null || !isNetworkAvailable()) return
-
         val updates = mutableMapOf<String, Any>()
         if (device.mediaTitle != title) updates["mediaTitle"] = title
         if (device.mediaArtist != artist) updates["mediaArtist"] = artist
-
-        if (device.mediaAlbumArt != albumArt) {
-            updates["mediaAlbumArt"] = albumArt
-        }
-
+        if (device.mediaAlbumArt != albumArt) updates["mediaAlbumArt"] = albumArt
         if (device.isPlaying != isPlaying) updates["isPlaying"] = isPlaying
         if (device.mediaCustomAction1Title != customAction1Title) updates["mediaCustomAction1Title"] = customAction1Title
         if (device.mediaCustomAction1Action != customAction1Action) updates["mediaCustomAction1Action"] = customAction1Action
         if (device.mediaCustomAction2Title != customAction2Title) updates["mediaCustomAction2Title"] = customAction2Title
         if (device.mediaCustomAction2Action != customAction2Action) updates["mediaCustomAction2Action"] = customAction2Action
-
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
-            
-            // Mark these fields as recently changed locally
             val now = System.currentTimeMillis()
-            updates.keys.forEach { key ->
-                lastLocalChangeTime[key] = now
-            }
-            
+            updates.keys.forEach { lastLocalChangeTime[it] = now }
             repository.updateDeviceFields(deviceId, updates)
-
-            currentRemoteDevice = device.copy(
-                mediaTitle = title, mediaArtist = artist,
-                mediaAlbumArt = if (updates.containsKey("mediaAlbumArt")) albumArt else device.mediaAlbumArt,
-                isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title,
-                mediaCustomAction1Action = customAction1Action,
-                mediaCustomAction2Title = customAction2Title,
-                mediaCustomAction2Action = customAction2Action
-            )
+            currentRemoteDevice = device.copy(mediaTitle = title, mediaArtist = artist, mediaAlbumArt = if (updates.containsKey("mediaAlbumArt")) albumArt else device.mediaAlbumArt, isPlaying = isPlaying, mediaCustomAction1Title = customAction1Title, mediaCustomAction1Action = customAction1Action, mediaCustomAction2Title = customAction2Title, mediaCustomAction2Action = customAction2Action)
         }
     }
 
@@ -473,61 +387,41 @@ class CloudRemoteService : Service() {
         if (msSinceCommand < COOLDOWN_MS) return
 
         val updates = mutableMapOf<String, Any>()
-
-        // Increase battery change threshold to 5% if connection is bad or power save is on
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         val threshold = if (currentConnectionQuality == ConnectionQuality.BAD || powerManager.isPowerSaveMode) 5 else 2
-
         val batteryDiff = abs(cachedDevice.batteryLevel - state.batteryLevel)
         if (batteryDiff >= threshold || cachedDevice.isCharging != state.isCharging) {
             updates["batteryLevel"] = state.batteryLevel
             updates["isCharging"] = state.isCharging
         }
 
-        if (cachedDevice.mediaVolume != state.mediaVolume) updates["mediaVolume"] = state.mediaVolume
-        if (cachedDevice.maxMediaVolume != state.maxMediaVolume) updates["maxMediaVolume"] = state.maxMediaVolume
-        if (cachedDevice.ringerMode != state.ringerMode) updates["ringerMode"] = state.ringerMode
+        // THE ULTIMATE GUARD:
+        // 1. Don't sync if DND is physically active (OS is forcing silence).
+        // 2. Don't sync if we are in the 2s window after a DND toggle.
+        val isLocked = state.isDndActive || System.currentTimeMillis() < dndTransitionLockUntil
+
+        if (!isLocked) {
+            if (cachedDevice.mediaVolume != state.mediaVolume) updates["mediaVolume"] = state.mediaVolume
+            if (cachedDevice.maxMediaVolume != state.maxMediaVolume) updates["maxMediaVolume"] = state.maxMediaVolume
+            if (cachedDevice.ringerMode != state.ringerMode) updates["ringerMode"] = state.ringerMode
+        }
+
         if (cachedDevice.isDndActive != state.isDndActive) updates["isDndActive"] = state.isDndActive
         if (cachedDevice.isScreenOn != state.isScreenOn) updates["isScreenOn"] = state.isScreenOn
         if (cachedDevice.isCurtainOn != state.isCurtainOn) updates["isCurtainOn"] = state.isCurtainOn
         if (cachedDevice.isLocked != state.isLocked) updates["isLocked"] = state.isLocked
 
-
-        // Compare connected devices list
-        val stateConnectedDevices = state.connectedDevices.map {
-            mapOf(
-                "name" to it.name,
-                "type" to it.type.name,
-                "batteryLevel" to it.batteryLevel
-            )
-        }
-        if (cachedDevice.connectedDevices != stateConnectedDevices) {
-            updates["connectedDevices"] = stateConnectedDevices
-        }
+        val stateConnectedDevices = state.connectedDevices.map { mapOf("name" to it.name, "type" to it.type.name, "batteryLevel" to it.batteryLevel) }
+        if (cachedDevice.connectedDevices != stateConnectedDevices) updates["connectedDevices"] = stateConnectedDevices
 
         if (updates.isNotEmpty()) {
             updates["lastUpdated"] = System.currentTimeMillis()
-            
-            // Mark these fields as recently changed locally
             val now = System.currentTimeMillis()
-            updates.keys.forEach { key ->
-                lastLocalChangeTime[key] = now
-            }
-            
+            updates.keys.forEach { lastLocalChangeTime[it] = now }
             repository.updateDeviceFields(deviceId, updates)
-
-            currentRemoteDevice = cachedDevice.copy(
-                batteryLevel = state.batteryLevel, isCharging = state.isCharging,
-                mediaVolume = state.mediaVolume, maxMediaVolume = state.maxMediaVolume,
-                ringerMode = state.ringerMode, isDndActive = state.isDndActive,
-                isScreenOn = state.isScreenOn, isCurtainOn = state.isCurtainOn,
-                isLocked = state.isLocked,
-                connectedDevices = stateConnectedDevices
-            )
+            currentRemoteDevice = cachedDevice.copy(batteryLevel = state.batteryLevel, isCharging = state.isCharging, mediaVolume = state.mediaVolume, maxMediaVolume = state.maxMediaVolume, ringerMode = state.ringerMode, isDndActive = state.isDndActive, isScreenOn = state.isScreenOn, isCurtainOn = state.isCurtainOn, isLocked = state.isLocked, connectedDevices = stateConnectedDevices)
         }
-        val widgetIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply {
-            action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE
-        }
+        val widgetIntent = Intent(this@CloudRemoteService, ConnectedDevicesWidgetReceiver::class.java).apply { action = ConnectedDevicesWidgetReceiver.ACTION_UPDATE }
         sendBroadcast(widgetIntent)
     }
 
@@ -537,76 +431,35 @@ class CloudRemoteService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID, "Cloud Remote Sync Service", NotificationManager.IMPORTANCE_LOW
-        )
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(CHANNEL_ID, "Cloud Remote Sync Service", NotificationManager.IMPORTANCE_LOW)
+        getSystemService(NOTIFICATION_SERVICE).let { (it as NotificationManager).createNotificationChannel(channel) }
     }
 
     private fun createBatteryNotificationChannel() {
-        val channel = NotificationChannel(
-            BATTERY_CHANNEL_ID, "Battery Alerts", NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "Notifications for low battery levels of cloud devices"
-        }
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(BATTERY_CHANNEL_ID, "Battery Alerts", NotificationManager.IMPORTANCE_HIGH).apply { description = "Notifications for low battery levels of cloud devices" }
+        getSystemService(NOTIFICATION_SERVICE).let { (it as NotificationManager).createNotificationChannel(channel) }
     }
 
     private fun checkBatteryLevel(device: Device) {
         val lastLevel = lastNotifiedBatteryLevels[device.id] ?: 100
         val currentLevel = device.batteryLevel
-
-        if (currentLevel <= 5 && lastLevel > 5) {
-            showBatteryNotification(device, isCritical = true)
-            lastNotifiedBatteryLevels[device.id] = 5
-        } else if (currentLevel <= 20 && lastLevel > 20) {
-            showBatteryNotification(device, isCritical = false)
-            lastNotifiedBatteryLevels[device.id] = 20
-        } else if (currentLevel > 20 && lastLevel <= 20) {
-            // Reset if battery level goes back up
-            lastNotifiedBatteryLevels[device.id] = 100
-        }
+        if (currentLevel <= 5 && lastLevel > 5) { showBatteryNotification(device, true); lastNotifiedBatteryLevels[device.id] = 5 }
+        else if (currentLevel <= 20 && lastLevel > 20) { showBatteryNotification(device, false); lastNotifiedBatteryLevels[device.id] = 20 }
+        else if (currentLevel > 20 && lastLevel <= 20) { lastNotifiedBatteryLevels[device.id] = 100 }
     }
 
     private fun showBatteryNotification(device: Device, isCritical: Boolean) {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
+        val intent = Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-
-        val message = if (isCritical) {
-            getString(R.string.battery_very_low_message, device.name, device.batteryLevel)
-        } else {
-            getString(R.string.battery_low_message, device.name, device.batteryLevel)
-        }
-
-        val notification = NotificationCompat.Builder(this, BATTERY_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(getString(R.string.low_battery_notification_title))
-            .setContentText(message)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-
-        // Use a unique ID per device to allow multiple notifications
-        val notificationId = BATTERY_NOTIFICATION_ID_OFFSET + device.id.hashCode()
-        notificationManager.notify(notificationId, notification)
+        val message = if (isCritical) getString(R.string.battery_very_low_message, device.name, device.batteryLevel) else getString(R.string.battery_low_message, device.name, device.batteryLevel)
+        val notification = NotificationCompat.Builder(this, BATTERY_CHANNEL_ID).setSmallIcon(R.drawable.ic_notification).setContentTitle(getString(R.string.low_battery_notification_title)).setContentText(message).setPriority(NotificationCompat.PRIORITY_HIGH).setContentIntent(pendingIntent).setAutoCancel(true).build()
+        notificationManager.notify(BATTERY_NOTIFICATION_ID_OFFSET + device.id.hashCode(), notification)
     }
 
     private fun createNotification(): Notification {
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Cloud Remote Active")
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentIntent(pendingIntent)
-            .setSilent(true)
-            .setOngoing(true).build()
+        val pendingIntent = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        return NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle("Cloud Remote Active").setSmallIcon(R.drawable.ic_notification).setContentIntent(pendingIntent).setSilent(true).setOngoing(true).build()
     }
 
     override fun onDestroy() {
