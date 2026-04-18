@@ -55,13 +55,6 @@ class CurtainTileService : TileService() {
             } else {
                 SwipeableCurtainManager.showCurtain(applicationContext)
             }
-
-            // Collapse the quick settings shade (deprecated and restricted in Android 12+)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                @Suppress("DEPRECATION")
-                val closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-                sendBroadcast(closeIntent)
-            }
         }
     }
 
