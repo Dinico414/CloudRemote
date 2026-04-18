@@ -85,9 +85,9 @@ import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.helper.SwipeableCurtainManager
+import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInViewModel
-import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.ui.res.DeviceItem
 import com.xenonware.cloudremote.ui.res.LoginScreen
 import com.xenonware.cloudremote.ui.theme.LocalExtendedMaterialColorScheme
@@ -376,7 +376,7 @@ fun CompactRemote(
                             val cloudDevices = devices.filter { it.id != viewModel.localDeviceId }
                                 .filter { it.name.contains(searchQuery, ignoreCase = true) }
                             val (onlineCloudDevices, offlineCloudDevices) = cloudDevices.partition {
-                                (currentTime - it.lastUpdated) < 900_000 // 15 minute threshold (matches max heartbeat)
+                                (currentTime - it.lastUpdated) < 900_000 
                             }
 
                             LazyColumn(
@@ -391,9 +391,6 @@ fun CompactRemote(
                             ) {
                                 item {
                                     val isSharing = localDevice != null
-                                    // FIX: We only copy Battery, Charging, and Screen/Lock state from hardware.
-                                    // We DO NOT copy mediaVolume or ringerMode because those are "Intended States"
-                                    // and should come from the 'localDevice' (Cloud) object.
                                     val deviceToDisplay = (localDevice ?: Device(
                                         id = viewModel.localDeviceId,
                                         name = localDeviceName.ifBlank {
@@ -405,8 +402,7 @@ fun CompactRemote(
                                         isCurtainOn = localDeviceState.isCurtainOn,
                                         isLocked = localDeviceState.isLocked,
                                         connectedDevices = localDeviceState.connectedDevices.map { it.toMap() }
-                                        // REMOVED: mediaVolume = localDeviceState.mediaVolume
-                                        // REMOVED: ringerMode = localDeviceState.ringerMode
+
                                     )
 
                                     DeviceItem(
