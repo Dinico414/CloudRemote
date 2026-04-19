@@ -180,7 +180,7 @@ class LocalDeviceManager(private val context: Context) {
         return try {
             // Use cached battery values to avoid spamming registerReceiver
             val batteryLevel = if (lastBatteryLevel != -1) lastBatteryLevel else getBatteryLevel()
-            val isCharging = lastIsCharging
+            val isCharging = if (lastBatteryLevel != -1) lastIsCharging else isCharging()
 
             val mediaVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             val maxMediaVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
@@ -207,7 +207,8 @@ class LocalDeviceManager(private val context: Context) {
                 isDndActive,
                 powerManager.isInteractive,
                 isCurtainVisible,
-                isLocked
+                isLocked,
+                cachedConnectedDevices
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error getting device state", e)
