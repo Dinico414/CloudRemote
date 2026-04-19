@@ -51,8 +51,6 @@ import com.xenonware.cloudremote.MainActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.ConnectedDevice
-import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.helper.LocalDeviceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,30 +83,16 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         val isCharging = localDeviceManager.isCharging()
 
         val connectedDevices = try {
-            val state = localDeviceManager.getCurrentStateSnapshot()
-            state.connectedDevices
+            localDeviceManager.getConnectedBluetoothDevices()
         } catch (_: Exception) {
             data?.connectedDevices ?: emptyList()
         }
-
-        val batteryPrefs =
-            context.getSharedPreferences(BatteryWidget.PREFS_NAME, Context.MODE_PRIVATE)
-        val cloudDevicesJson = batteryPrefs.getString(BatteryWidget.KEY_DEVICES, null)
-        val cloudDevices = if (cloudDevicesJson != null) {
-            BatteryWidget.parseDevicesJson(cloudDevicesJson)
-        } else {
-            emptyList()
-        }
-
-        val localDeviceId = SharedPreferenceManager(context).localDeviceId
-        val filteredCloudDevices = cloudDevices.filter { it.id != localDeviceId }
 
         val widgetData = WidgetData(
             localName = deviceName,
             localBattery = batteryLevel,
             localCharging = isCharging,
-            connectedDevices = connectedDevices,
-            cloudDevices = filteredCloudDevices
+            connectedDevices = connectedDevices
         )
 
         prefs.edit(commit = true) {
@@ -126,8 +110,7 @@ class ConnectedDevicesWidget : GlanceAppWidget() {
         val localName: String = "",
         val localBattery: Int = 0,
         val localCharging: Boolean = false,
-        val connectedDevices: List<ConnectedDevice> = emptyList(),
-        val cloudDevices: List<Device> = emptyList(),
+        val connectedDevices: List<ConnectedDevice> = emptyList()
     )
 
     data class BatteryItem(

@@ -275,7 +275,7 @@ class LocalDeviceManager(private val context: Context) {
         }
     }
 
-    private fun getConnectedBluetoothDevices(): List<ConnectedDevice> {
+    fun getConnectedBluetoothDevices(): List<ConnectedDevice> {
         val devices = mutableListOf<ConnectedDevice>()
         try {
             if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return devices
