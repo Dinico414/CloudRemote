@@ -4,20 +4,17 @@ import android.text.format.DateFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -58,6 +56,8 @@ fun PixelWatchFace(isActive: Boolean) {
     val textMeasurer = rememberTextMeasurer()
     val context = LocalContext.current
     val is24Hour = DateFormat.is24HourFormat(context)
+
+    val localDensity = LocalDensity.current
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.4f, animationSpec = tween(500), label = "alpha"
@@ -148,21 +148,24 @@ fun PixelWatchFace(isActive: Boolean) {
         val secondaryColor = Color.Gray
         val pillOutlineColor = Color.LightGray
 
+        fun pxToSp(px: Float): androidx.compose.ui.unit.TextUnit =
+            (px / localDensity.density / localDensity.fontScale).sp
+
         val hourStyle = TextStyle(
             color = primaryColor,
-            fontSize = (r * 0.20f).sp,
+            fontSize = pxToSp(r * 0.50f),
             fontWeight = FontWeight.Medium,
             fontFamily = QuicksandTitleVariable
         )
         val digMinStyle = TextStyle(
             color = primaryColor,
-            fontSize = (r * 0.08f).sp,
+            fontSize = pxToSp(r * 0.20f),
             fontWeight = FontWeight.Medium,
             fontFamily = QuicksandTitleVariable
         )
         val dialNumStyle = TextStyle(
             color = secondaryColor,
-            fontSize = (r * 0.035f).sp,
+            fontSize = pxToSp(r * 0.0875f),
             fontWeight = FontWeight.Normal,
             fontFamily = QuicksandTitleVariable
         )
@@ -294,23 +297,45 @@ fun PixelWatchFace(isActive: Boolean) {
     }
 }
 
-@Preview(widthDp = 300, heightDp = 300)
+// Static preview — no animation state, no tap logic, explicit dark background.
+@Preview(
+    widthDp = 300,
+    heightDp = 300,
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    apiLevel = 36
+)
 @Composable
 fun PixelWatchFacePreview() {
+    PixelWatchFace(isActive = true)
+}
+
+@Preview(
+    widthDp = 300,
+    heightDp = 300,
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    apiLevel = 36
+)
+@Composable
+fun PixelWatchFaceInactivePreview() {
+    PixelWatchFace(isActive = false)
+}
+
+@Preview(
+    widthDp = 300,
+    heightDp = 300,
+    apiLevel = 36
+)
+@Composable
+fun PixelWatchFaceInteractivePreview() {
     var isActive by remember { mutableStateOf(true) }
-    LaunchedEffect(isActive) {
-        if (isActive) {
-            delay(5000)
-            isActive = false
-        }
-    }
     Box(modifier = Modifier
         .fillMaxSize()
         .pointerInput(Unit) {
-            detectTapGestures {
-                isActive = !isActive
-            }
-        }) {
+            detectTapGestures { isActive = !isActive }
+        }
+    ) {
         PixelWatchFace(isActive = isActive)
     }
 }
