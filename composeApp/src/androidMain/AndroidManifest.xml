@@ -39,8 +39,9 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.Xenon">
-            <intent-filter>
+            android:theme="@style/Theme.Xenon"
+            android:windowSoftInputMode="adjustResize">
+        <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
