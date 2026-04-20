@@ -73,7 +73,7 @@ fun PixelWatchFace(isActive: Boolean) {
             isLongInactive = false
             if (wereMinutesHidden) {
                 isReappearing = true
-                delay(500L) // Delay seconds/pill expansion if minutes were hidden
+                delay(250L) // Delay seconds/pill expansion if minutes were hidden
                 isReappearing = false
             }
             isShortInactive = false
@@ -82,10 +82,9 @@ fun PixelWatchFace(isActive: Boolean) {
             isLongInactive = false
             isReappearing = false
 
-//            delay(5_000L) // 5 seconds until Stage 1 (seconds disappear)
             isShortInactive = true
 
-            delay(5_000L) // Further 4m55s until Stage 2 (minutes disappear) - total 5 min
+            delay(300_000L)
             isLongInactive = true
         }
     }
