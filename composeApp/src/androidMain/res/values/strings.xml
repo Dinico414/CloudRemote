@@ -141,6 +141,7 @@
     <string name="category_default">Default</string>
     <string name="category_foldables">Foldables</string>
     <string name="category_tablet">Tablet</string>
+    <string name="category_pc">PC</string>
     <string name="category_specific">Specific</string>
     <string name="locked">Locked</string>
     <string name="unlocked">Unlocked</string>

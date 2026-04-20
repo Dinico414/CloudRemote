@@ -180,6 +180,8 @@ fun getDeviceIconPrefix(name: String): String? {
         "Flip Phone" -> "fp"
         "Fold (inwards)" -> "fi"
         "Fold (outwards)" -> "fo"
+        "Wide Fold" -> "wf"
+        "Flip Fold" -> "ff"
         "Trifold (Z-Shape)" -> "tfz"
         "Trifold (G-Shape)" -> "tfg"
         "LG Wing" -> "lg"
@@ -189,6 +191,21 @@ fun getDeviceIconPrefix(name: String): String? {
         "Tablet" -> "t"
         "Tablet (Notch)" -> "tn"
         "Tablet (RoundCutOut)" -> "trc"
+        "Pi Project" -> "pp"
+        "Switch" -> "ns"
+        "SwitchOled" -> "nso"
+        "SwitchLite" -> "nsl"
+        "Switch2" -> "ns2"
+        "Monitor" -> "m"
+        "Wide Monitor" -> "wm"
+        "WinTop" -> "wt"
+        "MacTop" -> "mt"
+        "WinTop (BigDualScreen)" -> "wtbds"
+        "WinTop (SmallDualScreen)" -> "wtsds"
+        "Raspberry Pi" -> "rp"
+        "Ubuntu Pi" -> "up"
+        "Win Pi" -> "wp"
+        "Droid Pi" -> "dp"
         else -> "op"
     }
 }
@@ -206,11 +223,13 @@ val deviceIconCategories = listOf(
         "New Phone (PillCutOut)",
         "New Phone (NoBezel)"
     ), R.string.category_foldables to listOf(
-        "Flip Phone", "Fold (inwards)", "Fold (outwards)", "Trifold (Z-Shape)", "Trifold (G-Shape)"
+        "Flip Phone", "Fold (inwards)", "Fold (outwards)", "Wide Fold", "Flip Fold", "Trifold (Z-Shape)", "Trifold (G-Shape)"
     ), R.string.category_tablet to listOf(
         "Tablet", "Tablet (Notch)", "Tablet (RoundCutOut)"
+    ), R.string.category_pc to listOf(
+        "Monitor", "Wide Monitor", "WinTop", "MacTop", "WinTop (BigDualScreen)", "WinTop (SmallDualScreen)", "Raspberry Pi", "Ubuntu Pi", "Win Pi", "Droid Pi"
     ), R.string.category_specific to listOf(
-        "LG Wing", "Surface Duo", "iKKO Mind One", "Clicks Communicator"
+        "LG Wing", "Surface Duo", "iKKO Mind One", "Clicks Communicator", "Switch", "SwitchOled", "SwitchLite", "Switch2", "Pi Project"
     )
 )
 

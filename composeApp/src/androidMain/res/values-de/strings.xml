@@ -142,6 +142,7 @@
     <string name="category_default">Standard</string>
     <string name="category_foldables">Faltbare Geräte</string>
     <string name="category_tablet">Tablet</string>
+    <string name="category_pc">PC</string>
     <string name="category_specific">Spezifisch</string>
     <string name="locked">Gesperrt</string>
     <string name="unlocked">Entsperrt</string>
@@ -160,5 +161,10 @@
     <string name="low_battery_notification_title">Niedriger Akkustand</string>
     <string name="battery_low_message">Akku von %1$s ist bei %2$d%%</string>
     <string name="battery_very_low_message">Akku von %1$s ist kritisch: %2$d%%</string>
+
+    <string name="connected_devices">Verbundene Geräte</string>
+
+    <string name="connected_devices_widget_description">Zeigt Akkustand Ihrer Telefone und verbundener Bluetooth Geräte</string>
+    <string name="devices_battery_widget_description">Zeigt Akkustand Ihrer Telefone und Cloud Geräte</string>
 
 </resources>
