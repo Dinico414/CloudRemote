@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_preview_bg"
@@ -45,7 +46,8 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/round_phone_android_24"
-                android:tint="@color/preview_primary_on" />
+                android:tint="@color/preview_primary_on"
+                tools:ignore="UseAppTint" />
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -77,7 +79,8 @@
                     android:foregroundTintMode="add"
                     android:src="@drawable/round_bolt_24"
                     android:tintMode="multiply"
-                    android:tint="@color/preview_primary_container" />
+                    android:tint="@color/preview_primary_container"
+                    tools:ignore="UseAppTint" />
             </FrameLayout>
         </LinearLayout>
     </FrameLayout>
@@ -116,7 +119,8 @@
                 android:layout_width="16dp"
                 android:layout_height="16dp"
                 android:src="@drawable/rounded_tablet_24"
-                android:tint="@color/preview_tertiary_on" />
+                android:tint="@color/preview_tertiary_on"
+                tools:ignore="UseAppTint" />
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
