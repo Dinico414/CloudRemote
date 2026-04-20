@@ -62,8 +62,48 @@ fun PixelWatchFace(isActive: Boolean) {
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0.4f, animationSpec = tween(500), label = "alpha"
     )
+
+    var isLongInactive by remember { mutableStateOf(false) }
+    var isShortInactive by remember { mutableStateOf(false) }
+    var isReappearing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            val wereMinutesHidden = isLongInactive
+            isLongInactive = false
+            if (wereMinutesHidden) {
+                isReappearing = true
+                delay(500L) // Delay seconds/pill expansion if minutes were hidden
+                isReappearing = false
+            }
+            isShortInactive = false
+        } else {
+            isShortInactive = false
+            isLongInactive = false
+            isReappearing = false
+
+//            delay(5_000L) // 5 seconds until Stage 1 (seconds disappear)
+            isShortInactive = true
+
+            delay(5_000L) // Further 4m55s until Stage 2 (minutes disappear) - total 5 min
+            isLongInactive = true
+        }
+    }
+
+    val minutesAlpha by animateFloatAsState(
+        targetValue = if (isLongInactive) 0f else 1f,
+        animationSpec = tween(1000),
+        label = "minutesAlpha"
+    )
+    val secondsAlpha by animateFloatAsState(
+        targetValue = if (isShortInactive || isReappearing) 0f else 1f,
+        animationSpec = tween(500),
+        label = "secondsAlpha"
+    )
     val pillRightWeight by animateFloatAsState(
-        targetValue = if (isActive) 1f else 0f, animationSpec = tween(500), label = "pillRight"
+        targetValue = if (isShortInactive || isReappearing) 0f else 1f,
+        animationSpec = tween(500),
+        label = "pillRight"
     )
 
     var time by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -259,6 +299,7 @@ fun PixelWatchFace(isActive: Boolean) {
                 rInnerNum,
                 rInnerTickIn,
                 rInnerTickOut,
+                alpha = minutesAlpha,
                 drawTicks = false,
                 drawNumbers = true
             )
@@ -270,14 +311,15 @@ fun PixelWatchFace(isActive: Boolean) {
             rInnerNum,
             rInnerTickIn,
             rInnerTickOut,
+            alpha = minutesAlpha,
             drawTicks = true,
             drawNumbers = false
         )
 
         // 4. Second Ring
-        if (pillRightWeight > 0f) {
+        if (secondsAlpha > 0f) {
             drawDial(
-                currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = pillRightWeight
+                currentSecondFloat, rOuterNum, rOuterTickIn, rOuterTickOut, alpha = secondsAlpha
             )
         }
 
