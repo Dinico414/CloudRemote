@@ -147,7 +147,7 @@
     <string name="locked">Gesperrt</string>
     <string name="unlocked">Entsperrt</string>
     <string name="welcome_title">Willkommen in Cloud Remote!</string>
-    <string name="welcome_description">Diese App bietet Widgets zur Anzeige von Geräte\u00ADinformationen auf Ihrem Startbildschirm, sowie eine Schnell\u00ADzugriffskachel um die lokale Vorhangfunktion einfach aktivieren können.</string>
+    <string name="welcome_description">Diese App bietet Widgets zur Anzeige von Geräte\u00ADinformationen auf Ihrem Startbildschirm, sowie eine Schnell\u00ADzugriffskachel um die lokale Vorhangfunktion einfach zu aktivieren.</string>
     <string name="news_title">Was ist neu!</string>
     <string name="offline_devices">Offline Devices</string>
     <string name="cloud_devices">Cloud Devices</string>
