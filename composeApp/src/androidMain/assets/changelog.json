@@ -1,0 +1,16 @@
+[
+  {
+    "versionCode": 2,
+    "versionName": "1.3.2",
+    "changes": {
+      "en": [
+        "Integrated a new changelog system",
+        "Improved Always On Display"
+      ],
+      "de": [
+        "Neues Changelog-System integriert",
+        "Verbesserte Always On Display"
+      ]
+    }
+  }
+]

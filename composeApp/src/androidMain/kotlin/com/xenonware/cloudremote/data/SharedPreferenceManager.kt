@@ -23,7 +23,9 @@ class SharedPreferenceManager(private val context: Context) {
     private val languageTagKey = "app_language_tag"
     private val developerModeKey = "developer_mode_enabled"
     private val inputReceiverEnabledKey = "input_receiver_enabled"
-    private val isFirstLaunchKey = "is_first_launch"
+    private val isFirstLaunchKey = "is_first_launch_v3"
+    private val lastSeenVersionNameKey = "last_seen_version_name_v3"
+    private val lastSeenVersionCodeKey = "last_seen_version_code_v3"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
@@ -91,7 +93,15 @@ class SharedPreferenceManager(private val context: Context) {
 
     var isFirstLaunch: Boolean
         get() = sharedPreferences.getBoolean(isFirstLaunchKey, true)
-        set(value) = sharedPreferences.edit { putBoolean(isFirstLaunchKey, value) }
+        set(value) = sharedPreferences.edit(commit = true) { putBoolean(isFirstLaunchKey, value) }
+
+    var lastSeenVersionName: String
+        get() = sharedPreferences.getString(lastSeenVersionNameKey, "") ?: ""
+        set(value) = sharedPreferences.edit(commit = true) { putString(lastSeenVersionNameKey, value) }
+
+    var lastSeenVersionCode: Int
+        get() = sharedPreferences.getInt(lastSeenVersionCodeKey, 0)
+        set(value) = sharedPreferences.edit(commit = true) { putInt(lastSeenVersionCodeKey, value) }
 
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false

@@ -68,6 +68,11 @@
             android:exported="false"
             android:theme="@style/Theme.Xenon" />
 
+        <activity
+            android:name=".NewsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Xenon" />
+
         <service
             android:name=".service.CloudRemoteService"
             android:enabled="true"

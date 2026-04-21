@@ -63,6 +63,7 @@ class WelcomeActivity : ComponentActivity() {
                     ) {
                         WelcomeScreen(onFinish = {
                             sharedPreferenceManager.isFirstLaunch = false
+                            sharedPreferenceManager.lastSeenVersionName = BuildConfig.VERSION_NAME
                             startActivity(Intent(this, MainActivity::class.java))
                             finish()
                         })

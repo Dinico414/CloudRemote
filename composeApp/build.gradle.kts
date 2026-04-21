@@ -54,8 +54,8 @@ android {
         applicationId = "com.xenonware.cloudremote"
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.3.1"
+        versionCode = 2
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "XENON_COMMONS_VERSION", "\"${libs.versions.xenonCommons.get()}\"")

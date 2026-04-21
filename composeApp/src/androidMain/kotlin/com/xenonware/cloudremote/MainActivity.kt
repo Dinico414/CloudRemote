@@ -14,6 +14,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -68,6 +69,10 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         sharedPreferenceManager = SharedPreferenceManager(applicationContext)
 
+        Log.d("MainActivity", "isFirstLaunch: ${sharedPreferenceManager.isFirstLaunch}")
+        Log.d("MainActivity", "BuildConfig.VERSION_NAME: ${BuildConfig.VERSION_NAME}")
+        Log.d("MainActivity", "lastSeenVersionName: ${sharedPreferenceManager.lastSeenVersionName}")
+
         if (arePermissionsMissing()) {
             val intent = Intent(this, PermissionActivity::class.java)
             startActivity(intent)
@@ -76,7 +81,17 @@ class MainActivity : ComponentActivity() {
         }
 
         if (sharedPreferenceManager.isFirstLaunch) {
+            Log.d("MainActivity", "Redirecting to WelcomeActivity")
             val intent = Intent(this, WelcomeActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+
+        // Only show NewsActivity if NOT first launch AND version name changed
+        if (BuildConfig.VERSION_NAME != sharedPreferenceManager.lastSeenVersionName) {
+            Log.d("MainActivity", "Redirecting to NewsActivity")
+            val intent = Intent(this, NewsActivity::class.java)
             startActivity(intent)
             finish()
             return
