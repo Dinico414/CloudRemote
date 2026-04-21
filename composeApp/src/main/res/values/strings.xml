@@ -147,6 +147,8 @@
     <string name="unlocked">Unlocked</string>
     <string name="welcome_title">Welcome to Cloud Remote!</string>
     <string name="welcome_description">This app offers widgets to display device information on your home screen and a quick settings tile to easily toggle the local curtain feature.</string>
+    <string name="news_title">What´s new!</string>
+
     <string name="offline_devices">Offline Devices</string>
     <string name="cloud_devices">Cloud Devices</string>
     <string name="long_press_to_lock_device_remotely">Long-press to lock device remotely</string>
