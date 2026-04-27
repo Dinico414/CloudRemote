@@ -57,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -127,11 +126,9 @@ fun CompactRemote(
         }
         val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
-        val density = LocalDensity.current
         val configuration = LocalConfiguration.current
         val isCompact = LocalDeviceConfig.current.isCommunicator || LocalDeviceConfig.current.isMindOne
         val appHeight = configuration.screenHeightDp.dp
-        val screenWidthDp = with(density) { appSize.width.toDp() }.value.toInt()
 
         val isAppBarExpandable = when (layoutType) {
             LayoutType.COVER -> false
