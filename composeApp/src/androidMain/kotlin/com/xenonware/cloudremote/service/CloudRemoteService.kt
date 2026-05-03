@@ -25,6 +25,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import com.xenonware.cloudremote.MainActivity
+import com.xenonware.cloudremote.PingAlarmActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
@@ -248,26 +249,30 @@ class CloudRemoteService : Service() {
                         if (prev != null && myDevice != null) {
                             val now = System.currentTimeMillis()
 
-                            if (prev.mediaVolume != myDevice.mediaVolume && !isLocalChangeRecent("mediaVolume", now)) {
-                                localDeviceManager.setVolume(myDevice.mediaVolume)
-                                commandApplied = true
-                            }
-                            if (prev.ringerMode != myDevice.ringerMode) {
-                                localDeviceManager.setRingerMode(myDevice.ringerMode)
-                                commandApplied = true
-                            }
-                            if (prev.isDndActive != myDevice.isDndActive) {
-                                localDeviceManager.setDnd(myDevice.isDndActive)
-                                commandApplied = true
-
-                                // Start the guard timer: ignore local audio changes for 2s
-                                dndTransitionLockUntil = System.currentTimeMillis() + 2000L
-
-                                if (!myDevice.isDndActive) {
-                                    localDeviceManager.setRingerMode(myDevice.ringerMode)
+                            // If we are being pinged, we ignore volume/DND sync to avoid fighting with PingAlarmActivity
+                            if (!myDevice.isPinged) {
+                                if (prev.mediaVolume != myDevice.mediaVolume && !isLocalChangeRecent("mediaVolume", now)) {
                                     localDeviceManager.setVolume(myDevice.mediaVolume)
+                                    commandApplied = true
+                                }
+                                if (prev.ringerMode != myDevice.ringerMode) {
+                                    localDeviceManager.setRingerMode(myDevice.ringerMode)
+                                    commandApplied = true
+                                }
+                                if (prev.isDndActive != myDevice.isDndActive) {
+                                    localDeviceManager.setDnd(myDevice.isDndActive)
+                                    commandApplied = true
+
+                                    // Start the guard timer: ignore local audio changes for 2s
+                                    dndTransitionLockUntil = System.currentTimeMillis() + 2000L
+
+                                    if (!myDevice.isDndActive) {
+                                        localDeviceManager.setRingerMode(myDevice.ringerMode)
+                                        localDeviceManager.setVolume(myDevice.mediaVolume)
+                                    }
                                 }
                             }
+
                             if (prev.isCurtainOn != myDevice.isCurtainOn && !isLocalChangeRecent("isCurtainOn", now)) {
                                 localDeviceManager.setCloudCurtain(myDevice.isCurtainOn)
                                 commandApplied = true
@@ -281,6 +286,18 @@ class CloudRemoteService : Service() {
                                 localDeviceManager.lockDevice()
                                 repository.updateDeviceFields(deviceId, mapOf("pendingAction" to "", "isLocked" to true))
                                 commandApplied = true
+                            }
+                            if (myDevice.isPinged && !prev.isPinged) {
+                                val intent = Intent(this@CloudRemoteService, PingAlarmActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                }
+                                startActivity(intent)
+                            } else if (!myDevice.isPinged && prev.isPinged) {
+                                val intent = Intent(this@CloudRemoteService, PingAlarmActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                    putExtra("STOP_PING", true)
+                                }
+                                startActivity(intent)
                             }
                         }
 

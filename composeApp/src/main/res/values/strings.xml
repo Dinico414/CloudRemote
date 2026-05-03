@@ -149,6 +149,17 @@
     <string name="welcome_description">This app offers widgets to display device information on your home screen and a quick settings tile to easily toggle the local curtain feature.</string>
     <string name="news_title">What´s new!</string>
 
+    <string name="ping_device">Ping Device</string>
+    <string name="no_other_devices_found">No other devices found</string>
+    <string name="pinging">Pinging...</string>
+    <string name="ready_to_ping">Ready to ping</string>
+    <string name="offline">Offline</string>
+    <string name="stop">STOP</string>
+    <string name="ping">PING</string>
+    <string name="device_pinged">Device Pinged!</string>
+    <string name="device_pinged_description">This device is being pinged from another device.</string>
+    <string name="dismiss_alarm">Dismiss Alarm</string>
+
     <string name="offline_devices">Offline Devices</string>
     <string name="cloud_devices">Cloud Devices</string>
     <string name="long_press_to_lock_device_remotely">Long-press to lock device remotely</string>

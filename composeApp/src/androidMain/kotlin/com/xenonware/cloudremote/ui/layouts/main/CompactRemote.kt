@@ -4,6 +4,7 @@ package com.xenonware.cloudremote.ui.layouts.main
 
 import android.annotation.SuppressLint
 import android.content.ComponentName
+import android.content.Intent
 import android.os.Build
 import android.service.quicksettings.TileService
 import android.widget.Toast
@@ -29,6 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Curtains
 import androidx.compose.material.icons.rounded.CurtainsClosed
+import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -80,6 +82,7 @@ import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
 import com.xenonware.cloudremote.BuildConfig
+import com.xenonware.cloudremote.FindDeviceActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
 import com.xenonware.cloudremote.data.SharedPreferenceManager
@@ -281,6 +284,28 @@ fun CompactRemote(
                             val icon =
                                 if (localDevice?.isCurtainOn == true) Icons.Rounded.CurtainsClosed else Icons.Rounded.Curtains
                             Icon(icon, contentDescription = "Curtain Trigger")
+                        }
+
+                        val findDeviceIconAlpha by animateFloatAsState(
+                            targetValue = iconAlphaTarget, animationSpec = tween(
+                                durationMillis = iconsAlphaDuration,
+                                delayMillis = if (isSearchActive) 50 else 0
+                            ), label = "FindDeviceIconAlpha"
+                        )
+
+                        // Ping Device button
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(context, FindDeviceActivity::class.java)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.alpha(findDeviceIconAlpha),
+                            enabled = !isSearchActive && showActionIconsExceptSearch
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.MyLocation,
+                                contentDescription = stringResource(R.string.ping_device)
+                            )
                         }
 
                         val settingsIconAlpha by animateFloatAsState(

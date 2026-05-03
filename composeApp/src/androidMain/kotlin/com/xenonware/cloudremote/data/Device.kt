@@ -41,5 +41,7 @@ data class Device(
     val mediaCustomAction2Action: String = "",
 
     val pendingAction: String = "",
-    val connectedDevices: List<Map<String, Any>> = emptyList()
+    val connectedDevices: List<Map<String, Any>> = emptyList(),
+    @get:PropertyName("isPinged")
+    val isPinged: Boolean = false
 )

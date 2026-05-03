@@ -149,6 +149,18 @@
     <string name="welcome_title">Willkommen in Cloud Remote!</string>
     <string name="welcome_description">Diese App bietet Widgets zur Anzeige von Geräte\u00ADinformationen auf Ihrem Startbildschirm, sowie eine Schnell\u00ADzugriffskachel um die lokale Vorhangfunktion einfach zu aktivieren.</string>
     <string name="news_title">Was ist neu!</string>
+
+    <string name="ping_device">Gerät anpingen</string>
+    <string name="no_other_devices_found">Keine anderen Geräte gefunden</string>
+    <string name="pinging">Ping läuft…</string>
+    <string name="ready_to_ping">Bereit zum Anpingen</string>
+    <string name="offline">Offline</string>
+    <string name="stop">STOPP</string>
+    <string name="ping">PING</string>
+    <string name="device_pinged">Gerät angepingt!</string>
+    <string name="device_pinged_description">Dieses Gerät wird von einem anderen Gerät angepingt.</string>
+    <string name="dismiss_alarm">Alarm beenden</string>
+
     <string name="offline_devices">Offline Devices</string>
     <string name="cloud_devices">Cloud Devices</string>
     <string name="long_press_to_lock_device_remotely">Gedrückt halten, um den Gerät zu sperren</string>

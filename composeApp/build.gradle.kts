@@ -55,7 +55,7 @@ android {
         minSdk = 29
         targetSdk = 37
         versionCode = 2
-        versionName = "1.3.2"
+        versionName = "1.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "XENON_COMMONS_VERSION", "\"${libs.versions.xenonCommons.get()}\"")

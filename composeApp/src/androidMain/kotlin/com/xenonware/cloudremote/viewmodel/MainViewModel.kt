@@ -210,6 +210,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.deleteDevice(device.id)
     }
 
+    fun updateDeviceFields(deviceId: String, fields: Map<String, Any>) {
+        viewModelScope.launch {
+            repository.updateDeviceFields(deviceId, fields)
+        }
+    }
+
     private fun handleLocalMediaAction(action: String) {
         val componentName = ComponentName(getApplication(), MediaNotificationListener::class.java)
         val mediaSessionManager = getApplication<Application>().getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager

@@ -1,15 +1,15 @@
 [
   {
     "versionCode": 2,
-    "versionName": "1.3.2",
+    "versionName": "1.3.4",
     "changes": {
       "en": [
         "Integrated a new changelog system",
-        "Improved Always On Display"
+        "New Feature added so User can Ping there other devices to find them again"
       ],
       "de": [
         "Neues Changelog-System integriert",
-        "Verbesserte Always On Display"
+        "Neue Funktion hinzugefügt die es Nutzern erlaubt andere Geräte zu Pingen, um diese wieder zu finden"
       ]
     }
   }
