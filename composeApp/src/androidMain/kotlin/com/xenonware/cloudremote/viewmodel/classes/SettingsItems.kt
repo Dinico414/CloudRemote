@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchColors
@@ -125,6 +127,26 @@ fun SettingsItems(
         horizontalPadding = tileHorizontalPadding,
         verticalPadding = tileVerticalPadding,
         iconContentDescription = stringResource(R.string.profile_picture)
+    )
+    Spacer(Modifier.height(actualOuterGroupSpacing))
+
+    SettingsTile(
+        title = stringResource(id = R.string.device_admin_permission),
+        subtitle = stringResource(id = R.string.device_admin_permission_description),
+        onClick = { viewModel.onDeviceAdminSettingsClicked(context) },
+        icon = {
+            Icon(
+                Icons.Rounded.Lock,
+                stringResource(R.string.device_admin_permission),
+                tint = tileSubtitleColor
+            )
+        },
+        shape = tileShapeOverride ?: standaloneShape,
+        backgroundColor = tileBackgroundColor,
+        contentColor = tileContentColor,
+        subtitleColor = tileSubtitleColor,
+        horizontalPadding = tileHorizontalPadding,
+        verticalPadding = tileVerticalPadding
     )
     Spacer(Modifier.height(actualOuterGroupSpacing))
 

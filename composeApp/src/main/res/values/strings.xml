@@ -121,7 +121,9 @@
     <string name="notification_access">Notification access</string>
     <string name="notification_access_description">This permission is required to read media notifications and display them in the app.</string>
     <string name="device_admin">Device Admin</string>
+    <string name="device_admin_permission">Device Admin permission</string>
     <string name="device_admin_description">Cloud Remote needs this permission to lock the screen remotely.</string>
+    <string name="device_admin_permission_description">Manage device administrator privileges</string>
     <string name="grant_permission">Grant Permission</string>
 
     <!-- Bluetooth Permissions -->

@@ -122,7 +122,9 @@
     <string name="notification_access">Benachrichtigungs\u00ADzugriff</string>
     <string name="notification_access_description">Diese Berechtigung wird benötigt, um Medien\u00ADbenachrichtigungen zu lesen und sie in der App anzuzeigen.</string>
     <string name="device_admin">Gerät-Admin</string>
+    <string name="device_admin_permission">Geräteadmin-Berechtigung</string>
     <string name="device_admin_description">Diese Berechtigung wird benötigt, um den Bildschirm gesteuert zu sperren.</string>
+    <string name="device_admin_permission_description">Geräteadministrator-Berechtigungen verwalten</string>
     <string name="grant_permission">Berechtigung erteilen</string>
 
     <!-- Bluetooth Permissions -->

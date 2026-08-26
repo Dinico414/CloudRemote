@@ -3,6 +3,7 @@ package com.xenonware.cloudremote.viewmodel
 import android.app.ActivityManager
 import android.app.Application
 import android.app.LocaleManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -19,6 +20,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.xenon.mylibrary.res.LanguageOption
 import com.xenonware.cloudremote.R
+import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -152,6 +154,37 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun dismissSignOutDialog() {
         _showSignOutDialog.value = false
+    }
+
+
+    fun onDeviceAdminSettingsClicked(context: Context) {
+        // Try the direct activity component first (most direct for many devices)
+        val directIntent = Intent().apply {
+            component = ComponentName("com.android.settings", "com.android.settings.Settings\$DeviceAdminSettingsActivity")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        try {
+            context.startActivity(directIntent)
+        } catch (e: Exception) {
+            // Fallback to the standard action
+            val intent = Intent("android.settings.DEVICE_ADMIN_SETTINGS").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            try {
+                context.startActivity(intent)
+            } catch (e2: Exception) {
+                // Final fallback to Security settings
+                val securityIntent = Intent(Settings.ACTION_SECURITY_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    context.startActivity(securityIntent)
+                } catch (e3: Exception) {
+                    Toast.makeText(context, "Could not open settings", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     // Theme
