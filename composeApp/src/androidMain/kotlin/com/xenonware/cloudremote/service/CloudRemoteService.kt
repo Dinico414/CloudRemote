@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.milliseconds
 
 class CloudRemoteService : Service() {
 
@@ -227,8 +228,8 @@ class CloudRemoteService : Service() {
         scope.launch {
             var retryDelay = 2000L
             while (isActive) {
-                if (auth.currentUser == null) { delay(5000); continue }
-                if (!isNetworkAvailable()) { delay(15000); continue }
+                if (auth.currentUser == null) { delay(5000.milliseconds); continue }
+                if (!isNetworkAvailable()) { delay(15000.milliseconds); continue }
 
                 try {
                     repository.getDevicesFlow().collect { devices ->
@@ -305,13 +306,13 @@ class CloudRemoteService : Service() {
                         broadcastWidgetUpdate(devices)
                     }
                 } catch (e: Exception) { Log.e(TAG, "Error syncing: ${e.message}") }
-                delay(retryDelay)
+                delay(retryDelay.milliseconds)
                 retryDelay = (retryDelay * 2).coerceAtMost(120_000L)
             }
         }
 
         scope.launch {
-            localDeviceManager.observeDeviceState().collectLatest { state ->
+            localDeviceManager.observeDeviceState().collectLatest { _ ->
                 val batteryIntent = Intent(this@CloudRemoteService, BatteryWidgetReceiver::class.java).apply {
                     action = BatteryWidgetReceiver.ACTION_REFRESH_LOCAL
                     setPackage(packageName)
@@ -346,7 +347,7 @@ class CloudRemoteService : Service() {
                     !powerManager.isInteractive -> 120_000L
                     else -> HEARTBEAT_INTERVAL_MS
                 }
-                delay(interval)
+                delay(interval.milliseconds)
                 if (auth.currentUser != null && currentRemoteDevice != null && isNetworkAvailable()) {
                     repository.updateDeviceFields(deviceId, mapOf("lastUpdated" to System.currentTimeMillis()))
                 }

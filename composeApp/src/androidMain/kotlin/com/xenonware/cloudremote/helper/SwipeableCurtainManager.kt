@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -40,9 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
-import com.xenonware.cloudremote.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -54,6 +51,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.service.CurtainTrampolineActivity
 import com.xenonware.cloudremote.ui.res.PixelWatchFace
@@ -64,6 +62,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 @SuppressLint("StaticFieldLeak")
@@ -106,10 +105,8 @@ object SwipeableCurtainManager {
                 PixelFormat.TRANSLUCENT
             )
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                params.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
+            params.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 
             val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -195,7 +192,7 @@ object SwipeableCurtainManager {
 
                         LaunchedEffect(isActive) {
                             if (isActive) {
-                                delay(10000)
+                                delay(10000.milliseconds)
                                 isActive = false
                             }
                         }
@@ -218,7 +215,7 @@ object SwipeableCurtainManager {
                                                 onDragEnd = {
                                                     // Only allow swipe to dismiss if NOT a cloud-initiated curtain
                                                     if (!isCloudCurtain && contentOffsetY < -200 * density) {
-                                                        hideCurtain(context)
+                                                        hideCurtain()
                                                     } else {
                                                         contentOffsetY = 0f
                                                     }
@@ -290,7 +287,7 @@ object SwipeableCurtainManager {
         }
     }
 
-    fun hideCurtain(context: Context) {
+    fun hideCurtain() {
         if (curtainView == null && !isCurtainVisible) {
             Log.d(TAG, "Curtain already hidden")
             return
@@ -330,16 +327,16 @@ object SwipeableCurtainManager {
 
     private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner,
         SavedStateRegistryOwner {
-        private val lifecycleRegistry = LifecycleRegistry(this)
-        private val savedStateRegistryController = SavedStateRegistryController.Companion.create(this)
+        private val savedStateRegistryController = SavedStateRegistryController.create(this)
         private val store = ViewModelStore()
 
-        override val lifecycle: Lifecycle get() = lifecycleRegistry
+        override val lifecycle: Lifecycle
+            field = LifecycleRegistry(this)
         override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
         override val viewModelStore: ViewModelStore get() = store
 
         fun handleLifecycleEvent(event: Lifecycle.Event) {
-            lifecycleRegistry.handleLifecycleEvent(event)
+            lifecycle.handleLifecycleEvent(event)
         }
 
         fun performRestore(savedState: Bundle?) {

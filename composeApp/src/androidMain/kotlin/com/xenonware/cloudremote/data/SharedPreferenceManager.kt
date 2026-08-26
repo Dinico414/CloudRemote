@@ -99,10 +99,6 @@ class SharedPreferenceManager(private val context: Context) {
         get() = sharedPreferences.getString(lastSeenVersionNameKey, "") ?: ""
         set(value) = sharedPreferences.edit(commit = true) { putString(lastSeenVersionNameKey, value) }
 
-    var lastSeenVersionCode: Int
-        get() = sharedPreferences.getInt(lastSeenVersionCodeKey, 0)
-        set(value) = sharedPreferences.edit(commit = true) { putInt(lastSeenVersionCodeKey, value) }
-
     fun isCoverThemeApplied(currentDisplaySize: IntSize): Boolean {
         if (!coverThemeEnabled) return false
         val storedDimension1 = sharedPreferences.getInt(coverDisplayDimension1Key, 0)

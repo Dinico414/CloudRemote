@@ -8,7 +8,6 @@ import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.xenonware.cloudremote.BuildConfig
 
 class CloudRemoteApplication : Application() {
     override fun onCreate() {
@@ -71,7 +70,7 @@ class CloudRemoteApplication : Application() {
                 writer.append("\n-----------------\n")
             }
             return true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }

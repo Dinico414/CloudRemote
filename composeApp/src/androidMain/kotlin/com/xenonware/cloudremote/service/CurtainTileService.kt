@@ -31,7 +31,7 @@ class CurtainTileService : TileService() {
 
         if (isLocked) {
             if (SwipeableCurtainManager.isCurtainVisible) {
-                SwipeableCurtainManager.hideCurtain(this)
+                SwipeableCurtainManager.hideCurtain()
             } else {
                 val intent = Intent(this, CurtainTrampolineActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -51,7 +51,7 @@ class CurtainTileService : TileService() {
             }
         } else {
             if (SwipeableCurtainManager.isCurtainVisible) {
-                SwipeableCurtainManager.hideCurtain(this)
+                SwipeableCurtainManager.hideCurtain()
             } else {
                 SwipeableCurtainManager.showCurtain(applicationContext)
             }

@@ -32,7 +32,6 @@ import androidx.compose.material.icons.rounded.Curtains
 import androidx.compose.material.icons.rounded.CurtainsClosed
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,16 +41,13 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -81,11 +77,10 @@ import com.xenon.mylibrary.values.LargePadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
-import com.xenonware.cloudremote.BuildConfig
+import com.xenonware.cloudremote.BuildConfig.BUILD_TYPE
 import com.xenonware.cloudremote.FindDeviceActivity
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.data.Device
-import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.helper.SwipeableCurtainManager
 import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
@@ -98,6 +93,7 @@ import com.xenonware.cloudremote.viewmodel.MainViewModel
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,15 +115,13 @@ fun CompactRemote(
         val modelUpper = remember { Build.MODEL.uppercase() }
 
         val deviceConfig = LocalDeviceConfig.current
-        var backProgress by remember { mutableFloatStateOf(0f) }
         val context = LocalContext.current
         @Suppress("SimplifyBooleanWithConstants")
-        if (BuildConfig.BUILD_TYPE == "debug") {
+        if (BUILD_TYPE == "debug") {
             LaunchedEffect(modelUpper) {
                 Toast.makeText(context, modelUpper, Toast.LENGTH_SHORT).show()
             }
         }
-        val sharedPreferenceManager = remember { SharedPreferenceManager(context) }
 
         val configuration = LocalConfiguration.current
         val isCompact = LocalDeviceConfig.current.isCommunicator || LocalDeviceConfig.current.isMindOne
@@ -145,8 +139,6 @@ fun CompactRemote(
         // 2. UI / Navigation / Interaction State
         // ============================================================================
         val hazeState = rememberHazeState()
-        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-        val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
 
         val lazyListState = rememberLazyListState()
@@ -389,7 +381,7 @@ fun CompactRemote(
 
                             LaunchedEffect(Unit) {
                                 while (true) {
-                                    delay(30000)
+                                    delay(30000.milliseconds)
                                     currentTime = System.currentTimeMillis()
                                 }
                             }

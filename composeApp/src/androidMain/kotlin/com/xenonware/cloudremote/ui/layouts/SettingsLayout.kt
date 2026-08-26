@@ -1,12 +1,11 @@
 package com.xenonware.cloudremote.ui.layouts
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInState
 import com.xenonware.cloudremote.ui.layouts.settings.CoverSettings
 import com.xenonware.cloudremote.ui.layouts.settings.DefaultSettings
+import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
 
 @Composable
@@ -16,7 +15,6 @@ fun SettingsLayout(
     isLandscape: Boolean,
     layoutType: LayoutType,
     onNavigateToDeveloperOptions: () -> Unit,
-    modifier: Modifier = Modifier,
     state: SignInState,
     googleAuthUiClient: GoogleAuthUiClient,
     onSignInClick: () -> Unit,

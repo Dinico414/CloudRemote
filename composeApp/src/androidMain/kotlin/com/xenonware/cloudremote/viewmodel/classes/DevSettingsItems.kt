@@ -1,3 +1,5 @@
+@file:Suppress("unused", "UnusedVariable")
+
 package com.xenonware.cloudremote.viewmodel.classes
 
 import androidx.compose.foundation.layout.Column

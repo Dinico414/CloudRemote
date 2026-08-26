@@ -1,6 +1,5 @@
 package com.xenonware.cloudremote
 
-import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.media.AudioAttributes
@@ -13,19 +12,35 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MyLocation
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +58,15 @@ import com.xenonware.cloudremote.helper.LocalDeviceManager
 import com.xenonware.cloudremote.ui.res.AnimatedGradientBackground
 import com.xenonware.cloudremote.ui.theme.XenonTheme
 import com.xenonware.cloudremote.viewmodel.MainViewModel
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 class PingAlarmActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -65,16 +88,8 @@ class PingAlarmActivity : ComponentActivity() {
         viewModel.localDeviceId = sharedPreferenceManager.localDeviceId
 
         // Show over lock screen
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                        WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
-            )
-        }
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
 
         handleIntent(intent)
         setupUI()
@@ -99,13 +114,13 @@ class PingAlarmActivity : ComponentActivity() {
 
     private fun initAlarmState() {
         val localDeviceManager = LocalDeviceManager(this)
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
 
         if (!isStateSaved) {
             originalVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
             originalAlarmVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             originalRingerMode = audioManager.ringerMode
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
             originalDnd = notificationManager.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
             isStateSaved = true
         }
@@ -143,44 +158,35 @@ class PingAlarmActivity : ComponentActivity() {
         val notification: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
         ringtone = RingtoneManager.getRingtone(applicationContext, notification)
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val attributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-            ringtone?.audioAttributes = attributes
-        }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            ringtone?.isLooping = true
-        }
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        ringtone?.audioAttributes = attributes
+
+        ringtone?.isLooping = true
         ringtone?.play()
 
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
         }
 
         val pattern = longArrayOf(0, 500, 500)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(pattern, 0)
-        }
+        vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
 
         startFlashing()
     }
 
     private fun startFlashing() {
-        val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val cameraManager = getSystemService(CAMERA_SERVICE) as CameraManager
         val cameraId = try {
             cameraManager.cameraIdList.firstOrNull()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         } ?: return
 
@@ -191,10 +197,10 @@ class PingAlarmActivity : ComponentActivity() {
                     try {
                         cameraManager.setTorchMode(cameraId, !isOn)
                         isOn = !isOn
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         break
                     }
-                    delay(300)
+                    delay(300.milliseconds)
                 }
             } finally {
                 withContext(NonCancellable) {
@@ -214,7 +220,7 @@ class PingAlarmActivity : ComponentActivity() {
 
         if (isStateSaved) {
             val localDeviceManager = LocalDeviceManager(this)
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
             
             localDeviceManager.setDnd(originalDnd)
             audioManager.ringerMode = originalRingerMode
@@ -227,7 +233,7 @@ class PingAlarmActivity : ComponentActivity() {
         }
 
         CoroutineScope(Dispatchers.Main).launch {
-            delay(1000)
+            delay(1000.milliseconds)
             finish()
         }
     }

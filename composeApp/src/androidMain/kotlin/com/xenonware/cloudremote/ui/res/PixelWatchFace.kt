@@ -50,6 +50,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun PixelWatchFace(isActive: Boolean) {
@@ -73,7 +74,7 @@ fun PixelWatchFace(isActive: Boolean) {
             isLongInactive = false
             if (wereMinutesHidden) {
                 isReappearing = true
-                delay(250L) // Delay seconds/pill expansion if minutes were hidden
+                delay(250L.milliseconds) // Delay seconds/pill expansion if minutes were hidden
                 isReappearing = false
             }
             isShortInactive = false
@@ -84,7 +85,7 @@ fun PixelWatchFace(isActive: Boolean) {
 
             isShortInactive = true
 
-            delay(300_000L)
+            delay(300_000L.milliseconds)
             isLongInactive = true
         }
     }
@@ -112,7 +113,7 @@ fun PixelWatchFace(isActive: Boolean) {
     LaunchedEffect(isFullyInactive) {
         if (isFullyInactive) {
             while (true) {
-                delay(20000L)
+                delay(20000L.milliseconds)
                 val maxOffset = 80f
                 burnInOffset = Offset(
                     x = (Random.nextFloat() * 2 - 1) * maxOffset,
@@ -128,13 +129,13 @@ fun PixelWatchFace(isActive: Boolean) {
         while (true) {
             time = System.currentTimeMillis()
             if (!isFullyInactive) {
-                delay(16)
+                delay(16.milliseconds)
             } else {
                 val calendar = Calendar.getInstance().apply { timeInMillis = time }
                 val seconds = calendar.get(Calendar.SECOND)
                 val millis = calendar.get(Calendar.MILLISECOND)
                 val delayToNextMinute = 60000L - (seconds * 1000L + millis)
-                delay(max(delayToNextMinute, 100L))
+                delay(max(delayToNextMinute, 100L).milliseconds)
             }
         }
     }

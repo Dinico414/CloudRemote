@@ -1,7 +1,6 @@
 package com.xenonware.cloudremote.helper
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadata
@@ -13,10 +12,10 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Base64
+import androidx.core.graphics.scale
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
-import androidx.core.graphics.scale
 
 class MediaNotificationListener : NotificationListenerService() {
 
@@ -211,6 +210,6 @@ class MediaNotificationListener : NotificationListenerService() {
         val isMetered = cm.isActiveNetworkMetered
         val bandwidth = caps.linkDownstreamBandwidthKbps
         
-        return isMetered || (bandwidth > 0 && bandwidth < 800)
+        return isMetered || (bandwidth in 1..<800)
     }
 }

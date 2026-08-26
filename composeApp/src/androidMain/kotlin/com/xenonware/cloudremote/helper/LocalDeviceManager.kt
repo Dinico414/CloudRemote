@@ -15,21 +15,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
 import android.os.BatteryManager
-import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
-import android.view.WindowManager
 import androidx.annotation.RequiresPermission
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.BTDeviceType
 import com.xenonware.cloudremote.data.ConnectedDevice
@@ -45,7 +35,6 @@ class LocalDeviceManager(private val context: Context) {
     private val notificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val devicePolicyManager = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private val mainHandler = Handler(Looper.getMainLooper())
     private val adminComponent = ComponentName(context, AdminReceiver::class.java)
@@ -291,7 +280,7 @@ class LocalDeviceManager(private val context: Context) {
                     devices.add(
                         ConnectedDevice(
                             name = name,
-                            type = mapBluetoothClassToDeviceType(device, name),
+                            type = mapBluetoothClassToDeviceType(device),
                             batteryLevel = batteryLevel
                         )
                     )
@@ -313,7 +302,7 @@ class LocalDeviceManager(private val context: Context) {
         return try {
             val method = device.javaClass.getMethod("isConnected")
             method.invoke(device) as Boolean
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -322,13 +311,13 @@ class LocalDeviceManager(private val context: Context) {
         return try {
             val method = device.javaClass.getMethod("getBatteryLevel")
             method.invoke(device) as Int
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             -1
         }
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    private fun mapBluetoothClassToDeviceType(device: BluetoothDevice, name: String): BTDeviceType {
+    private fun mapBluetoothClassToDeviceType(device: BluetoothDevice): BTDeviceType {
         val btClass = device.bluetoothClass ?: return BTDeviceType.OTHER
         val name = device.name ?: ""
 
@@ -470,7 +459,7 @@ class LocalDeviceManager(private val context: Context) {
             if (enabled) {
                 SwipeableCurtainManager.showCurtain(context, isCloud = true)
             } else {
-                SwipeableCurtainManager.hideCurtain(context)
+                SwipeableCurtainManager.hideCurtain()
             }
         }
     }
@@ -485,22 +474,4 @@ class LocalDeviceManager(private val context: Context) {
         }
     }
 
-    private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner,
-        SavedStateRegistryOwner {
-        private val lifecycleRegistry = LifecycleRegistry(this)
-        private val savedStateRegistryController = SavedStateRegistryController.create(this)
-        private val store = ViewModelStore()
-
-        override val lifecycle: Lifecycle get() = lifecycleRegistry
-        override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
-        override val viewModelStore: ViewModelStore get() = store
-
-        fun handleLifecycleEvent(event: Lifecycle.Event) {
-            lifecycleRegistry.handleLifecycleEvent(event)
-        }
-
-        fun performRestore(savedState: Bundle?) {
-            savedStateRegistryController.performRestore(savedState)
-        }
-    }
 }

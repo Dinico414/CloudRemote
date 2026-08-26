@@ -155,6 +155,7 @@ import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.window.DialogProperties
 import com.xenon.mylibrary.res.XenonDialog
+import com.xenon.mylibrary.res.XenonSingleChoiceButtonGroup
 import com.xenon.mylibrary.theme.QuicksandTitleVariable
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.R
@@ -164,6 +165,7 @@ import com.xenonware.cloudremote.ui.theme.LocalGreenMaterialColorScheme
 import com.xenonware.cloudremote.ui.theme.LocalIsDarkTheme
 import com.xenonware.cloudremote.ui.theme.LocalRedMaterialColorScheme
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 fun getDeviceIconPrefix(name: String): String? {
     return when (name) {
@@ -300,21 +302,21 @@ fun DeviceItem(
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(750L)
+            delay(750L.milliseconds)
             for (i in 1..8) {
                 previewFrame9 = i + 1
                 if (i % 2 == 0) {
                     previewFrame = (i / 2) + 1
                 }
-                delay(50L)
+                delay(50L.milliseconds)
             }
-            delay(750L)
+            delay(750L.milliseconds)
             for (i in 1..8) {
                 previewFrame9 = 9 - i
                 if (i % 2 == 0) {
                     previewFrame = 5 - (i / 2)
                 }
-                delay(50L)
+                delay(50L.milliseconds)
             }
         }
     }
@@ -784,7 +786,7 @@ fun DeviceItem(
                         }
                     }
 
-                    @Suppress("KotlinConstantConditions") if (BuildConfig.BUILD_TYPE == "debug" && device.mediaCustomAction1Title.isNotBlank() && device.mediaCustomAction2Title.isNotBlank()) {
+                    if (BuildConfig.BUILD_TYPE == "debug" && device.mediaCustomAction1Title.isNotBlank() && device.mediaCustomAction2Title.isNotBlank()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Start,
@@ -888,24 +890,23 @@ fun DeviceItem(
                         XenonSingleChoiceButtonGroup(
                             options = listOf(0, 1, 2),
                             selectedOption = device.ringerMode,
-                            connected = false,
                             onOptionSelect = { onUpdateDevice(device.copy(ringerMode = it)) },
                             label = { "" },
-                            colors = ToggleButtonDefaults.toggleButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                checkedContainerColor = MaterialTheme.colorScheme.primary,
-                                checkedContentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedContentColor = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.weight(3f),
-                            height = 48.dp,
-                            icon = { option, _ ->
+                            buttonHeight = 48.dp,
+                            icon = { option, isSelected ->
                                 Icon(
                                     imageVector = when (option) {
                                         0 -> Icons.AutoMirrored.Rounded.VolumeOff
                                         1 -> Icons.Rounded.Vibration
                                         else -> Icons.AutoMirrored.Rounded.VolumeUp
-                                    }, contentDescription = "Ringer Mode"
+                                    },
+                                    contentDescription = "Ringer Mode",
+                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             })
                     }
@@ -932,7 +933,7 @@ fun DeviceItem(
                                 onUpdateDevice(device.copy(mediaVolume = newVolume))
                             },
                             modifier = Modifier.height(48.dp),
-                            colors = ToggleButtonDefaults.toggleButtonColors(
+                            colors = ToggleButtonDefaults.colors(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                                 checkedContainerColor = MaterialTheme.colorScheme.primary,
@@ -1414,7 +1415,7 @@ fun IconToggleButton(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            colors = ToggleButtonDefaults.toggleButtonColors(
+            colors = ToggleButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 checkedContainerColor = activeColor,

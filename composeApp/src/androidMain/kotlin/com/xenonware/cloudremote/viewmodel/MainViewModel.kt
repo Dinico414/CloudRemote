@@ -7,8 +7,6 @@ import android.media.session.MediaSessionManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
-import android.os.Build
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -120,14 +118,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            connectivityManager.registerDefaultNetworkCallback(networkCallback)
-        } else {
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .build()
-            connectivityManager.registerNetworkCallback(request, networkCallback)
-        }
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
     fun onSignedIn() {
@@ -221,7 +212,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val mediaSessionManager = getApplication<Application>().getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val controllers = try {
             mediaSessionManager.getActiveSessions(componentName)
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             emptyList()
         }
         val mediaController = controllers.firstOrNull()

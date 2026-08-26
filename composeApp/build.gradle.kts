@@ -24,6 +24,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.play.services.auth)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -48,7 +49,7 @@ kotlin {
 android {
     namespace = "com.xenonware.cloudremote"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
     defaultConfig {
         applicationId = "com.xenonware.cloudremote"
@@ -81,6 +82,7 @@ android {
 
         getByName("release") {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
@@ -149,7 +151,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.firebase.auth.ktx)
-    implementation(libs.play.services.auth)
+    // implementation(libs.play.services.auth) // Moved to androidMain
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.gson)
