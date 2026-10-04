@@ -8,28 +8,36 @@
     <string name="settings_menu_item_description">Open settings menu</string>
     <string name="theme">Theme</string>
     <string name="cover_screen_mode">Cover Screen Mode</string>
-    <string name="cover_screen_mode_description">Selected cover screen</string>
+    <string name="selected_cover_screen">Selected Cover Screen</string>
+    <string name="active">Active</string>
+    <string name="inactive">Inactive</string>
+    <string name="cover_screen_mode_description">Enable to apply a more compact, borderless layout when you are using the Cover Display.</string>
     <string name="language">Language</string>
-    <string name="clear_data">Clear All Data</string>
-    <string name="clear_data_description">Clears app data and cache</string>
-    <string name="reset_settings">Reset All Settings</string>
-    <string name="blacked_out">Blacked-out</string>
-    <string name="blacked_out_description">Makes dark mode even darker.</string>
+    <string name="clear_data">Clear Data</string>
+    <string name="clear_data_description">Remove all application data</string>
+    <string name="reset_settings">Reset Settings</string>
+    <string name="reset_all_settings_description">Restore all settings to default</string>
+    <string name="blacked_out">Blacked out</string>
+    <string name="blacked_out_description">Make Dark mode even darker.</string>
     <string name="time_format">Time Format</string>
     <string name="date_format">Date Format</string>
     <string name="date_time_format"><![CDATA[Time & Date Format]]></string>
     <string name="signed_in">Logged in</string>
     <string name="sign_in">Log in with Google</string>
-    <string name="sign_out">Log out</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign Out</string>
     <string name="version">Version</string>
     <string name="app_version">App Version</string>
-    <string name="xenon_ui_version">Xenon-UI Version</string>
-    <string name="xenon_commons_version">Xenon-Commons Version</string>
+    <string name="xenon_ui_version">Xenon UI Version</string>
+    <string name="xenon_commons_version">Xenon Commons Version</string>
+    <string name="buy_me_a_coffee">Buy me a coffee</string>
+    <string name="buy_me_a_coffee_description">Support the developer of Xenon Launcher</string>
 
     <!-- Developer Settings -->
     <string name="developer_options_title">Developer Options</string>
     <string name="developer_options">Developer Settings</string>
-    <string name="dev_settings_description">Enable Alpha and Beta State Features</string>
+    <string name="dev_settings_description">Enables beta or test features.</string>
+    <string name="developer">Developer</string>
     <string name="already_in_developer_mode">You are already in developer mode</string>
     <string name="developer_mode_enabled">Developer mode enabled!</string>
     <string name="taps_remaining_to_developer">You are now %d steps away from being a developer.</string>
@@ -100,8 +108,8 @@
     <string name="underline_text">Underline Text</string>
     <string name="change_text_size">Change Text Size</string>
     <string name="change_layout">Change Layout</string>
-    <string name="profile_picture">Profile picture</string>
-    <string name="more_infos">More infos</string>
+    <string name="profile_picture">Profile Picture</string>
+    <string name="more_infos">More Infos</string>
     <string name="finish">Finish</string>
     <string name="next">Next</string>
 
@@ -168,7 +176,6 @@
     <string name="device_is_already_locked">Device is already locked</string>
     <string name="swipe_up_to_unlock">Swipe up to unlock</string>
     <string name="locked_extern">Locked remotely</string>
-    <string name="reset_all_settings_description">Does only effect Settings</string>
     <string name="offline_message">You are currently offline</string>
     <string name="bad_connection_message">Poor network connection</string>
 

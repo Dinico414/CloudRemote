@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.auth.api.identity.Identity
 import com.xenon.mylibrary.ActivityScreen
 import com.xenon.mylibrary.res.FloatingToolbarContent
 import com.xenon.mylibrary.res.GoogleProfilBorder
@@ -73,7 +72,7 @@ import com.xenon.mylibrary.res.XenonSnackbar
 import com.xenon.mylibrary.theme.DeviceConfigProvider
 import com.xenon.mylibrary.theme.LocalDeviceConfig
 import com.xenon.mylibrary.values.ExtraLargePadding
-import com.xenon.mylibrary.values.LargePadding
+import com.xenon.mylibrary.values.MediumLargePadding
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenon.mylibrary.values.NoSpacing
 import com.xenon.mylibrary.values.SmallPadding
@@ -151,8 +150,7 @@ fun CompactRemote(
         // ============================================================================
         val googleAuthUiClient = remember {
             GoogleAuthUiClient(
-                context = context.applicationContext,
-                oneTapClient = Identity.getSignInClient(context.applicationContext)
+                context = context.applicationContext
             )
         }
         val signInViewModel: SignInViewModel = viewModel()
@@ -218,11 +216,11 @@ fun CompactRemote(
             val targetBottomPadding =
                 remember(imeHeight, bottomPaddingNavigationBar, imePaddingValues) {
                     val calculatedPadding = if (imeHeight > bottomPaddingNavigationBar) {
-                        imeHeight + LargePadding
+                        imeHeight + MediumLargePadding
                     } else {
                         max(
                             bottomPaddingNavigationBar, imePaddingValues.calculateTopPadding()
-                        ) + LargePadding
+                        ) + MediumLargePadding
                     }
                     max(calculatedPadding, 0.dp)
                 }

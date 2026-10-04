@@ -1,6 +1,8 @@
 package com.xenonware.cloudremote.viewmodel.classes
 
+import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,20 +26,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.xenon.mylibrary.res.SettingsGoogleTile
 import com.xenon.mylibrary.res.SettingsSwitchMenuTile
 import com.xenon.mylibrary.res.SettingsSwitchTile
 import com.xenon.mylibrary.res.SettingsTile
-import com.xenon.mylibrary.values.ExtraLargeSpacing
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
+import com.xenon.mylibrary.values.LargestSpacing
 import com.xenon.mylibrary.values.LargerPadding
-import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.NoCornerRadius
-import com.xenon.mylibrary.values.SmallSpacing
-import com.xenon.mylibrary.values.SmallestCornerRadius
+import com.xenon.mylibrary.values.SmallMediumCornerRadius
+import com.xenon.mylibrary.values.SmallerSpacing
+import com.xenon.mylibrary.R
 import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInState
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
-import com.xenonware.cloudremote.R
+import com.xenonware.cloudremote.R.string
 
 
 @Composable
@@ -49,10 +53,10 @@ fun SettingsItems(
     currentLanguage: String,
     appVersion: String,
     onNavigateToDeveloperOptions: () -> Unit,
-    innerGroupRadius: Dp = SmallestCornerRadius,
-    outerGroupRadius: Dp = MediumCornerRadius,
-    innerGroupSpacing: Dp = SmallSpacing,
-    outerGroupSpacing: Dp = ExtraLargeSpacing,
+    innerGroupRadius: Dp = SmallMediumCornerRadius,
+    outerGroupRadius: Dp = ExtraLargerCornerRadius,
+    innerGroupSpacing: Dp = SmallerSpacing,
+    outerGroupSpacing: Dp = LargestSpacing,
     tileBackgroundColor: Color = MaterialTheme.colorScheme.surfaceBright,
     tileContentColor: Color = MaterialTheme.colorScheme.onSurface,
     tileSubtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -114,30 +118,28 @@ fun SettingsItems(
     }
 
     SettingsGoogleTile(
-        title = if (state.isSignInSuccessful) userData?.username ?: stringResource(id = R.string.signed_in) else stringResource(id = R.string.sign_in),
+        title = if (state.isSignInSuccessful) userData?.username ?: "Signed in" else stringResource(string.sign_in_with_google),
         subtitle = if (state.isSignInSuccessful) userData?.email else null,
         profilePictureUrl = userData?.profilePictureUrl,
-        noAccIcon = painterResource(R.drawable.default_icon),
+        noAccIcon = painterResource(R.drawable.ic_default_icon),
         isSignedIn = state.isSignInSuccessful,
         onClick = if (state.isSignInSuccessful) onSignOutClick else onSignInClick,
         shape = tileShapeOverride ?: standaloneShape,
         backgroundColor = Color.Transparent,
         contentColor = tileContentColor,
         subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding,
-        iconContentDescription = stringResource(R.string.profile_picture)
+        iconContentDescription = stringResource(string.profile_picture)
     )
     Spacer(Modifier.height(actualOuterGroupSpacing))
 
     SettingsTile(
-        title = stringResource(id = R.string.device_admin_permission),
-        subtitle = stringResource(id = R.string.device_admin_permission_description),
+        title = stringResource(string.device_admin_permission),
+        subtitle = stringResource(string.device_admin_permission_description),
         onClick = { viewModel.onDeviceAdminSettingsClicked(context) },
         icon = {
             Icon(
                 Icons.Rounded.Lock,
-                stringResource(R.string.device_admin_permission),
+                stringResource(string.device_admin_permission),
                 tint = tileSubtitleColor
             )
         },
@@ -150,184 +152,149 @@ fun SettingsItems(
     )
     Spacer(Modifier.height(actualOuterGroupSpacing))
 
-    SettingsTile(
-        title = stringResource(id = R.string.theme),
-        subtitle = "${stringResource(id = R.string.current)} $currentThemeTitle",
-        onClick = { viewModel.onThemeSettingClicked() },
-        icon = {
-            Icon(
-                painterResource(R.drawable.themes),
-                stringResource(R.string.theme),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: topShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
-    )
-    Spacer(Modifier.height(actualInnerGroupSpacing))
-    SettingsSwitchTile(
-        title = stringResource(R.string.blacked_out),
-        subtitle = stringResource(R.string.blacked_out_description),
-        checked = blackedOutEnabled,
-        onCheckedChange = { viewModel.setBlackedOutEnabled(it) },
-        onClick = { viewModel.setBlackedOutEnabled(!blackedOutEnabled) },
-        icon = {
-            Icon(
-                painterResource(R.drawable.blacked_out),
-                stringResource(R.string.blacked_out),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: middleShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding,
-        switchColors = switchColorsOverride ?: defaultSwitchColors
-    )
-    Spacer(Modifier.height(actualInnerGroupSpacing))
-    SettingsSwitchMenuTile(
-        title = stringResource(R.string.cover_screen_mode),
-        subtitle = "${stringResource(R.string.cover_screen_mode_description)} (${
-            if (applyCoverTheme) stringResource(
-                R.string.enabled
-            ) else stringResource(R.string.disabled)
-        })",
-        checked = coverThemeEnabled,
-        onCheckedChange = { viewModel.setCoverThemeEnabled(it) },
-        onClick = { viewModel.onCoverThemeClicked() },
-        icon = {
-            Icon(
-                painterResource(R.drawable.cover_screen),
-                stringResource(R.string.cover_screen_mode),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: bottomShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding,
-        switchColors = switchColorsOverride ?: defaultSwitchColors
-    )
+    Column {
+        SettingsTile(
+            title = stringResource(string.theme),
+            subtitle = "${stringResource(string.current)} $currentThemeTitle",
+            onClick = { viewModel.onThemeSettingClicked() },
+            icon = { Icon(painterResource(R.drawable.ic_themes), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: topShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor
+        )
+        Spacer(Modifier.height(actualInnerGroupSpacing))
+        SettingsSwitchTile(
+            title = stringResource(string.blacked_out),
+            subtitle = stringResource(string.blacked_out_description),
+            checked = blackedOutEnabled,
+            onCheckedChange = { viewModel.setBlackedOutEnabled(it) },
+            onClick = { viewModel.setBlackedOutEnabled(!blackedOutEnabled) },
+            icon = { Icon(painterResource(R.drawable.ic_blacked_out), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: middleShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor,
+            switchColors = switchColorsOverride ?: defaultSwitchColors
+        )
+        Spacer(Modifier.height(actualInnerGroupSpacing))
+
+        SettingsSwitchMenuTile(
+            title = stringResource(string.cover_screen_mode),
+            subtitle = "${stringResource(string.selected_cover_screen)}\n(${if (applyCoverTheme) stringResource(string.active) else stringResource(string.inactive)})",
+            checked = coverThemeEnabled,
+            onCheckedChange = { viewModel.setCoverThemeEnabled(it) },
+            onClick = { viewModel.onCoverThemeClicked() },
+            icon = { Icon(painterResource(R.drawable.ic_cover_screen), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: bottomShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor,
+            switchColors = switchColorsOverride ?: defaultSwitchColors
+        )
+    }
 
     Spacer(Modifier.height(outerGroupSpacing))
 
     SettingsTile(
-        title = stringResource(R.string.language),
-        subtitle = "${stringResource(R.string.current)} $currentLanguage",
+        title = stringResource(string.language),
+        subtitle = "${stringResource(string.current)} $currentLanguage",
         onClick = { viewModel.onLanguageSettingClicked(context) },
-        icon = {
-            Icon(
-                painterResource(R.drawable.language),
-                stringResource(R.string.language),
-                tint = tileSubtitleColor
-            )
-        },
+        icon = { Icon(painterResource(R.drawable.ic_language), null, tint = tileSubtitleColor) },
         shape = tileShapeOverride ?: standaloneShape,
         backgroundColor = tileBackgroundColor,
         contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
+        subtitleColor = tileSubtitleColor
     )
     LaunchedEffect(Unit) { viewModel.updateCurrentLanguage() }
 
     Spacer(Modifier.height(outerGroupSpacing))
 
-    SettingsTile(
-        title = stringResource(R.string.clear_data),
-        subtitle = stringResource(R.string.clear_data_description),
-        onClick = { viewModel.onClearDataClicked(); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-        icon = {
-            Icon(
-                painterResource(R.drawable.reset),
-                stringResource(R.string.clear_data),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: topShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
-    )
-    Spacer(Modifier.height(actualInnerGroupSpacing))
-    SettingsTile(
-        title = stringResource(R.string.reset_settings),
-        subtitle = stringResource(R.string.reset_all_settings_description),
-        onClick = {
-            viewModel.onResetSettingsClicked(); haptic.performHapticFeedback(
-            HapticFeedbackType.LongPress
-        )
-        },
-        icon = {
-            Icon(
-                painterResource(R.drawable.reset_settings),
-                stringResource(R.string.reset_settings),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: middleShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
-    )
-    Spacer(Modifier.height(actualInnerGroupSpacing))
-    SettingsTile(
-        title = stringResource(R.string.version),
-        subtitle = "v $appVersion" + if (developerModeEnabled) " (Developer)" else "",
-        onClick = { viewModel.onInfoTileClicked() },
-        onLongClick = { viewModel.openImpressum(context) },
-        icon = {
-            Icon(
-                painterResource(R.drawable.info),
-                stringResource(R.string.version),
-                tint = tileSubtitleColor
-            )
-        },
-        shape = tileShapeOverride ?: bottomShape,
-        backgroundColor = tileBackgroundColor,
-        contentColor = tileContentColor,
-        subtitleColor = tileSubtitleColor,
-        horizontalPadding = tileHorizontalPadding,
-        verticalPadding = tileVerticalPadding
-    )
-
-    if (developerModeEnabled) {
-        Spacer(Modifier.height(actualOuterGroupSpacing))
+    // --- system ---
+    Column {
         SettingsTile(
-            title = stringResource(
-                R.string.developer_options_title
-            ),
-            subtitle = stringResource(
-                R.string.dev_settings_description
-            ),
+            title = stringResource(string.clear_data),
+            subtitle = stringResource(string.clear_data_description),
             onClick = {
-                onNavigateToDeveloperOptions()
+                viewModel.onClearDataClicked(); haptic.performHapticFeedback(
+                HapticFeedbackType.LongPress
+            )
+            },
+            icon = { Icon(painterResource(R.drawable.ic_reset), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: topShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor
+        )
+        Spacer(Modifier.height(actualInnerGroupSpacing))
+        SettingsTile(
+            title = stringResource(string.reset_settings),
+            subtitle = stringResource(string.reset_all_settings_description),
+            onClick = {
+                viewModel.onResetSettingsClicked(); haptic.performHapticFeedback(
+                HapticFeedbackType.LongPress
+            )
             },
             icon = {
                 Icon(
-                    painter = painterResource(R.drawable.developer),
-                    contentDescription = stringResource(R.string.developer_options_title),
+                    painterResource(R.drawable.ic_reset_settings),
+                    null,
+                    tint = tileSubtitleColor
+                )
+            },
+            shape = tileShapeOverride ?: middleShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor
+        )
+        Spacer(Modifier.height(actualInnerGroupSpacing))
+        SettingsTile(
+            title = stringResource(string.version),
+            subtitle = "v $appVersion" + if (developerModeEnabled) " (${stringResource(string.developer)})" else "",
+            onClick = { viewModel.onInfoTileClicked() },
+            onLongClick = { viewModel.openImpressum(context) },
+            icon = { Icon(painterResource(R.drawable.ic_info), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: bottomShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor
+        )
+        Spacer(Modifier.height(actualOuterGroupSpacing))
+        SettingsTile(
+            title = stringResource(string.buy_me_a_coffee),
+            subtitle = stringResource(string.buy_me_a_coffee_description),
+            onClick = {
+                val intent =
+                    Intent(Intent.ACTION_VIEW, "https://www.buymeacoffee.com/xenonware".toUri())
+                context.startActivity(intent)
+            },
+            icon = {
+                Icon(
+                    painterResource(R.drawable.ic_buy_me_a_coffee),
+                    null,
                     tint = tileSubtitleColor
                 )
             },
             shape = tileShapeOverride ?: standaloneShape,
             backgroundColor = tileBackgroundColor,
             contentColor = tileContentColor,
-            subtitleColor = tileSubtitleColor,
-            horizontalPadding = tileHorizontalPadding,
-            verticalPadding = tileVerticalPadding
+            showTrailingIcon = true,
+            subtitleColor = tileSubtitleColor
+        )
+    }
+
+    // --- dev ---
+    if (developerModeEnabled) {
+        Spacer(Modifier.height(actualOuterGroupSpacing))
+        SettingsTile(
+            title = stringResource(string.developer_options_title),
+            subtitle = stringResource(string.dev_settings_description),
+            onClick = onNavigateToDeveloperOptions,
+            icon = { Icon(painterResource(R.drawable.ic_developer), null, tint = tileSubtitleColor) },
+            shape = tileShapeOverride ?: standaloneShape,
+            backgroundColor = tileBackgroundColor,
+            contentColor = tileContentColor,
+            subtitleColor = tileSubtitleColor
         )
     }
 }

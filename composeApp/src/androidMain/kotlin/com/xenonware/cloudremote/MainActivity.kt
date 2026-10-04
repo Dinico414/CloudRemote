@@ -16,10 +16,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
@@ -30,7 +27,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import com.google.android.gms.auth.api.identity.Identity
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
 import com.xenonware.cloudremote.service.CloudRemoteService
@@ -55,8 +51,7 @@ class MainActivity : ComponentActivity() {
 
     private val googleAuthUiClient by lazy {
         GoogleAuthUiClient(
-            context = applicationContext,
-            oneTapClient = Identity.getSignInClient(applicationContext)
+            context = this
         )
     }
 
@@ -132,32 +127,6 @@ class MainActivity : ComponentActivity() {
                 blackedOutModeEnabled = lastAppliedBlackedOutMode
             ) { layoutType, isLandscape ->
 
-                val oneTapLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.StartIntentSenderForResult(),
-                    onResult = { result ->
-                        if (result.resultCode == RESULT_OK) {
-                            lifecycleScope.launch {
-                                val signInResult = googleAuthUiClient.signInWithIntent(
-                                    intent = result.data ?: return@launch
-                                )
-                                signInViewModel.onSignInResult(signInResult)
-                            }
-                        }
-                    })
-
-                val traditionalSignInLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.StartActivityForResult(),
-                    onResult = { result ->
-                        if (result.resultCode == RESULT_OK) {
-                            lifecycleScope.launch {
-                                val signInResult = googleAuthUiClient.signInWithTraditionalIntent(
-                                    intent = result.data ?: return@launch
-                                )
-                                signInViewModel.onSignInResult(signInResult)
-                            }
-                        }
-                    })
-
                 XenonApp(
                     viewModel = viewModel,
                     layoutType = layoutType,
@@ -171,14 +140,7 @@ class MainActivity : ComponentActivity() {
                     onSignInClick = {
                         lifecycleScope.launch {
                             val signInResult = googleAuthUiClient.signIn()
-                            if (signInResult != null) {
-                                oneTapLauncher.launch(
-                                    IntentSenderRequest.Builder(signInResult.pendingIntent.intentSender)
-                                        .build()
-                                )
-                            } else {
-                                traditionalSignInLauncher.launch(googleAuthUiClient.getTraditionalSignInIntent())
-                            }
+                            signInViewModel.onSignInResult(signInResult)
                         }
                     },
                 )

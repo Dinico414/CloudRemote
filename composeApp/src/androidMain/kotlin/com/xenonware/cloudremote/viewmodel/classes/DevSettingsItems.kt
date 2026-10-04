@@ -29,12 +29,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.res.SettingsSwitchTile
 import com.xenon.mylibrary.res.SettingsTile
-import com.xenon.mylibrary.values.ExtraLargeSpacing
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
+import com.xenon.mylibrary.values.LargestSpacing
 import com.xenon.mylibrary.values.LargerPadding
-import com.xenon.mylibrary.values.MediumCornerRadius
 import com.xenon.mylibrary.values.NoCornerRadius
-import com.xenon.mylibrary.values.SmallSpacing
-import com.xenon.mylibrary.values.SmallestCornerRadius
+import com.xenon.mylibrary.values.SmallMediumCornerRadius
+import com.xenon.mylibrary.values.SmallerSpacing
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.viewmodel.DevSettingsViewModel
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
@@ -44,10 +44,10 @@ fun DevSettingsItems(
     settingsViewModel: SettingsViewModel,
     viewModel: DevSettingsViewModel,
     modifier: Modifier = Modifier,
-    innerGroupRadius: Dp = SmallestCornerRadius,
-    outerGroupRadius: Dp = MediumCornerRadius,
-    innerGroupSpacing: Dp = SmallSpacing,
-    outerGroupSpacing: Dp = ExtraLargeSpacing,
+    innerGroupRadius: Dp = SmallMediumCornerRadius,
+    outerGroupRadius: Dp = ExtraLargerCornerRadius,
+    innerGroupSpacing: Dp = SmallerSpacing,
+    outerGroupSpacing: Dp = LargestSpacing,
     tileBackgroundColor: Color = MaterialTheme.colorScheme.surfaceBright,
     tileContentColor: Color = MaterialTheme.colorScheme.onSurface,
     tileSubtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -127,7 +127,7 @@ fun DevSettingsItems(
         )
 
         if (isDeveloperModeEnabled) {
-            Spacer(modifier = Modifier.height(SmallSpacing))
+            Spacer(modifier = Modifier.height(SmallerSpacing))
             SettingsSwitchTile(
                 title = stringResource(id = R.string.disable_input_receiver),
                 subtitle = stringResource(id = R.string.disable_input_receiver_subtitle),
@@ -145,7 +145,7 @@ fun DevSettingsItems(
                 horizontalPadding = tileHorizontalPadding,
                 verticalPadding = tileVerticalPadding
             )
-            Spacer(modifier = Modifier.height(SmallSpacing))
+            Spacer(modifier = Modifier.height(SmallerSpacing))
             SettingsTile(
                 title = "Force Crash",
                 subtitle = "Triggers a crash to test the crash logger",

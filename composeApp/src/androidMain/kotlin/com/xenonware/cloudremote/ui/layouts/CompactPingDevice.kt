@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.xenon.mylibrary.ActivityScreen
-import com.xenon.mylibrary.values.MediumCornerRadius
+import com.xenon.mylibrary.values.ExtraLargerCornerRadius
 import com.xenon.mylibrary.values.MediumPadding
 import com.xenonware.cloudremote.R
 import com.xenonware.cloudremote.viewmodel.LayoutType
@@ -94,7 +94,7 @@ fun CompactPingDevice(
                         val isOnline = (currentTime - device.lastUpdated) < 900_000
 
                         Card(
-                            shape = RoundedCornerShape(MediumCornerRadius),
+                            shape = RoundedCornerShape(ExtraLargerCornerRadius),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .graphicsLayer(alpha = if (isOnline) 1f else 0.5f),
