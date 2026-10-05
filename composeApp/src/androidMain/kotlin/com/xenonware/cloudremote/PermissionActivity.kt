@@ -7,17 +7,80 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.xenon.mylibrary.activity.BasePermissionActivity
+import com.xenon.mylibrary.res.AnimatedGradientBackground
+import com.xenon.mylibrary.res.PermissionScreen
+import com.xenon.mylibrary.res.XenonIcon
 import com.xenon.mylibrary.utils.PermissionItem
 import com.xenonware.cloudremote.broadcastReceiver.AdminReceiver
 import com.xenonware.cloudremote.data.SharedPreferenceManager
+import com.xenonware.cloudremote.ui.theme.XenonTheme
 
 class PermissionActivity : BasePermissionActivity() {
 
     private val sharedPreferenceManager by lazy { SharedPreferenceManager(this) }
+    private val refreshTrigger = mutableIntStateOf(0)
+
+    override fun onResume() {
+        super.onResume()
+        refreshTrigger.intValue++
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            XenonTheme(
+                darkTheme = isSystemInDarkTheme(),
+                useBlackedOutDarkTheme = false,
+                isCoverMode = false,
+                dynamicColor = true
+            ) {
+                AnimatedGradientBackground(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color.Transparent
+                    ) {
+                        val trigger by refreshTrigger
+                        val permissions = remember(trigger) { getPermissions() }
+                        PermissionScreen(
+                            permissions = permissions,
+                            isFirstLaunch = isFirstLaunch(),
+                            grantButtonText = getString(R.string.grant_permission),
+                            skipIcon = XenonIcon { modifier ->
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                    contentDescription = null,
+                                    modifier = modifier.size(24.dp)
+                                )
+                            },
+                            onFinish = { onPermissionsFinished() }
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     override fun isFirstLaunch(): Boolean = sharedPreferenceManager.isFirstLaunch
 

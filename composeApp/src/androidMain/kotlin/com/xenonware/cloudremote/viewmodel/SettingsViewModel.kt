@@ -1,11 +1,15 @@
 package com.xenonware.cloudremote.viewmodel
 
+import android.Manifest
 import android.app.ActivityManager
 import android.app.Application
 import android.app.LocaleManager
+import android.app.NotificationManager
+import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Process
@@ -13,6 +17,8 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.unit.IntSize
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -98,6 +104,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val _showVersionDialog = MutableStateFlow(false)
     val showVersionDialog: StateFlow<Boolean> = _showVersionDialog.asStateFlow()
 
+    private val _showPermissionsDialog = MutableStateFlow(false)
+    val showPermissionsDialog: StateFlow<Boolean> = _showPermissionsDialog.asStateFlow()
+
+    private val _permissionsList = MutableStateFlow<List<PermissionStatus>>(emptyList())
+    val permissionsList: StateFlow<List<PermissionStatus>> = _permissionsList.asStateFlow()
+
     private val _developerModeEnabled = MutableStateFlow(sharedPreferenceManager.developerModeEnabled)
     val developerModeEnabled: StateFlow<Boolean> = _developerModeEnabled.asStateFlow()
 
@@ -156,6 +168,104 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _showSignOutDialog.value = false
     }
 
+    // Permissions Dialog
+    fun setShowPermissionsDialog(show: Boolean) {
+        _showPermissionsDialog.value = show
+    }
+
+    fun updatePermissionsList(context: Context) {
+        val list = buildList {
+            add(
+                PermissionStatus(
+                    name = context.getString(R.string.display_over_other_apps),
+                    permission = "overlay",
+                    isGranted = Settings.canDrawOverlays(context)
+                )
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                add(
+                    PermissionStatus(
+                        name = context.getString(R.string.bluetooth_access),
+                        permission = "bluetooth",
+                        isGranted = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.BLUETOOTH_CONNECT
+                        ) == PackageManager.PERMISSION_GRANTED
+                    )
+                )
+            }
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            add(
+                PermissionStatus(
+                    name = context.getString(R.string.do_not_disturb_access),
+                    permission = "dnd",
+                    isGranted = notificationManager.isNotificationPolicyAccessGranted
+                )
+            )
+            val enabledListeners = Settings.Secure.getString(
+                context.contentResolver,
+                "enabled_notification_listeners"
+            )
+            add(
+                PermissionStatus(
+                    name = context.getString(R.string.notification_access),
+                    permission = "notification_listener",
+                    isGranted = enabledListeners?.contains(context.packageName) == true
+                )
+            )
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            add(
+                PermissionStatus(
+                    name = context.getString(R.string.device_admin),
+                    permission = "device_admin",
+                    isGranted = dpm.isAdminActive(ComponentName(context, AdminReceiver::class.java))
+                )
+            )
+        }
+        _permissionsList.value = list
+    }
+
+    fun openPermissionSetting(context: Context, permissionKey: String) {
+        when (permissionKey) {
+            "overlay" -> {
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        "package:${context.packageName}".toUri()
+                    ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            }
+            "bluetooth" -> {
+                try {
+                    val intent = Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        "package:${context.packageName}".toUri()
+                    ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            }
+            "dnd" -> {
+                try {
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            }
+            "notification_listener" -> {
+                try {
+                    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            }
+            "device_admin" -> {
+                onDeviceAdminSettingsClicked(context)
+            }
+        }
+    }
 
     fun onDeviceAdminSettingsClicked(context: Context) {
         // Try the direct activity component first (most direct for many devices)

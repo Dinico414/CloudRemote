@@ -2,7 +2,6 @@
 
 package com.xenonware.cloudremote
 
-import android.Manifest
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -68,16 +67,9 @@ class MainActivity : ComponentActivity() {
         Log.d("MainActivity", "BuildConfig.VERSION_NAME: ${BuildConfig.VERSION_NAME}")
         Log.d("MainActivity", "lastSeenVersionName: ${sharedPreferenceManager.lastSeenVersionName}")
 
-        if (arePermissionsMissing()) {
-            val intent = Intent(this, PermissionActivity::class.java)
-            startActivity(intent)
-            finish()
-            return
-        }
-
         if (sharedPreferenceManager.isFirstLaunch) {
-            Log.d("MainActivity", "Redirecting to WelcomeActivity")
-            val intent = Intent(this, WelcomeActivity::class.java)
+            Log.d("MainActivity", "Redirecting to PermissionActivity")
+            val intent = Intent(this, PermissionActivity::class.java)
             startActivity(intent)
             finish()
             return
@@ -192,28 +184,6 @@ class MainActivity : ComponentActivity() {
             context = newBase.createConfigurationContext(config)
         }
         super.attachBaseContext(ContextWrapper(context))
-    }
-
-    private fun arePermissionsMissing(): Boolean {
-        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val enabledListeners =
-            Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        val dpm = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        val componentName = ComponentName(this, AdminReceiver::class.java)
-
-        val bluetoothConnect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.checkSelfPermission(
-                this, Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-
-        return !Settings.canDrawOverlays(this) ||
-                !bluetoothConnect ||
-                !notificationManager.isNotificationPolicyAccessGranted ||
-                !dpm.isAdminActive(componentName) ||
-                enabledListeners == null || !enabledListeners.contains(packageName)
     }
 
 

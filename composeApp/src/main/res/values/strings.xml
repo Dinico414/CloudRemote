@@ -122,6 +122,12 @@
     <string name="restart_app_description">restart app</string>
 
     <!-- Permissions -->
+    <string name="permissions">Permissions</string>
+    <string name="permissions_summary">Manage required permissions</string>
+    <string name="granted">Granted</string>
+    <string name="skipped">Skipped</string>
+    <string name="denied">Denied</string>
+    <string name="close">Close</string>
     <string name="display_over_other_apps">Display over other apps</string>
     <string name="display_over_other_apps_description">This permission is required for the curtain feature to work. It allows the app to draw over other apps.</string>
     <string name="do_not_disturb_access">Do Not Disturb access</string>

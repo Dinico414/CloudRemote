@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchColors
@@ -133,16 +131,10 @@ fun SettingsItems(
     Spacer(Modifier.height(actualOuterGroupSpacing))
 
     SettingsTile(
-        title = stringResource(string.device_admin_permission),
-        subtitle = stringResource(string.device_admin_permission_description),
-        onClick = { viewModel.onDeviceAdminSettingsClicked(context) },
-        icon = {
-            Icon(
-                Icons.Rounded.Lock,
-                stringResource(string.device_admin_permission),
-                tint = tileSubtitleColor
-            )
-        },
+        title = stringResource(string.permissions),
+        subtitle = stringResource(string.permissions_summary),
+        onClick = { viewModel.setShowPermissionsDialog(true) },
+        icon = { Icon(painterResource(R.drawable.ic_toggle), null, tint = tileSubtitleColor) },
         shape = tileShapeOverride ?: standaloneShape,
         backgroundColor = tileBackgroundColor,
         contentColor = tileContentColor,

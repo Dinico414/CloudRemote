@@ -138,6 +138,7 @@ class SettingsActivity : ComponentActivity() {
         super.onResume()
         settingsViewModel.updateCurrentLanguage()
         settingsViewModel.refreshDeveloperModeState()
+        settingsViewModel.updatePermissionsList(this)
         lifecycleScope.launch {
             val user = googleAuthUiClient.getSignedInUser()
             val isSignedIn = user != null

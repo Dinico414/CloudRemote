@@ -43,6 +43,7 @@ import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInState
 import com.xenonware.cloudremote.BuildConfig
 import com.xenonware.cloudremote.R
+import com.xenonware.cloudremote.ui.res.PermissionsDialog
 import com.xenonware.cloudremote.viewmodel.classes.SettingsItems
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
 import dev.chrisbanes.haze.hazeEffect
@@ -78,6 +79,12 @@ fun CoverSettings(
     val selectedLanguageTagInDialog by viewModel.selectedLanguageTagInDialog.collectAsState()
     val showVersionDialog by viewModel.showVersionDialog.collectAsState()
     val showSignOutDialog by viewModel.showSignOutDialog.collectAsState()
+    val showPermissionsDialog by viewModel.showPermissionsDialog.collectAsState()
+    val permissionsList by viewModel.permissionsList.collectAsState()
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.updatePermissionsList(context)
+    }
 
     val packageManager = context.packageManager
     val packageName = context.packageName
@@ -273,6 +280,21 @@ fun CoverSettings(
                 dialogTitle = stringResource(id = R.string.sign_out),
                 confirmText = stringResource(id = R.string.confirm),
                 descriptionText = stringResource(id = R.string.sign_out_description)
+            )
+        }
+    }
+    if (showPermissionsDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(hazeState)
+        ) {
+            PermissionsDialog(
+                permissions = permissionsList,
+                onDismiss = { viewModel.setShowPermissionsDialog(false) },
+                onOpenPermission = { permissionKey ->
+                    viewModel.openPermissionSetting(context, permissionKey)
+                }
             )
         }
     }
