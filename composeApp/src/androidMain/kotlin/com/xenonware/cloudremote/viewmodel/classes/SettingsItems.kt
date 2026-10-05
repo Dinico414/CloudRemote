@@ -40,6 +40,7 @@ import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInState
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
 import com.xenonware.cloudremote.R.string
+import org.jetbrains.compose.resources.getString
 
 
 @Composable
@@ -254,7 +255,7 @@ fun SettingsItems(
         Spacer(Modifier.height(actualOuterGroupSpacing))
         SettingsTile(
             title = stringResource(string.buy_me_a_coffee),
-            subtitle = stringResource(string.buy_me_a_coffee_description),
+            subtitle = stringResource(string.buy_me_a_coffee_description, stringResource(string.app_name)),
             onClick = {
                 val intent =
                     Intent(Intent.ACTION_VIEW, "https://www.buymeacoffee.com/xenonware".toUri())
