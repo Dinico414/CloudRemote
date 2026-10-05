@@ -9,11 +9,19 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.net.ConnectivityManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Base64
+import androidx.annotation.WorkerThread
 import androidx.core.graphics.scale
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import kotlin.math.roundToInt
 
@@ -37,9 +45,15 @@ class MediaNotificationListener : NotificationListenerService() {
     private var lastBitmapRef: Bitmap? = null
     private var lastEncodedArt: String = ""
     private lateinit var mediaSessionManager: MediaSessionManager
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     private val sessionsChangedListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
-        handleControllersChanged(controllers)
+        serviceScope.launch {
+            handleControllersChanged(controllers)
+        }
     }
 
     override fun onCreate() {
@@ -47,15 +61,24 @@ class MediaNotificationListener : NotificationListenerService() {
         mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
+
     private val mediaControllerCallback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
             super.onPlaybackStateChanged(state)
-            updateMediaInfo(activeMediaController?.metadata, state)
+            serviceScope.launch {
+                updateMediaInfo(activeMediaController?.metadata, state)
+            }
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             super.onMetadataChanged(metadata)
-            updateMediaInfo(metadata, activeMediaController?.playbackState)
+            serviceScope.launch {
+                updateMediaInfo(metadata, activeMediaController?.playbackState)
+            }
         }
     }
 
@@ -63,7 +86,9 @@ class MediaNotificationListener : NotificationListenerService() {
         super.onListenerConnected()
         val componentName = ComponentName(this, this.javaClass)
         mediaSessionManager.addOnActiveSessionsChangedListener(sessionsChangedListener, componentName)
-        findActiveMediaController()
+        serviceScope.launch {
+            findActiveMediaController()
+        }
     }
 
     override fun onListenerDisconnected() {
@@ -74,24 +99,29 @@ class MediaNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn?.notification?.category == "transport") {
-            findActiveMediaController()
+            serviceScope.launch {
+                findActiveMediaController()
+            }
         }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         super.onNotificationRemoved(sbn)
         if (sbn?.notification?.category == "transport") {
-            findActiveMediaController()
+            serviceScope.launch {
+                findActiveMediaController()
+            }
         }
     }
 
+    @WorkerThread
     private fun handleControllersChanged(controllers: List<MediaController>?) {
         if (!controllers.isNullOrEmpty()) {
             val newController = controllers[0]
             if (newController != activeMediaController) {
                 activeMediaController?.unregisterCallback(mediaControllerCallback)
                 activeMediaController = newController
-                activeMediaController?.registerCallback(mediaControllerCallback)
+                activeMediaController?.registerCallback(mediaControllerCallback, mainHandler)
                 updateMediaInfo(activeMediaController?.metadata, activeMediaController?.playbackState)
             } else {
                 updateMediaInfo(activeMediaController?.metadata, activeMediaController?.playbackState)
@@ -103,6 +133,7 @@ class MediaNotificationListener : NotificationListenerService() {
         }
     }
 
+    @WorkerThread
     private fun findActiveMediaController() {
         val componentName = ComponentName(this, this.javaClass)
         try {
@@ -112,6 +143,7 @@ class MediaNotificationListener : NotificationListenerService() {
         }
     }
 
+    @WorkerThread
     private fun updateMediaInfo(metadata: MediaMetadata?, playbackState: PlaybackState?) {
         val title = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE) ?: ""
         val artist = metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: ""
@@ -162,11 +194,12 @@ class MediaNotificationListener : NotificationListenerService() {
                 newIntent.getStringExtra(EXTRA_ALBUM_ART) == last.getStringExtra(EXTRA_ALBUM_ART) &&
                 newIntent.getBooleanExtra(EXTRA_IS_PLAYING, false) == last.getBooleanExtra(EXTRA_IS_PLAYING, false) &&
                 newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_1_TITLE) == last.getStringExtra(EXTRA_CUSTOM_ACTION_1_TITLE) &&
-                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) == last.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) &&
                 newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_2_TITLE) == last.getStringExtra(EXTRA_CUSTOM_ACTION_2_TITLE) &&
+                newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) == last.getStringExtra(EXTRA_CUSTOM_ACTION_1_ACTION) &&
                 newIntent.getStringExtra(EXTRA_CUSTOM_ACTION_2_ACTION) == last.getStringExtra(EXTRA_CUSTOM_ACTION_2_ACTION)
     }
 
+    @WorkerThread
     private fun encodeBitmap(bitmap: Bitmap): String {
         val resizedBitmap = resizeBitmap(bitmap)
         val outputStream = ByteArrayOutputStream()

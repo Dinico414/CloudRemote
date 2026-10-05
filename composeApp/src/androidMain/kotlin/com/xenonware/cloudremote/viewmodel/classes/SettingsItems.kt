@@ -40,7 +40,6 @@ import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInState
 import com.xenonware.cloudremote.viewmodel.SettingsViewModel
 import com.xenonware.cloudremote.R.string
-import org.jetbrains.compose.resources.getString
 
 
 @Composable

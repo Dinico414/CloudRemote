@@ -25,7 +25,6 @@ class SharedPreferenceManager(private val context: Context) {
     private val inputReceiverEnabledKey = "input_receiver_enabled"
     private val isFirstLaunchKey = "is_first_launch_v3"
     private val lastSeenVersionNameKey = "last_seen_version_name_v3"
-    private val lastSeenVersionCodeKey = "last_seen_version_code_v3"
 
     internal val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)

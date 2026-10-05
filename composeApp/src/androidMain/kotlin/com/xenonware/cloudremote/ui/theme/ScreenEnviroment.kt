@@ -52,14 +52,14 @@ fun ScreenEnvironment(
 
         XenonTheme(
             darkTheme = appIsDarkTheme,
-            useBlackedOutDarkTheme = if (appIsDarkTheme) blackedOutModeEnabled else false,
+            useBlackedOutDarkTheme = appIsDarkTheme && blackedOutModeEnabled,
             dynamicColor = useDynamicColor
         ) {
             val systemUiController = rememberSystemUiController()
             val view = LocalView.current
 
             val darkIconsForSystemBars =
-                if (layoutType == LayoutType.COVER) false else !appIsDarkTheme
+                layoutType != LayoutType.COVER && !appIsDarkTheme
 
             if (!view.isInEditMode) {
                 SideEffect {

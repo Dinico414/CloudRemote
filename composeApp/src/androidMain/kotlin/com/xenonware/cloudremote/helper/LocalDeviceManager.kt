@@ -181,9 +181,7 @@ class LocalDeviceManager(private val context: Context) {
             }
 
             // EXACT OLD BEHAVIOR: Only active if filter is exactly NONE
-            val isDndActive = if (notificationManager.isNotificationPolicyAccessGranted) {
-                notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
-            } else false
+            val isDndActive = notificationManager.isNotificationPolicyAccessGranted && notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_NONE
 
             val isLocked = keyguardManager.isKeyguardLocked
 

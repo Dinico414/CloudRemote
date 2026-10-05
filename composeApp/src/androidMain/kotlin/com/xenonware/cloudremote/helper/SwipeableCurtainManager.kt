@@ -110,10 +110,7 @@ object SwipeableCurtainManager {
 
             val layout = object : FrameLayout(context) {
                 override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-                    if (event.keyCode == KeyEvent.KEYCODE_BACK) {
-                        return true // Consume BACK key
-                    }
-                    return super.dispatchKeyEvent(event)
+                    return event.keyCode == KeyEvent.KEYCODE_BACK || super.dispatchKeyEvent(event) // Consume BACK key
                 }
             }
             layout.setBackgroundColor(Color.TRANSPARENT)

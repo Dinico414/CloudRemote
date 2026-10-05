@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme.Companion.expressive
 import androidx.compose.material3.darkColorScheme
@@ -199,157 +198,6 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHigh = surfaceContainerHighLight,
     surfaceContainerHighest = surfaceContainerHighestLight
 )
-private val GreenDarkColorScheme = darkColorScheme(
-    primary = greenPrimaryDark,
-    onPrimary = greenOnPrimaryDark,
-    primaryContainer = greenPrimaryContainerDark,
-    onPrimaryContainer = greenOnPrimaryContainerDark,
-    secondary = greenSecondaryDark,
-    onSecondary = greenOnSecondaryDark,
-    secondaryContainer = greenSecondaryContainerDark,
-    onSecondaryContainer = greenOnSecondaryContainerDark,
-    tertiary = greenTertiaryDark,
-    onTertiary = greenOnTertiaryDark,
-    tertiaryContainer = greenTertiaryContainerDark,
-    onTertiaryContainer = greenOnTertiaryContainerDark,
-    error = greenErrorDark,
-    onError = greenOnErrorDark,
-    errorContainer = greenErrorContainerDark,
-    onErrorContainer = greenOnErrorContainerDark,
-    background = greenBackgroundDark,
-    onBackground = greenOnBackgroundDark,
-    surface = greenSurfaceDark,
-    onSurface = greenOnSurfaceDark,
-    surfaceVariant = greenSurfaceVariantDark,
-    onSurfaceVariant = greenOnSurfaceVariantDark,
-    outline = greenOutlineDark,
-    outlineVariant = greenOutlineVariantDark,
-    scrim = greenScrimDark,
-    inverseSurface = greenInverseSurfaceDark,
-    inverseOnSurface = greenInverseOnSurfaceDark,
-    inversePrimary = greenInversePrimaryDark,
-    surfaceDim = greenSurfaceDimDark,
-    surfaceBright = greenSurfaceBrightDark,
-    surfaceContainerLowest = greenSurfaceContainerLowestDark,
-    surfaceContainerLow = greenSurfaceContainerLowDark,
-    surfaceContainer = greenSurfaceContainerDark,
-    surfaceContainerHigh = greenSurfaceContainerHighDark,
-    surfaceContainerHighest = greenSurfaceContainerHighestDark
-)
-
-private val GreenLightColorScheme = lightColorScheme(
-    primary = greenPrimaryLight,
-    onPrimary = greenOnPrimaryLight,
-    primaryContainer = greenPrimaryContainerLight,
-    onPrimaryContainer = greenOnPrimaryContainerLight,
-    secondary = greenSecondaryLight,
-    onSecondary = greenOnSecondaryLight,
-    secondaryContainer = greenSecondaryContainerLight,
-    onSecondaryContainer = greenOnSecondaryContainerLight,
-    tertiary = greenTertiaryLight,
-    onTertiary = greenOnTertiaryLight,
-    tertiaryContainer = greenTertiaryContainerLight,
-    onTertiaryContainer = greenOnTertiaryContainerLight,
-    error = greenErrorLight,
-    onError = greenOnErrorLight,
-    errorContainer = greenErrorContainerLight,
-    onErrorContainer = greenOnErrorContainerLight,
-    background = greenBackgroundLight,
-    onBackground = greenOnBackgroundLight,
-    surface = greenSurfaceLight,
-    onSurface = greenOnSurfaceLight,
-    surfaceVariant = greenSurfaceVariantLight,
-    onSurfaceVariant = greenOnSurfaceVariantLight,
-    outline = greenOutlineLight,
-    outlineVariant = greenOutlineVariantLight,
-    scrim = greenScrimLight,
-    inverseSurface = greenInverseSurfaceLight,
-    inverseOnSurface = greenInverseOnSurfaceLight,
-    inversePrimary = greenInversePrimaryLight,
-    surfaceDim = greenSurfaceDimLight,
-    surfaceBright = greenSurfaceBrightLight,
-    surfaceContainerLowest = greenSurfaceContainerLowestLight,
-    surfaceContainerLow = greenSurfaceContainerLowLight,
-    surfaceContainer = greenSurfaceContainerLight,
-    surfaceContainerHigh = greenSurfaceContainerHighLight,
-    surfaceContainerHighest = greenSurfaceContainerHighestLight
-)
-
-private val RedDarkColorScheme = darkColorScheme(
-    primary = redPrimaryDark,
-    onPrimary = redOnPrimaryDark,
-    primaryContainer = redPrimaryContainerDark,
-    onPrimaryContainer = redOnPrimaryContainerDark,
-    secondary = redSecondaryDark,
-    onSecondary = redOnSecondaryDark,
-    secondaryContainer = redSecondaryContainerDark,
-    onSecondaryContainer = redOnSecondaryContainerDark,
-    tertiary = redTertiaryDark,
-    onTertiary = redOnTertiaryDark,
-    tertiaryContainer = redTertiaryContainerDark,
-    onTertiaryContainer = redOnTertiaryContainerDark,
-    error = redErrorDark,
-    onError = redOnErrorDark,
-    errorContainer = redErrorContainerDark,
-    onErrorContainer = redOnErrorContainerDark,
-    background = redBackgroundDark,
-    onBackground = redOnBackgroundDark,
-    surface = redSurfaceDark,
-    onSurface = redOnSurfaceDark,
-    surfaceVariant = redSurfaceVariantDark,
-    onSurfaceVariant = redOnSurfaceVariantDark,
-    outline = redOutlineDark,
-    outlineVariant = redOutlineVariantDark,
-    scrim = redScrimDark,
-    inverseSurface = redInverseSurfaceDark,
-    inverseOnSurface = redInverseOnSurfaceDark,
-    inversePrimary = redInversePrimaryDark,
-    surfaceDim = redSurfaceDimDark,
-    surfaceBright = redSurfaceBrightDark,
-    surfaceContainerLowest = redSurfaceContainerLowestDark,
-    surfaceContainerLow = redSurfaceContainerLowDark,
-    surfaceContainer = redSurfaceContainerDark,
-    surfaceContainerHigh = redSurfaceContainerHighDark,
-    surfaceContainerHighest = redSurfaceContainerHighestDark
-)
-
-private val RedLightColorScheme = lightColorScheme(
-    primary = redPrimaryLight,
-    onPrimary = redOnPrimaryLight,
-    primaryContainer = redPrimaryContainerLight,
-    onPrimaryContainer = redOnPrimaryContainerLight,
-    secondary = redSecondaryLight,
-    onSecondary = redOnSecondaryLight,
-    secondaryContainer = redSecondaryContainerLight,
-    onSecondaryContainer = redOnSecondaryContainerLight,
-    tertiary = redTertiaryLight,
-    onTertiary = redOnTertiaryLight,
-    tertiaryContainer = redTertiaryContainerLight,
-    onTertiaryContainer = redOnTertiaryContainerLight,
-    error = redErrorLight,
-    onError = redOnErrorLight,
-    errorContainer = redErrorContainerLight,
-    onErrorContainer = redOnErrorContainerLight,
-    background = redBackgroundLight,
-    onBackground = redOnBackgroundLight,
-    surface = redSurfaceLight,
-    onSurface = redOnSurfaceLight,
-    surfaceVariant = redSurfaceVariantLight,
-    onSurfaceVariant = redOnSurfaceVariantLight,
-    outline = redOutlineLight,
-    outlineVariant = redOutlineVariantLight,
-    scrim = redScrimLight,
-    inverseSurface = redInverseSurfaceLight,
-    inverseOnSurface = redInverseOnSurfaceLight,
-    inversePrimary = redInversePrimaryLight,
-    surfaceDim = redSurfaceDimLight,
-    surfaceBright = redSurfaceBrightLight,
-    surfaceContainerLowest = redSurfaceContainerLowestLight,
-    surfaceContainerLow = redSurfaceContainerLowLight,
-    surfaceContainer = redSurfaceContainerLight,
-    surfaceContainerHigh = redSurfaceContainerHighLight,
-    surfaceContainerHighest = redSurfaceContainerHighestLight
-)
 
 fun Color.adjustTone(targetTone: Float): Color {
     val hsl = FloatArray(3)
@@ -374,7 +222,6 @@ fun ColorScheme.toCoverMode(): ColorScheme {
 }
 
 @SuppressLint("ObsoleteSdkInt")
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun XenonTheme(
     darkTheme: Boolean,
