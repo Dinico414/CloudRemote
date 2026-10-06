@@ -167,7 +167,7 @@
 
     <string name="ping_device">Ping Device</string>
     <string name="no_other_devices_found">No other devices found</string>
-    <string name="pinging">Pinging...</string>
+    <string name="pinging">Pinging…</string>
     <string name="ready_to_ping">Ready to ping</string>
     <string name="offline">Offline</string>
     <string name="stop">STOP</string>

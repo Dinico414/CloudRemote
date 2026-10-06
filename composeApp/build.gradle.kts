@@ -56,7 +56,7 @@ android {
         minSdk = 29
         targetSdk = 37
         versionCode = 2
-        versionName = "1.4.1"
+        versionName = "1.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "XENON_COMMONS_VERSION", "\"${libs.versions.xenonCommons.get()}\"")
@@ -81,8 +81,8 @@ android {
         }
 
         getByName("release") {
+            //noinspection NotShrinkingResources
             isMinifyEnabled = true
-            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )

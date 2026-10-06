@@ -84,10 +84,13 @@ import com.xenonware.cloudremote.service.CurtainTileService
 import com.xenonware.cloudremote.sign_in.GoogleAuthUiClient
 import com.xenonware.cloudremote.sign_in.SignInViewModel
 import com.xenonware.cloudremote.ui.res.DeviceItem
+import com.xenonware.cloudremote.ui.res.DeviceRemoveDialog
+import com.xenonware.cloudremote.ui.res.DeviceShareDialog
 import com.xenonware.cloudremote.ui.res.LoginScreen
 import com.xenonware.cloudremote.ui.theme.LocalExtendedMaterialColorScheme
 import com.xenonware.cloudremote.viewmodel.LayoutType
 import com.xenonware.cloudremote.viewmodel.MainViewModel
+import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
@@ -136,12 +139,16 @@ fun CompactRemote(
         // 2. UI / Navigation / Interaction State
         // ============================================================================
         val hazeState = rememberHazeState()
+        val screenHazeState = rememberHazeState()
         val snackbarHostState = remember { SnackbarHostState() }
 
         val lazyListState = rememberLazyListState()
 
         var isSearchActive by rememberSaveable { mutableStateOf(false) }
         var searchQuery by rememberSaveable { mutableStateOf("") }
+        var showShareDialog by remember { mutableStateOf(false) }
+        var showRemoveDialog by remember { mutableStateOf(false) }
+        var deviceToRemove by remember { mutableStateOf<Device?>(null) }
 
         // ============================================================================
         // 3. Authentication & Preferences
@@ -169,6 +176,21 @@ fun CompactRemote(
         val devices by viewModel.devices.collectAsState()
         val localDevice = devices.find { it.id == viewModel.localDeviceId }
         val localDeviceName by viewModel.localDeviceName.collectAsStateWithLifecycle()
+        val localDeviceState by viewModel.localDeviceState.collectAsStateWithLifecycle()
+
+        val isSharing = localDevice != null
+        val deviceToDisplay = (localDevice ?: Device(
+            id = viewModel.localDeviceId,
+            name = localDeviceName.ifBlank {
+                currentUser?.displayName ?: "This Device"
+            })).copy(
+            batteryLevel = localDeviceState.batteryLevel,
+            isCharging = localDeviceState.isCharging,
+            isScreenOn = localDeviceState.isScreenOn,
+            isCurtainOn = localDeviceState.isCurtainOn,
+            isLocked = localDeviceState.isLocked,
+            connectedDevices = localDeviceState.connectedDevices.map { it.toMap() }
+        )
 
         val networkState by viewModel.networkState.collectAsStateWithLifecycle()
         val offlineMessage = stringResource(id = R.string.offline_message)
@@ -196,7 +218,16 @@ fun CompactRemote(
 
         val extendedColors = LocalExtendedMaterialColorScheme.current
 
-        Scaffold(snackbarHost = {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(
+                        if (showShareDialog || showRemoveDialog) Modifier.hazeSource(screenHazeState)
+                        else Modifier
+                    )
+            ) {
+                Scaffold(snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 XenonSnackbar(
                     backgroundColor = extendedColors.inverseError,
@@ -371,8 +402,6 @@ fun CompactRemote(
                                     .padding(bottom = scaffoldPadding.calculateBottomPadding())
                             )
                         } else {
-                            val localDeviceState by viewModel.localDeviceState.collectAsStateWithLifecycle()
-
                             var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
                             LaunchedEffect(Unit) {
@@ -399,21 +428,6 @@ fun CompactRemote(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 item {
-                                    val isSharing = localDevice != null
-                                    val deviceToDisplay = (localDevice ?: Device(
-                                        id = viewModel.localDeviceId,
-                                        name = localDeviceName.ifBlank {
-                                            currentUser?.displayName ?: "This Device"
-                                        })).copy(
-                                        batteryLevel = localDeviceState.batteryLevel,
-                                        isCharging = localDeviceState.isCharging,
-                                        isScreenOn = localDeviceState.isScreenOn,
-                                        isCurtainOn = localDeviceState.isCurtainOn,
-                                        isLocked = localDeviceState.isLocked,
-                                        connectedDevices = localDeviceState.connectedDevices.map { it.toMap() }
-
-                                    )
-
                                     DeviceItem(
                                         device = deviceToDisplay,
                                         isLocalDevice = true,
@@ -427,7 +441,11 @@ fun CompactRemote(
                                         },
                                         onRemoveDevice = { removedDevice ->
                                             viewModel.removeDevice(removedDevice)
-                                        })
+                                        },
+                                        onRequestShare = {
+                                            showShareDialog = true
+                                        }
+                                    )
                                 }
 
                                 if (onlineCloudDevices.isNotEmpty()) {
@@ -486,7 +504,12 @@ fun CompactRemote(
                                             onToggleShare = { _, _ -> },
                                             onRemoveDevice = { removedDevice ->
                                                 viewModel.removeDevice(removedDevice)
-                                            })
+                                            },
+                                            onRequestRemove = { targetDevice ->
+                                                deviceToRemove = targetDevice
+                                                showRemoveDialog = true
+                                            }
+                                        )
                                     }
                                 }
                             }
@@ -496,4 +519,46 @@ fun CompactRemote(
             )
         }
     }
+
+    if (showShareDialog) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeEffect(screenHazeState)
+        ) {
+            DeviceShareDialog(
+                device = deviceToDisplay,
+                onDismissRequest = { showShareDialog = false },
+                onConfirm = { name, icon ->
+                    showShareDialog = false
+                    viewModel.toggleCurrentDevice(name, icon)
+                }
+            )
+        }
+    }
+
+    if (showRemoveDialog) {
+        deviceToRemove?.let { device ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeEffect(screenHazeState)
+            ) {
+                DeviceRemoveDialog(
+                    device = device,
+                    onDismissRequest = {
+                        showRemoveDialog = false
+                        deviceToRemove = null
+                    },
+                    onConfirm = {
+                        showRemoveDialog = false
+                        viewModel.removeDevice(device)
+                        deviceToRemove = null
+                    }
+                )
+            }
+        }
+    }
+}
+}
 }

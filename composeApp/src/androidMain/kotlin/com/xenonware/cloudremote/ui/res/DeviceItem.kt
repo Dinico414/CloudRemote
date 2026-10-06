@@ -233,6 +233,136 @@ val deviceIconCategories = listOf(
     )
 )
 
+@SuppressLint("LocalContextResourcesRead", "DiscouragedApi")
+@Composable
+fun DeviceShareDialog(
+    device: Device,
+    onDismissRequest: () -> Unit,
+    onConfirm: (name: String, icon: String) -> Unit,
+) {
+    val context = LocalContext.current
+    var shareName by remember { mutableStateOf("") }
+    var shareIcon by remember { mutableStateOf("old phone") }
+    var previewFrame by remember { mutableIntStateOf(1) }
+    var previewFrame9 by remember { mutableIntStateOf(1) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(750L.milliseconds)
+            for (i in 1..8) {
+                previewFrame9 = i + 1
+                if (i % 2 == 0) {
+                    previewFrame = (i / 2) + 1
+                }
+                delay(50L.milliseconds)
+            }
+            delay(750L.milliseconds)
+            for (i in 1..8) {
+                previewFrame9 = 9 - i
+                if (i % 2 == 0) {
+                    previewFrame = 5 - (i / 2)
+                }
+                delay(50L.milliseconds)
+            }
+        }
+    }
+
+    val placeholder = stringResource(id = R.string.device_name_placeholder)
+    XenonDialog(
+        onDismissRequest = onDismissRequest,
+        title = stringResource(id = R.string.share_device),
+        properties = DialogProperties(usePlatformDefaultWidth = true),
+        confirmButtonText = stringResource(id = R.string.share),
+        onConfirmButtonClick = {
+            onConfirm(
+                shareName.ifBlank { device.name.ifBlank { placeholder } }, shareIcon
+            )
+        },
+        contentManagesScrolling = false
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            OutlinedTextField(
+                value = shareName,
+                onValueChange = { shareName = it },
+                placeholder = { Text(device.name.ifBlank { stringResource(id = R.string.device_name_placeholder) }) },
+                label = { Text(stringResource(id = R.string.device_name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(16.dp))
+
+            deviceIconCategories.forEach { (categoryId, iconNames) ->
+                val scrollState = rememberScrollState()
+
+                Text(
+                    text = stringResource(id = categoryId),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                HorizontalScrollWithIndicator(
+                    scrollState = scrollState,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    iconNames.forEach { name ->
+                        val prefix = getDeviceIconPrefix(name)
+                        if (prefix != null) {
+                            val currentFrame =
+                                if (name == "Trifold (G-Shape)") previewFrame9 else previewFrame
+                            val resId = remember(prefix, currentFrame) {
+                                context.resources.getIdentifier(
+                                    prefix + currentFrame, "drawable", context.packageName
+                                )
+                            }
+                            if (resId != 0) {
+                                IconButton(
+                                    onClick = { shareIcon = name },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = if (shareIcon == name) MaterialTheme.colorScheme.primaryContainer
+                                        else Color.Transparent
+                                    )
+                                ) {
+                                    Image(
+                                        painter = painterResource(id = resId),
+                                        contentDescription = name,
+                                        modifier = Modifier.padding(4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun DeviceRemoveDialog(
+    device: Device,
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    XenonDialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = true),
+        title = stringResource(id = R.string.remove_device),
+        confirmButtonText = stringResource(id = R.string.remove),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        dismissIconButtonContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+        dismissIconButtonContentColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+        confirmContainerColor = MaterialTheme.colorScheme.error,
+        confirmContentColor = MaterialTheme.colorScheme.onError,
+        onConfirmButtonClick = onConfirm
+    ) {
+        Text(stringResource(id = R.string.remove_device_message, device.name))
+    }
+}
+
 @Suppress("SimplifyBooleanWithConstants")
 @SuppressLint("LocalContextResourcesRead", "DiscouragedApi")
 @Composable
@@ -244,11 +374,11 @@ fun DeviceItem(
     onUpdateDevice: (Device) -> Unit,
     onToggleShare: (String, String) -> Unit,
     onRemoveDevice: (Device) -> Unit = {},
+    onRequestShare: (() -> Unit)? = null,
+    onRequestRemove: ((Device) -> Unit)? = null,
 ) {
     var showShareDialog by remember { mutableStateOf(false) }
     var showRemoveDialog by remember { mutableStateOf(false) }
-    var shareName by remember { mutableStateOf("") }
-    var shareIcon by remember { mutableStateOf("old phone") }
     var isCollapsed by remember { mutableStateOf(!isLocalDevice) }
     var lastRememberedVolume by remember { mutableIntStateOf(device.maxMediaVolume / 2) }
     val haptic = LocalHapticFeedback.current
@@ -294,125 +424,28 @@ fun DeviceItem(
         label = "rowTextColor"
     )
 
-    var previewFrame by remember { mutableIntStateOf(1) }
-    var previewFrame9 by remember { mutableIntStateOf(1) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(750L.milliseconds)
-            for (i in 1..8) {
-                previewFrame9 = i + 1
-                if (i % 2 == 0) {
-                    previewFrame = (i / 2) + 1
-                }
-                delay(50L.milliseconds)
-            }
-            delay(750L.milliseconds)
-            for (i in 1..8) {
-                previewFrame9 = 9 - i
-                if (i % 2 == 0) {
-                    previewFrame = 5 - (i / 2)
-                }
-                delay(50L.milliseconds)
-            }
-        }
-    }
-
     val context = LocalContext.current
 
     if (showShareDialog) {
-        val placeholder = stringResource(id = R.string.device_name_placeholder)
-        XenonDialog(
+        DeviceShareDialog(
+            device = device,
             onDismissRequest = { showShareDialog = false },
-            title = stringResource(id = R.string.share_device),
-            properties = DialogProperties(usePlatformDefaultWidth = true),
-            confirmButtonText = stringResource(id = R.string.share),
-            onConfirmButtonClick = {
+            onConfirm = { name, icon ->
                 showShareDialog = false
-                onToggleShare(
-                    shareName.ifBlank { device.name.ifBlank { placeholder } }, shareIcon
-                )
-            },
-            contentManagesScrolling = false
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                OutlinedTextField(
-                    value = shareName,
-                    onValueChange = { shareName = it },
-                    placeholder = { Text(device.name.ifBlank { stringResource(id = R.string.device_name_placeholder) }) },
-                    label = { Text(stringResource(id = R.string.device_name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(16.dp))
-
-                deviceIconCategories.forEach { (categoryId, iconNames) ->
-                    val scrollState = rememberScrollState()
-
-                    Text(
-                        text = stringResource(id = categoryId),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    HorizontalScrollWithIndicator(
-                        scrollState = scrollState,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        iconNames.forEach { name ->
-                            val prefix = getDeviceIconPrefix(name)
-                            if (prefix != null) {
-                                val currentFrame =
-                                    if (name == "Trifold (G-Shape)") previewFrame9 else previewFrame
-                                val resId = remember(prefix, currentFrame) {
-                                    context.resources.getIdentifier(
-                                        prefix + currentFrame, "drawable", context.packageName
-                                    )
-                                }
-                                if (resId != 0) {
-                                    IconButton(
-                                        onClick = { shareIcon = name },
-                                        colors = IconButtonDefaults.iconButtonColors(
-                                            containerColor = if (shareIcon == name) MaterialTheme.colorScheme.primaryContainer
-                                            else Color.Transparent
-                                        )
-                                    ) {
-                                        Image(
-                                            painter = painterResource(id = resId),
-                                            contentDescription = name,
-                                            modifier = Modifier.padding(4.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                }
+                onToggleShare(name, icon)
             }
-        }
+        )
     }
 
     if (showRemoveDialog) {
-        XenonDialog(
+        DeviceRemoveDialog(
+            device = device,
             onDismissRequest = { showRemoveDialog = false },
-            properties = DialogProperties(usePlatformDefaultWidth = true),
-            title = stringResource(id = R.string.remove_device),
-            confirmButtonText = stringResource(id = R.string.remove),
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            dismissIconButtonContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
-            dismissIconButtonContentColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
-            confirmContainerColor = MaterialTheme.colorScheme.error,
-            confirmContentColor = MaterialTheme.colorScheme.onError,
-            onConfirmButtonClick = {
+            onConfirm = {
                 showRemoveDialog = false
                 onRemoveDevice(device)
-            }) {
-            Text(stringResource(id = R.string.remove_device_message, device.name))
-        }
+            }
+        )
     }
 
     val animatedRadius = animateDpAsState(
@@ -555,9 +588,11 @@ fun DeviceItem(
                             if (isSharing) {
                                 onToggleShare(device.name, device.icon)
                             } else {
-                                shareName = ""
-                                shareIcon = "old phone"
-                                showShareDialog = true
+                                if (onRequestShare != null) {
+                                    onRequestShare()
+                                } else {
+                                    showShareDialog = true
+                                }
                             }
                         }) {
                             Icon(
@@ -587,10 +622,14 @@ fun DeviceItem(
 
                     else -> {
                         FilledTonalIconButton(onClick = {
-                            showRemoveDialog = true
                             haptic.performHapticFeedback(
                                 HapticFeedbackType.LongPress
                             )
+                            if (onRequestRemove != null) {
+                                onRequestRemove(device)
+                            } else {
+                                showRemoveDialog = true
+                            }
                         }) {
                             Icon(
                                 imageVector = Icons.Rounded.Close, contentDescription = "Remove"
